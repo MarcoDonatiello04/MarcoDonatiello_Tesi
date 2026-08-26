@@ -101,8 +101,6 @@ dati sensibili archiviati nello storage cloud.
 Fra i quattro scenari, due ricadono nel perimetro del sistema presentato in questo lavoro e due ne restano fuori.
 
 
-
-
 \section{API Security Risks}
 
 Le API oggi fanno gran parte del lavoro che una volta faceva il sito web
@@ -113,18 +111,20 @@ gli endpoint espongono operazioni precise su risorse precise. Per un
 attaccante questo significa meno lavoro di interpretazione: non deve capire
 un'interfaccia grafica, gli basta osservare come sono costruite le chiamate.
 
-OWASP mantiene infatti, accanto al Top 10 per le applicazioni web, una
+OWASP mantiene, accanto al Top 10 per le applicazioni web, una
 classificazione separata dedicata alle API. Alcune categorie compaiono in
 entrambe le liste — la misconfiguration, il broken access control — ma buona
 parte dei rischi specifici delle API riguarda un livello che il Top 10
 generale non copre: l'autorizzazione su singoli oggetti, proprietà,
 funzioni. Un'applicazione web tradizionale filtra cosa mostrare all'utente;
-una API deve filtrare cosa restituire nella risposta. La differenza sembra
-minima, ma è da lì che nasce buona parte delle vulnerabilità trattate in
-questa sezione.Le dieci categorie che compongono l'edizione 2023 riflettono proprio questa
-logica: non genericità, ma rischi specifici del modo in cui un'API espone
-dati e funzionalità. Di seguito la lista completa, in ordine di gravità
-secondo OWASP\cite{owasp2023apitop10}:
+un'API deve filtrare cosa restituire nella risposta. La differenza sembra
+minima, ma è da lì che nascono molte delle vulnerabilità trattate in
+questa sezione.
+
+Le dieci categorie che compongono l'edizione 2023 riflettono questa logica: non
+rischi generici, ma rischi legati al modo specifico in cui un'API espone dati e
+funzionalità. Di seguito la lista completa, in ordine di gravità
+secondo OWASP~\cite{owasp2023apitop10}:
 \begin{enumerate}
   \item \textbf{API1:2023 -- Broken Object Level Authorization (BOLA)} — un
   endpoint accetta l'ID di una risorsa senza verificare che chi lo richiede
@@ -174,26 +174,24 @@ secondo OWASP\cite{owasp2023apitop10}:
   restituiti da API di terze parti integrate nel sistema.
 \end{enumerate}
 
-Tra le dieci categorie appena elencate, la prima merita un'attenzione
-diversa dalle altre. Non tanto per la posizione in classifica, quanto per
-quello che rappresenta: un controllo di accesso che manca proprio dove ci
-si aspetterebbe fosse più solido, cioè sulla singola risorsa richiesta. È il
-tipo di errore che si insinua facilmente in un endpoint scritto in fretta, e
-che allo stesso tempo può esporre l'intero set di dati di un sistema con
-una richiesta HTTP modificata di poco.
-
-La sezione seguente approfondisce nel dettaglio Broken Object Level
-Authorization: come si manifesta, perché resta la vulnerabilità più diffusa
-tra quelle riscontrate nelle API reali, e possibili scenari di rimedio.
-
+Tra le dieci categorie appena elencate la prima merita un'attenzione diversa
+dalle altre: non tanto per la posizione in classifica, quanto per ciò che
+rappresenta, cioè un controllo di accesso che manca proprio dove ci si
+aspetterebbe fosse più solido, sulla singola risorsa richiesta. È il tipo di
+errore che si insinua facilmente in un endpoint scritto in fretta e che, allo
+stesso tempo, può esporre porzioni estese della base dati di un sistema con una
+richiesta HTTP modificata di poco. La sottosezione seguente lo esamina nel
+dettaglio: come si manifesta, da quali cause nasce e con quali misure lo si
+previene.
 
 \subsection{API1:2023 -- Broken Object Level Authorization}
 
-\paragraph{Definizione e inquadramento concettuale}
+\paragraph{Definizione e collocazione}
 
 La Broken Object Level Authorization (BOLA) si manifesta quando un'applicazione, pur autenticando
 correttamente l'utente che effettua una richiesta, non verifica se quello stesso utente abbia
-effettivamente il diritto di accedere all'oggetto specifico richiesto.
+effettivamente il diritto di accedere all'oggetto specifico
+richiesto~\cite{owasp2023api1}.
 
 Un'interfaccia di programmazione applicativa espone tipicamente un insieme di risorse --- utenti,
 ordini, documenti, transazioni --- identificabili singolarmente attraverso un riferimento univoco.
@@ -253,10 +251,10 @@ Authorization: Bearer <token_utente_A>
 
 dove 483 non è l'ordine appartenente al titolare del token, ma un identificatore vicino a quello
 osservato in precedenza durante il normale utilizzo dell'applicazione. La richiesta è, dal punto di
-vista del protocollo, del tutto regolare: cambia soltanto il valore del parametro. Se la risorsa
-restituita appartenga realmente a un altro utente dipende interamente da un unico fattore,
-approfondito nel paragrafo seguente: se il server esegua o meno un confronto tra l'identità del
-chiamante e il proprietario effettivo dell'oggetto.
+vista del protocollo, del tutto regolare: cambia soltanto il valore del parametro. Che la
+risposta contenga davvero i dati di un altro utente dipende da un unico fattore, ripreso nel
+paragrafo seguente: se il server confronti o meno l'identità del chiamante con il proprietario
+effettivo dell'oggetto.
 
 \paragraph{Esempio applicativo}
 
@@ -300,7 +298,7 @@ esplicitamente concesso su quella risorsa --- e restituire, in caso contrario, u
 autorizzazione: tipicamente \texttt{403 Forbidden}, oppure \texttt{404 Not Found} quando si
 preferisce non rivelare l'esistenza della risorsa a chi non ne ha diritto.
 
-\paragraph{Cause tecniche ricorrenti}
+\paragraph{Cause e meccanismi tecnici tipici}
 
 L'assenza di un controllo di autorizzazione a livello di oggetto è la causa immediata di ogni
 istanza di BOLA, ma raramente costituisce una scelta progettuale deliberata. Più spesso deriva da
@@ -334,7 +332,7 @@ tramite un livello di autorizzazione centralizzato --- ogni endpoint deve reimpl
 autonomamente la logica di verifica, e questo aumenta la probabilità che qualche percorso venga
 trascurato.
 
-\paragraph{Impatto e conseguenze}
+\paragraph{Impatto}
 
 L'impatto di una vulnerabilità BOLA dipende dalla natura della risorsa esposta, ma incide
 tipicamente su più proprietà di sicurezza contemporaneamente. Sul piano della riservatezza,
@@ -352,8 +350,7 @@ Un aspetto che distingue BOLA da molte altre classi di vulnerabilità è la sua 
 sistematicamente ripetibile: una volta individuato un endpoint privo del controllo appropriato, lo
 stesso schema di attacco può essere applicato a un numero elevato di identificatori, trasformando
 quella che sembra una singola falla puntuale in un canale di accesso a porzioni estese della base
-dati. Diversi incidenti di sicurezza documentati pubblicamente, inclusi casi in cui decine di
-milioni di record sono stati esposti, hanno questa origine comune.
+dati.
 
 Il rischio assume connotati particolari negli ambienti multi-tenant e cloud, dove più clienti
 condividono la stessa infrastruttura applicativa e la separazione tra i rispettivi dati dipende
@@ -362,7 +359,7 @@ risorse. In un simile contesto, una singola vulnerabilità BOLA non compromette 
 un utente, ma può erodere il confine logico tra tenant distinti, con implicazioni che vanno oltre
 il singolo incidente e toccano la fiducia complessiva riposta nell'infrastruttura condivisa.
 
-\paragraph{Strategie di mitigazione}
+\paragraph{Mitigazione}
 
 La prevenzione di BOLA richiede che ogni accesso a una risorsa identificata da un parametro
 fornito dal client sia accompagnato da una verifica esplicita del diritto dell'utente su quello
@@ -370,7 +367,7 @@ specifico oggetto, eseguita interamente lato server. Nessuna informazione proven
 incluso l'identificatore stesso della risorsa, può essere considerata prova di autorizzazione:
 l'identificatore indica quale oggetto viene richiesto, non chi ha diritto di accedervi.
 
-Un principio applicabile in modo trasversale è quello del least privilege, secondo cui un soggetto
+Un principio applicabile in modo trasversale è quello del \textit{least privilege}, secondo cui un soggetto
 dovrebbe disporre soltanto dei permessi strettamente necessari a svolgere le proprie funzioni,
 senza margini di accesso più ampi per comodità implementativa. Applicato al livello oggetto,
 questo si traduce nella necessità di associare esplicitamente ogni utente, o ruolo, alle risorse su
@@ -386,64 +383,63 @@ diverse funzioni esposte dall'API.
 
 La coerenza dei controlli tra operazioni di lettura, scrittura e cancellazione sulla stessa risorsa
 merita infine attenzione specifica: la protezione di un'operazione non implica automaticamente la
-protezione delle altre, ed è proprio in questa asimmetria che si annidano molte delle istanze reali
-di BOLA documentate in letteratura.
+protezione delle altre, ed è in questa asimmetria che si annida buona parte delle istanze reali di
+BOLA.
 
-Nei paragrafi seguenti vengono trattate più sinteticamente le restanti vulnerabilità della OWASP
-API Security Top 10, a partire da API2:2023.
+Le sottosezioni seguenti trattano in forma più sintetica le restanti categorie della OWASP API
+Security Top 10, a partire da API2:2023.
 
 \newpage
 \subsection{API2:2023 -- Broken Authentication}
 
 \paragraph{Definizione e collocazione}
-Broken Authentication occupa la seconda posizione della classificazione OWASP  e si colloca concettualmente a monte di BOLA: mentre quest'ultima riguarda il controllo sull'accesso a uno specifico dato o risorsa, Broken Authentication compromette la capacità stessa del sistema di stabilire con certezza l'identità di chi effettua la richiesta. Un fallimento in questa fase rende vano qualsiasi controllo successivo, poiché un meccanismo di autorizzazione perde ogni efficacia se l'identità su cui si fonda può essere falsificata o aggirata \cite{owasp2023api2}.
-A differenza di altre categorie più circoscritte, questa voce raggruppa un insieme eterogeneo di debolezze nei processi di verifica dell'identità: dalla gestione poco attenta dei token di sessione all'assenza di vincoli sul numero di tentativi di accesso consentiti. Un esempio comune riguarda i messaggi di risposta del server: se il sistema segnala in modo esplicito se a essere errato sia lo username oppure la password, fornisce involontariamente all'attaccante una conferma sull'esistenza di un dato account. Parallelamente, l'assenza di limitazioni sulla frequenza delle richieste lascia l'interfaccia di login esposta ad attacchi automatizzati volti a indovinare le credenziali su larga scala.
+Broken Authentication occupa la seconda posizione della classificazione OWASP e si colloca concettualmente a monte di BOLA: mentre quest'ultima riguarda il controllo sull'accesso a uno specifico dato o risorsa, Broken Authentication compromette la capacità stessa del sistema di stabilire con certezza l'identità di chi effettua la richiesta. Un fallimento in questa fase rende vano qualsiasi controllo successivo, poiché un meccanismo di autorizzazione perde ogni efficacia se l'identità su cui si fonda può essere falsificata o aggirata~\cite{owasp2023api2}.
+A differenza di altre categorie più circoscritte, questa voce raggruppa un insieme eterogeneo di debolezze nei processi di verifica dell'identità: dalla gestione poco attenta dei token di sessione all'assenza di vincoli sul numero di tentativi di accesso consentiti. Un esempio comune riguarda i messaggi di risposta del server: se il sistema indica esplicitamente quale dei due campi, nome utente o password, sia errato, fornisce involontariamente all'attaccante una conferma sull'esistenza di quell'account. Parallelamente, l'assenza di limitazioni sulla frequenza delle richieste lascia l'interfaccia di login esposta ad attacchi automatizzati volti a indovinare le credenziali su larga scala.
+
 \paragraph{Cause e meccanismi tecnici tipici}
-Spesso queste problematiche nascono dal tentativo di implementare soluzioni di autenticazione proprietarie o non standard. Come evidenziato dalla documentazione OWASP, strumenti come le API key o protocolli di autorizzazione come OAuth vengono talvolta impiegati impropriamente per identificare gli utenti in scenari per cui non sono stati progettati, creando falle strutturali \cite{owasp2023api2}.
-Un ulteriore fattore critico è la mancanza di controlli sul volume dei tentativi di accesso. Endpoint di autenticazione e flussi di recupero password privi di rate limiting risultano vulnerabili ad attacchi in cui elenchi di credenziali già compromesse altrove vengono testati a raffica, sfruttando la tendenza diffusa a riutilizzare le medesime password su più servizi \cite{owasp2026credential}.
-Infine, la gestione dei token di sessione (come i JSON Web Token, o JWT) introduce ulteriori insidie: errori nella convalida della firma crittografica, chiavi di cifratura deboli, mancato controllo dei tempi di scadenza o assenza di meccanismi di revoca immediata permettono a un attaccante di forgiare token validi o di continuare a utilizzare credenziali che dovrebbero essere già decadute \cite{rfc8725}.
-\paragraph{Impatto essenziale}
-L'impatto di Broken Authentication è per sua natura sistemico: assumendo il controllo dell'identità di un utente, l'attaccante ne eredita tutti i privilegi operativi senza che il backend possa distinguere le azioni legittime da quelle malevole \cite{owasp2023api2}. Ciò può tradursi non solo nell'accesso a dati riservati, ma anche nella manomissione dei parametri di sicurezza dell'account (come la modifica dell'email di recupero), trasformando un'intrusione temporanea nella perdita definitiva del profilo.
+
+Spesso queste problematiche nascono dal tentativo di implementare soluzioni di autenticazione proprietarie o non standard. Come evidenziato dalla documentazione OWASP, strumenti come le API key o protocolli di autorizzazione come OAuth vengono talvolta impiegati impropriamente per identificare gli utenti in scenari per cui non sono stati progettati, creando falle strutturali~\cite{owasp2023api2}.
+Un ulteriore fattore critico è la mancanza di controlli sul volume dei tentativi di accesso. Endpoint di autenticazione e flussi di recupero password privi di rate limiting risultano vulnerabili ad attacchi in cui elenchi di credenziali già compromesse altrove vengono provati in massa, sfruttando la tendenza diffusa a riutilizzare le medesime password su più servizi~\cite{owasp2026credential}.
+Infine, la gestione dei token di sessione (come i JSON Web Token, o JWT) introduce ulteriori insidie: errori nella convalida della firma crittografica, chiavi di cifratura deboli, mancato controllo dei tempi di scadenza o assenza di meccanismi di revoca immediata permettono a un attaccante di forgiare token validi o di continuare a utilizzare credenziali che dovrebbero essere già decadute~\cite{rfc8725}.
+
+\paragraph{Impatto}
+
+L'impatto di Broken Authentication è per sua natura sistemico: assumendo il controllo dell'identità di un utente, l'attaccante ne eredita tutti i privilegi operativi senza che il backend possa distinguere le azioni legittime da quelle malevole~\cite{owasp2023api2}. Ciò può tradursi non solo nell'accesso a dati riservati, ma anche nella manomissione dei parametri di sicurezza dell'account (come la modifica dell'indirizzo di recupero), trasformando un'intrusione temporanea nella perdita definitiva del profilo.
+
 \paragraph{Mitigazione}
-La contromisura principale consiste nell'affidarsi a standard industriali consolidati e a librerie verificate, evitando soluzioni "fai-da-te" per la gestione di token e password \cite{nist2025sp80063b}. A livello applicativo e infrastrutturale è indispensabile introdurre politiche di rate limiting dedicate e restrittive sugli endpoint di login, adottare l'autenticazione a più fattori (MFA) dove possibile e imporre una nuova conferma delle credenziali prima di eseguire modifiche critiche sul profilo utente \cite{owasp2026authentication}.
+
+La contromisura principale consiste nell'affidarsi a standard industriali consolidati e a librerie verificate, evitando soluzioni ``fai-da-te'' per la gestione di token e password~\cite{nist2025sp80063b}. A livello applicativo e infrastrutturale è indispensabile introdurre politiche di rate limiting dedicate e restrittive sugli endpoint di login, adottare l'autenticazione a più fattori (MFA) dove possibile e imporre una nuova conferma delle credenziali prima di eseguire modifiche critiche sul profilo utente~\cite{owasp2026authentication}.
+
 \paragraph{Rilevabilità}
-Sul piano della rilevabilità, l'analisi automatica si divide principalmente in due direttrici a seconda della natura del difetto:
+
+Sul piano della rilevabilità l'analisi automatica si divide in due direttrici, a seconda della natura del difetto.
 \begin{enumerate}
- \item Analisi dei Token e della Crittografia:
- Per quanto riguarda la gestione dei JWT e dei formati di sessione, le vulnerabilità sono per lo più legate a regole deterministiche e ben definite (come la mancata verifica della firma o l'uso di algoritmi insicuri). La ricerca e gli strumenti di settore riescono quindi a scovare queste falle in modo efficace, sia analizzando staticamente il codice sorgente per intercettare configurazioni errate delle librerie crittografiche, sia generando dinamicamente token manipolati per verificare se il backend li accetti erroneamente \cite{yang2025jwteemo,xu2023jwtkey}.
-\item Flussi di Autenticazione e Abusi Comportamentali: 
-Al contrario, individuare l'assenza di rate limiting o la vulnerabilità a tentativi di accesso massivi richiede un approccio basato sul monitoraggio a runtime. Più che da un'ispezione sintattica del codice, queste carenze emergono dall'analisi dinamica del traffico o dall'osservazione dei registri di sistema (log), rilevando picchi anomali di richieste fallite concentrate in brevi finestre temporali \cite{owasp2026credential}.
+\item \textbf{Analisi dei token e della crittografia.} Le debolezze che riguardano i JWT e gli altri formati di sessione dipendono da regole deterministiche e ben definite, come la mancata verifica della firma o l'uso di algoritmi insicuri. Gli strumenti riescono quindi a individuarle con buona affidabilità, sia analizzando staticamente il codice sorgente per intercettare configurazioni errate delle librerie crittografiche, sia generando dinamicamente token manipolati per verificare se il backend li accetti~\cite{yang2025jwteemo,xu2023jwtkey}.
+\item \textbf{Flussi di autenticazione e abusi comportamentali.} L'assenza di rate limiting e l'esposizione a tentativi di accesso massivi richiedono invece un monitoraggio a runtime: più che da un'ispezione sintattica del codice, queste carenze emergono dall'analisi dinamica del traffico o dai registri di sistema, dove si manifestano come picchi anomali di richieste fallite concentrate in brevi finestre temporali~\cite{owasp2026credential}.
 \end{enumerate}
-
-
-
-
-
-
 
 \subsection{API3:2023 -- Broken Object Property Level Authorization}
 
 \paragraph{Definizione e collocazione}
 
-La \textit{Broken Object Property Level Authorization} (BOPLA) identifica una classe di vulnerabilità nella quale i controlli di autorizzazione applicati alle API non considerano adeguatamente le singole proprietà degli oggetti gestiti dall'applicazione. Il problema non riguarda quindi soltanto la possibilità per un utente di accedere a un determinato oggetto, ma anche quali attributi di quell'oggetto possa effettivamente leggere o modificare.
-
+La \textit{Broken Object Property Level Authorization} (BOPLA) identifica una classe di vulnerabilità nella quale i controlli di autorizzazione applicati alle API non considerano adeguatamente le singole proprietà degli oggetti gestiti dall'applicazione. Il problema non riguarda quindi soltanto la possibilità per un utente di accedere a un determinato oggetto, ma anche quali attributi di quell'oggetto possa effettivamente leggere o modificare~\cite{owasp2023apitop10}.
 
 La distinzione rispetto alla \textit{Broken Object Level Authorization} (BOLA) è rilevante. Nel caso di BOLA, il controllo di autorizzazione fallisce a livello dell'oggetto: un utente riesce, per esempio, ad accedere a una risorsa appartenente a un altro utente manipolando l'identificativo della risorsa. Nel caso di BOPLA, invece, l'utente può avere legittimamente accesso all'oggetto, ma ottenere o modificare proprietà che non rientrano nei suoi privilegi. L'oggetto, quindi, non costituisce necessariamente la risorsa a cui viene negato l'accesso; è una sua specifica proprietà a essere esposta o manipolabile senza un'adeguata autorizzazione.
 
-Il rischio è particolarmente rilevante nelle API REST, dove è frequente che un endpoint restituisca direttamente la rappresentazione serializzata di un oggetto. Una struttura interna contenente numerosi attributi può così diventare, senza una selezione esplicita, la struttura della risposta esposta al client.
+Il rischio è particolarmente rilevante nelle API REST, dove è frequente che un endpoint restituisca direttamente la rappresentazione serializzata di un oggetto. Una struttura interna composta da numerosi attributi può così diventare, in assenza di una selezione esplicita, il corpo stesso della risposta inviata al client.
 
 \paragraph{Cause e meccanismi tecnici tipici}
 
 Una delle cause più comuni è la sovrapposizione tra il modello utilizzato internamente dall'applicazione e quello esposto attraverso l'API. Un oggetto memorizzato nel database può contenere, ad esempio, proprietà quali \texttt{id}, \texttt{name}, \texttt{email}, \texttt{role} e \texttt{internalStatus}. Non tutte queste proprietà hanno però la stessa finalità né devono necessariamente essere accessibili allo stesso insieme di utenti.
 
-Un'implementazione che serializza automaticamente l'intero oggetto può produrre una risposta contenente anche attributi che il client non dovrebbe conoscere. In questo caso il problema non deriva necessariamente da un accesso non autorizzato all'oggetto, ma dal fatto che l'API non applica una politica distinta alle proprietà che lo compongono. L'interfaccia grafica potrebbe nascondere determinati campi, ma ciò non costituisce una misura di sicurezza: il contenuto della risposta HTTP rimane osservabile dal client e può essere analizzato direttamente. 
+Un'implementazione che serializza automaticamente l'intero oggetto può produrre una risposta contenente anche attributi che il client non dovrebbe conoscere. In questo caso il problema non deriva necessariamente da un accesso non autorizzato all'oggetto, ma dal fatto che l'API non applica una politica distinta alle proprietà che lo compongono. L'interfaccia grafica potrebbe nascondere determinati campi, ma ciò non costituisce una misura di sicurezza: il contenuto della risposta HTTP rimane osservabile dal client e può essere analizzato direttamente.
 
 Un secondo meccanismo riguarda le operazioni di scrittura. Framework e librerie possono consentire il \textit{binding} automatico dei parametri ricevuti dal client verso gli attributi di un oggetto applicativo. Se il server accetta un payload come:
 
 \begin{verbatim}
 {
-"name": "Mario",
-"email": "[mario@example.com](mailto:mario@example.com)"
+  "name": "Mario",
+  "email": "mario@example.com"
 }
 \end{verbatim}
 
@@ -451,44 +447,39 @@ un attaccante può provare ad aggiungere proprietà che non erano previste dal n
 
 \begin{verbatim}
 {
-"name": "Mario",
-"email": "[mario@example.com](mailto:mario@example.com)",
-"role": "admin"
+  "name": "Mario",
+  "email": "mario@example.com",
+  "role": "admin"
 }
 \end{verbatim}
 
-Se il campo \texttt{role} viene accettato e aggiornato senza un controllo specifico, l'utente può modificare una proprietà interna che dovrebbe essere gestita esclusivamente dal sistema. Lo stesso principio può riguardare attributi quali \texttt{isAdmin}, \texttt{approved}, \texttt{price} o \texttt{ownerId}, a seconda del modello utilizzato dall'applicazione. 
+Se il campo \texttt{role} viene accettato e aggiornato senza un controllo specifico, l'utente può modificare una proprietà interna che dovrebbe essere gestita esclusivamente dal sistema. Lo stesso principio può riguardare attributi quali \texttt{isAdmin}, \texttt{approved}, \texttt{price} o \texttt{ownerId}, a seconda del modello utilizzato dall'applicazione.
 
 Il problema può quindi manifestarsi in due direzioni differenti: lettura non autorizzata di proprietà e modifica non autorizzata di proprietà. Nel primo caso l'attaccante osserva informazioni che non dovrebbe ricevere; nel secondo riesce a influenzare direttamente lo stato dell'applicazione attraverso attributi che non dovrebbero essere controllabili dal client.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 L'impatto di una vulnerabilità BOPLA dipende principalmente dal tipo di proprietà coinvolta e dalle funzioni che la utilizzano. La semplice esposizione di un attributo può comportare una violazione della riservatezza, mentre la possibilità di modificarlo può compromettere l'integrità dei dati o il funzionamento dell'applicazione.
 
-Nel caso di proprietà contenenti informazioni personali, finanziarie o relative all'organizzazione interna del sistema, l'esposizione può determinare una divulgazione di dati a soggetti non autorizzati. La possibilità di modificare determinate proprietà può invece portare alla perdita o alla corruzione dei dati. In situazioni più critiche, una proprietà utilizzata nei meccanismi di autorizzazione o nella gestione dello stato dell'account può essere sfruttata per ottenere un'escalation dei privilegi o contribuire alla compromissione dell'account.
-
-
-\textbf{La gravità della vulnerabilità dipende quindi dal significato assunto dalla proprietà all'interno dell'applicazione
-}
+Nel caso di proprietà contenenti informazioni personali, finanziarie o relative all'organizzazione interna del sistema, l'esposizione può determinare una divulgazione di dati a soggetti non autorizzati. La possibilità di modificare determinate proprietà può invece portare alla perdita o alla corruzione dei dati. In situazioni più critiche, una proprietà utilizzata nei meccanismi di autorizzazione o nella gestione dello stato dell'account può essere sfruttata per ottenere un'escalation dei privilegi o contribuire alla compromissione dell'account. La gravità della vulnerabilità dipende quindi dal significato che quella proprietà assume all'interno dell'applicazione, più che dal meccanismo che ne consente l'accesso.
 
 \paragraph{Mitigazione}
 
 La mitigazione di BOPLA richiede che l'autorizzazione venga applicata non soltanto all'endpoint o all'oggetto, ma anche alle proprietà che possono essere restituite o modificate. La prima misura consiste quindi nel definire esplicitamente quali attributi ogni endpoint può esporre e quali possono essere accettati in input.
 
-Per le risposte, è preferibile evitare l'utilizzo di serializzazione quando questi comportano la restituzione automatica dell'intero oggetto. È invece opportuno selezionare esplicitamente le proprietà necessarie alla specifica operazione.
+Per le risposte è preferibile evitare i meccanismi di serializzazione automatica, che restituiscono l'oggetto così com'è rappresentato internamente, e selezionare invece le proprietà necessarie alla singola operazione.
 
-Per le operazioni di scrittura è necessario limitare esplicitamente gli attributi modificabili dal client. Una tecnica comune consiste nell'utilizzare una \textit{whitelist} delle proprietà ammesse, evitando che il payload venga associato automaticamente a tutti gli attributi dell'oggetto. 
-
+Per le operazioni di scrittura è necessario limitare esplicitamente gli attributi modificabili dal client. Una tecnica comune consiste nell'utilizzare una \textit{whitelist} delle proprietà ammesse, evitando che il payload venga associato automaticamente a tutti gli attributi dell'oggetto.
 
 \paragraph{Rilevabilità}
+
 La rilevazione di BOPLA si articola in due verifiche distinte, corrispondenti alle due direzioni in cui una proprietà può attraversare il confine fra client e server.
 
 La prima riguarda le proprietà esposte in risposta a una richiesta legittima, e si riduce al confronto fra gli attributi effettivamente restituiti e quelli previsti per il ruolo o il contesto dell'utente. È la verifica più diretta, perché l'evidenza è contenuta nella risposta stessa.
 
 La seconda riguarda le proprietà accettate in ingresso, ed è più onerosa perché il server non le dichiara. Individuarle richiede di modificare il payload delle richieste, eventualmente ricorrendo a tecniche di fuzzing per scoprire attributi non documentati, e di verificare poi se il server ne recepisca effettivamente il valore.
 
-Le due verifiche non sono sostituibili l'una con l'altra: un'API può accettare in input una proprietà sensibile che non restituisce mai, oppure restituire dati riservati senza consentirne la modifica. Un'analisi che si limitasse a una sola direzione lascerebbe scoperto metà del problema.
-
+Le due verifiche non sono sostituibili l'una con l'altra: un'API può accettare in input una proprietà sensibile che non restituisce mai, oppure restituire dati riservati senza consentirne la modifica. Un'analisi che si limitasse a una sola direzione lascerebbe scoperta metà del problema.
 
 \subsection{API4:2023 -- Unrestricted Resource Consumption}
 \label{subsubsec:api4}
@@ -560,13 +551,13 @@ aggiunge la causa che l'edizione 2023 porta in primo piano, l'assenza di soglie
 di spesa verso i fornitori esterni, dove la risorsa non è computazionale ma
 economica~\cite{owasp2023api4}.
 
-Che limiti tanto semplici manchino dipende da due fatti: possono risiedere nel
-framework, nel proxy, nel gateway o presso il fornitore cloud, e quando ogni
-livello presume che se ne occupi un altro non se ne occupa nessuno; e il difetto
-non produce errori, sicché un endpoint senza limiti supera ogni test
-funzionale.
+Che limiti tanto semplici manchino dipende da due fatti. Il primo è che possono
+risiedere nel framework, nel proxy, nel gateway o presso il fornitore cloud, e
+quando ogni livello presume che se ne occupi un altro non se ne occupa nessuno.
+Il secondo è che la loro assenza non produce errori: un endpoint privo di limiti
+supera ogni test funzionale.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 L'esito immediato è il denial of service per esaurimento, che CWE-770 enumera
 come conseguenza principale sulla disponibilità~\cite{cwe770}. Il punto di
@@ -577,15 +568,17 @@ riconosce come anomali.
 
 L'edizione 2023 dà pari dignità alla dimensione economica, e due dei tre scenari
 non producono alcuna interruzione: un recupero password che invia SMS a 0,05
-dollari l'uno, invocato decine di migliaia di volte, e un file che supera la
-soglia oltre la quale la cache non opera, con la fattura mensile che passa da
-circa 13 a circa 8\,000 dollari~\cite{owasp2023api4}.
+dollari l'uno, invocato decine di migliaia di volte, e un file di dimensione
+superiore alla soglia oltre la quale la cache smette di intervenire, con la
+fattura mensile che passa da circa 13 a circa 8\,000
+dollari~\cite{owasp2023api4}.
 
 \paragraph{Mitigazione}
 
-Nessun livello basta da solo. I limiti fisici su memoria, CPU e processi OWASP
-li affida a piattaforme che li rendono dichiarativi~\cite{owasp2023api4}: difesa
-di ultima istanza, che non impedisce l'abuso ma lo confina.
+Nessun livello basta da solo. I limiti fisici su memoria, CPU e processi sono
+affidati da OWASP alle piattaforme che li rendono
+dichiarativi~\cite{owasp2023api4}: una difesa di ultima istanza, che non
+impedisce l'abuso ma lo confina.
 
 All'ingresso dei dati la regola è dichiarare una dimensione massima per ogni
 parametro e payload, soprattutto per quelli che governano il numero di record
@@ -632,21 +625,22 @@ il ReDoS~\cite{staicu2018redos} e il costo delle query
 GraphQL~\cite{cha2020graphql}; manca invece, per quanto è stato possibile
 verificare, un corpo di lavori sottoposti a revisione paritaria sul rilevamento
 statico dell'assenza di rate limiting, timeout o limiti di paginazione nel
-codice di API REST. Ciò che esiste proviene dalla pratica degli strumenti ---
-regole sul codice, manifest infrastrutturali, contratto OpenAPI --- e solo le
-ultime due direzioni trovano appoggio in una fonte primaria~\cite{cwe770}.
+codice di API REST. Ciò che esiste proviene dalla pratica degli strumenti:
+regole sul codice, manifest infrastrutturali e vincoli dichiarati nel contratto
+OpenAPI.
 
-Se ne ricava una conclusione sulla natura del segnale statico che distingue API4
-dalle categorie precedenti. In una BOLA l'assenza del controllo nel gestore
-coincide con la vulnerabilità, perché il controllo non può risiedere altrove.
-Qui la coincidenza si spezza: l'analisi del codice non può affermare che il
-difetto esista, dato che il limite potrebbe stare nel gateway o nella
+Se ne ricava una conclusione sulla natura del segnale statico che distingue
+API4 dalle categorie precedenti. In una BOLA l'assenza del controllo nel
+gestore coincide con la vulnerabilità, perché il controllo non può risiedere
+altrove. Qui la coincidenza si spezza: l'analisi del codice non può affermare
+che il difetto esista, dato che il limite potrebbe stare nel gateway o nella
 piattaforma di orchestrazione, ma solo che a un dato livello non c'è. È
-un'assenza locale, che diventa finding quando un secondo segnale la conferma; e
-lo scenario di API9 mostra il caso simmetrico, in cui il limite presente a un
-livello non copre tutti gli host esposti~\cite{owasp2023api9}. La correlazione
-fra segnali eterogenei non è dunque un raffinamento dell'analisi, ma la
-condizione perché un giudizio sia possibile.
+un'assenza locale, che diventa una segnalazione fondata solo quando un secondo
+segnale la conferma; e lo scenario di API9 mostra il caso simmetrico, in cui il
+limite presente a un livello non copre tutti gli host
+esposti~\cite{owasp2023api9}. La correlazione fra segnali eterogenei non è
+dunque un raffinamento dell'analisi, ma la condizione perché un giudizio sia
+possibile.
 
 \subsection{API5:2023 -- Broken Function Level Authorization}
 \label{subsubsec:api5}
@@ -664,19 +658,19 @@ La differenza rispetto ad API1:2023 è di livello, ed è l'unica che OWASP fissi
 in modo prescrittivo: nella BOLA l'accesso all'endpoint è previsto e la
 violazione avviene manipolando l'identificatore dell'oggetto, mentre se
 l'attaccante raggiunge una funzione cui non dovrebbe accedere il caso ricade
-sotto la BFLA~\cite{owasp2023api1}. Davanti a un finding non conta dunque quali
-dati siano esposti, ma la legittimità della chiamata: chi legge il profilo altrui
-sostituendo un identificatore commette una BOLA, chi invoca l'esportazione
-completa degli utenti commette una BFLA. È la forma che la letteratura chiama
-escalation verticale~\cite{monshizadeh2014mace}.
+sotto la BFLA~\cite{owasp2023api1}. Di fronte a una segnalazione non conta
+dunque quali dati siano esposti, ma la legittimità della chiamata: chi legge il
+profilo altrui sostituendo un identificatore commette una BOLA, chi invoca
+l'esportazione completa degli utenti commette una BFLA. È la forma che la
+letteratura chiama escalation verticale~\cite{monshizadeh2014mace}.
 
-Il riferimento tassonomico è CWE-285 \emph{Improper Authorization}, di cui MITRE
-sconsiglia l'uso per mappare vulnerabilità reali, trattandosi di una classe di
-livello elevato, rimandando alle figlie CWE-862 quando il controllo è assente e
-CWE-863 quando esiste ma decide male~\cite{cwe285}. La voce insiste inoltre
-sulla distinzione fra autorizzazione e autenticazione, che vale anche qui: un'API
-può autenticare in modo impeccabile e restare priva di autorizzazione
-funzionale. Le relazioni con le altre categorie sono nella
+Il riferimento tassonomico è CWE-285 \emph{Improper Authorization}, che MITRE
+sconsiglia però di usare per mappare vulnerabilità reali, trattandosi di una
+classe troppo generica: rimanda piuttosto alle voci figlie, CWE-862 quando il
+controllo è assente e CWE-863 quando esiste ma decide male~\cite{cwe285}. La
+voce insiste inoltre sulla distinzione fra autorizzazione e autenticazione, che
+vale anche qui: un'API può autenticare in modo impeccabile e restare priva di
+autorizzazione funzionale. Le relazioni con le altre categorie sono nella
 Tabella~\ref{tab:api5_relazioni}.
 
 \begin{table}[H]
@@ -720,9 +714,9 @@ ruolo e indirizzo di posta; l'attaccante ne cambia metodo ed endpoint in
 console priva di controllo di funzione, e si invia un invito con ruolo
 \texttt{admin}~\cite{owasp2023api5}. Il controllo, in un certo senso, esisteva:
 stava nella console, nel fatto che solo un amministratore vedesse quel pulsante.
-Il secondo scenario è più spiccio: \texttt{GET /api/admin/v1/users/all}
-restituisce i dettagli di tutti gli utenti a chi tira a
-indovinare~\cite{owasp2023api5}.
+Il secondo scenario è più diretto: \texttt{GET /api/admin/v1/users/all}
+restituisce i dettagli di tutti gli utenti a chiunque ne indovini il
+percorso~\cite{owasp2023api5}.
 
 Tre osservazioni spostano infine il difetto fuori dal singolo gestore. Il
 percorso non dice se un endpoint sia amministrativo, perché le funzioni
@@ -732,7 +726,7 @@ inerzia riaprono l'operazione da una via non presidiata~\cite{owasp2023api8}; le
 versioni obsolete continuano a servire il gestore precedente al
 controllo~\cite{owasp2023api9}.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 OWASP colloca l'impatto tecnico nella fascia grave: l'attaccante accede a
 funzionalità non autorizzate, le funzioni amministrative sono il bersaglio
@@ -762,9 +756,9 @@ se il default è il diniego, una dimenticanza produce un \texttt{403} che il
 primo test funzionale rivela; se il default è il permesso, la stessa
 dimenticanza non produce alcun segnale.
 
-Segue la revisione degli endpoint, condotta tenendo presenti la logica di
-business e la gerarchia dei gruppi~\cite{owasp2023api5}: nessuna scorciatoia
-rispetto alla conoscenza del dominio.
+Segue la revisione degli endpoint, da condurre tenendo presenti la logica di
+business e la gerarchia dei gruppi~\cite{owasp2023api5}: un lavoro che non
+ammette scorciatoie rispetto alla conoscenza del dominio.
 
 La terza raccomandazione è l'unica con una forma sintattica: i controller
 amministrativi devono ereditare da un controller astratto che applichi il
@@ -783,7 +777,8 @@ di raggiungere una funzione è prevedibile~\cite{owasp2023api5}. Il giudizio
 riguarda però metà del problema: formulare la chiamata candidata è facile,
 stabilire se la risposta fosse dovuta non lo è, perché un \texttt{200 OK}
 attesta che l'operazione è stata eseguita, non che fosse legittimo eseguirla.
-Nemmeno il percorso aiuta, come avverte la fonte primaria~\cite{owasp2023api5}.
+Nemmeno il percorso aiuta, come avverte lo stesso documento
+OWASP~\cite{owasp2023api5}.
 
 Il contributo della letteratura non è ispezionare il codice ma ricostruire la
 specifica mancante. Sun, Xu e Su la ricavano dalla navigazione, dalle pagine
@@ -793,8 +788,8 @@ coerente e da quella coerenza si inferisce quali condizioni siano controlli di
 sicurezza~\cite{son2011rolecast}; MACE dal contesto di
 autorizzazione~\cite{monshizadeh2014mace}. Atlidakis, Godefroid e Polishchuk
 rinunciano a inferire e scrivono regole di sicurezza per le API REST,
-verificandole con fuzzing stateful~\cite{atlidakis2020checking}; il lavoro più
-recente affronta lo stesso problema in black box~\cite{liu2025bacscan}.
+verificandole con fuzzing stateful~\cite{atlidakis2020checking}; un lavoro
+recente affronta lo stesso problema in modalità black box~\cite{liu2025bacscan}.
 
 \subsection{API6:2023 -- Unrestricted Access to Sensitive Business Flows}
 \label{subsubsec:api6}
@@ -817,6 +812,7 @@ identico endpoint è sicuro in un contesto e vulnerabile in un altro, e a
 decidere è il modello di business che gli sta dietro.
 
 \paragraph{Cause e meccanismi tecnici tipici}
+
 La causa che OWASP indica non è tecnica: manca una visione d'insieme dell'API
 che ne supporti i requisiti di business~\cite{owasp2023api6}. Il difetto
 nasce nel raccordo fra chi progetta l'endpoint e chi conosce il valore
@@ -832,21 +828,24 @@ diverse~\cite{owasp2023api6}. La distribuzione geografica non è un dettaglio
 di colore: è la contromisura dell'attaccante contro il limite per indirizzo, e
 spiega perché il rate limiting nella sua forma più semplice non basti.
 
-\paragraph{Impatto essenziale}
-Su questo punto il documento è internamente incoerente. La riga dei rating
-classifica l'impatto tecnico come moderato, mentre la descrizione degli impatti
-afferma che un impatto tecnico in generale non è atteso e porta come esempi di
-danno l'impossibilità per gli utenti legittimi di acquistare un prodotto e
-l'inflazione nell'economia interna di un videogioco~\cite{owasp2023api6}. È
-la seconda formulazione a corrispondere agli scenari descritti, che non
-producono né violazione di riservatezza né alterazione di dati né
-indisponibilità del servizio. Ciò che cambia sta fuori dal sistema e si misura
-in scorte sottratte, ricavi persi o costi di acquisizione pagati per utenti
-inesistenti. Ne segue un effetto collaterale rilevante: un incidente che non
-produce indisponibilità né perdita di dati non attiva le procedure di risposta
-e viene percepito come problema commerciale anziché di sicurezza.
+\paragraph{Impatto}
+
+Su questo punto il documento OWASP è internamente incoerente: la tabella dei
+punteggi classifica l'impatto tecnico come moderato, mentre la descrizione
+degli impatti afferma che un impatto tecnico in generale non è atteso e porta
+come esempi di danno l'impossibilità per gli utenti legittimi di acquistare un
+prodotto e l'inflazione nell'economia interna di un
+videogioco~\cite{owasp2023api6}. È la seconda formulazione a corrispondere agli
+scenari descritti, che non producono né violazione di riservatezza né
+alterazione di dati né indisponibilità del servizio. Ciò che cambia sta fuori
+dal sistema e si misura in scorte sottratte, ricavi persi o costi di
+acquisizione pagati per utenti inesistenti. Ne segue un effetto collaterale
+rilevante: un incidente che non produce indisponibilità né perdita di dati non
+attiva le procedure di risposta e viene percepito come problema commerciale
+anziché di sicurezza.
 
 \paragraph{Mitigazione}
+
 OWASP propone una struttura a due livelli in cui l'ordine conta: prima si
 identificano, sul piano del business, i flussi che un uso eccessivo può
 danneggiare, e solo dopo si sceglie il meccanismo tecnico adeguato al rischio
@@ -860,7 +859,8 @@ automatizzate, non per impedirle~\cite{owasp2023api6}. La logica che li
 accomuna è economica: nessuno produce una decisione binaria affidabile, tutti
 spostano il costo dell'attacco fino a superare il profitto atteso.
 
-\paragraph{Rilevabilità --- stato dell'arte in letteratura}
+\paragraph{Rilevabilità}
+
 Il rilevamento automatico si scontra qui con l'assenza di un oracolo: nessun
 artefatto analizzabile, che sia codice, contratto o configurazione, risponde
 alla domanda se un dato flusso in una data azienda vada protetto, e la mancanza
@@ -888,7 +888,7 @@ VPN~\cite{owasp2023api7}. Il server diventa un intermediario involontario, che
 agisce per conto di chi lo interroga ma con i propri privilegi di rete. Non
 viola quindi un controllo di accesso applicativo: ne annulla uno di rete.
 
-MITRE classifica CWE-918 come debolezza \emph{resultant}, legata cioè alla
+MITRE classifica CWE-918 come debolezza \emph{resultant}, che emerge cioè in
 presenza di altre~\cite{cwe918}: l'SSRF è raramente il fine dell'attacco, quasi
 sempre il mezzo. A renderla attuale è il contesto in cui le API operano. È più
 comune, perché webhook, recupero di file da URL e anteprime dei collegamenti
@@ -942,7 +942,7 @@ male. Un'analisi su oltre 27.000 applicazioni PHP mostra però che la
 causa più diffusa non è una difesa mal costruita, ma l'assenza di qualunque
 difesa~\cite{wessels2024ssrf}.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 OWASP elenca come esiti l'enumerazione dei servizi interni per scansione di
 porte, la divulgazione di informazioni, l'aggiramento di firewall e, in alcuni
@@ -981,9 +981,10 @@ Va infine registrata un'ammissione che nessun'altra categoria contiene: il
 rischio SSRF non può sempre essere eliminato del tutto~\cite{owasp2023api7},
 perché funzionalità e vulnerabilità coincidono. Un servizio che offre anteprime
 di collegamenti arbitrari deve per definizione contattare indirizzi scelti
-dall'utente: se ne può confinare l'effetto, non impedirli.
+dall'utente: se ne può confinare l'effetto, non eliminare il comportamento che
+lo rende possibile.
 
-\paragraph{Rilevabilità: stato dell'arte in letteratura}
+\paragraph{Rilevabilità}
 
 Per la prima volta nel capitolo le due fonti primarie concordano, e a favore
 dell'analisi statica. OWASP giudica facile la rilevabilità, con la sola
@@ -1010,7 +1011,7 @@ Resta la verifica dinamica, sulla quale ricade la distinzione fra le due forme.
 Con ritorno la conferma è immediata: si punta l'endpoint verso un indirizzo
 controllato e si osserva se la richiesta arriva; per la forma cieca serve un
 canale laterale, tipicamente una risoluzione DNS. Nella pipeline adottata nel
-seguito la mancata conferma non declassa quindi il finding statico, perché
+seguito la mancata conferma non declassa quindi la segnalazione statica, perché
 indica soltanto che il canale di ritorno non è stato osservato.
 
 \subsection{API8:2023 -- Security Misconfiguration}
@@ -1040,10 +1041,10 @@ diventa perché produce un difetto di controllo di accesso.
 Le metriche collocano API8 fra le voci più gravi: sfruttabilità facile,
 prevalenza diffusa, rilevabilità facile, impatto tecnico
 severo~\cite{owasp2023api8}. Gli attaccanti cercano difetti non corretti e
-servizi con impostazioni predefinite insicure, in larga parte conoscenza
-pubblica~\cite{owasp2023api8}: non serve comprendere l'applicazione, serve
-sapere cosa cercare. Le sovrapposizioni con le categorie contigue sono nella
-Tabella~\ref{tab:api8_relazioni}.
+servizi con impostazioni predefinite insicure, informazioni in larga parte di
+pubblico dominio~\cite{owasp2023api8}: non serve comprendere l'applicazione,
+serve sapere che cosa cercare. Le sovrapposizioni con le categorie contigue
+sono nella Tabella~\ref{tab:api8_relazioni}.
 
 \begin{table}[H]
 \centering
@@ -1087,7 +1088,7 @@ diffusa, che l'elenco mette al secondo posto: patch mancanti e sistemi non
 aggiornati~\cite{owasp2023api8}, difetto di manutenzione più che di
 configurazione.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 Le configurazioni insicure, scrive OWASP, non solo espongono dati sensibili
 degli utenti, ma anche dettagli del sistema che possono condurre alla
@@ -1122,7 +1123,7 @@ traffico interno sarebbe fidato; e lo schema dichiarato per le risposte di error
 non è documentazione, ma un vincolo che a runtime impedisce la fuga di
 informazioni diagnostiche.
 
-\paragraph{Rilevabilità: stato dell'arte in letteratura}
+\paragraph{Rilevabilità}
 
 OWASP classifica la rilevabilità come facile con una motivazione che, per la
 prima volta nel capitolo, rinvia agli strumenti: ne esistono di automatici per
@@ -1219,7 +1220,7 @@ informazioni private di 50.000.000 di contatti, per assenza di restrizioni e
 monitoraggio sui flussi~\cite{owasp2023api9}. Qui non c'è alcun host
 dimenticato: manca la conoscenza di dove i dati finiscano.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 OWASP classifica l'impatto tecnico come moderato, osservando che gli attaccanti
 possono ottenere accesso non autorizzato a dati sensibili o compromettere i
@@ -1255,7 +1256,7 @@ scenario mostra disatteso; non usare dati di produzione fuori dalla produzione; 
 decidere, quando una versione nuova porta miglioramenti di sicurezza, se
 riportarli sulle precedenti o imporre la migrazione~\cite{owasp2023api9}.
 
-\paragraph{Rilevabilità: stato dell'arte in letteratura}
+\paragraph{Rilevabilità}
 
 OWASP giudica media la rilevabilità e non indica un metodo, limitandosi a
 osservare che una documentazione obsoleta rende più difficile individuare e
@@ -1276,16 +1277,15 @@ primo scenario è precisamente il caso in cui codice e contratto coincidono e il
 difetto sta nella topologia di rete, il che richiede ricognizione
 infrastrutturale e non analisi del software.
 
-La letteratura sottoposta a revisione paritaria è qui scarsa, e conviene dirlo
-anziché colmare il vuoto con riferimenti impropri: non esiste un insieme di
-verità di riferimento contro cui misurare un rilevatore di API ombra, perché
-costruirlo richiederebbe l'inventario completo di organizzazioni reali, cioè
-l'informazione che per ipotesi manca. Per API9 non esiste dunque un rilevamento
-nel senso in cui esiste per le altre categorie, cioè l'individuazione di un
-difetto dentro un artefatto: esiste la misura di una divergenza fra
-rappresentazioni indipendenti dello stesso sistema --- contratto, codice,
-inventario, traffico --- il cui valore non sta nel produrre un verdetto, ma nel
-restituire la visibilità che il difetto sottrae.
+La letteratura sottoposta a revisione paritaria è qui scarsa: non esiste un
+insieme di verità di riferimento contro cui misurare un rilevatore di API
+ombra, perché costruirlo richiederebbe l'inventario completo di organizzazioni
+reali, cioè proprio l'informazione che per ipotesi manca. Per API9 non esiste
+dunque un rilevamento nel senso in cui esiste per le altre categorie, cioè
+l'individuazione di un difetto dentro un artefatto: esiste la misura di una
+divergenza fra rappresentazioni indipendenti dello stesso sistema ---
+contratto, codice, inventario, traffico --- il cui valore non sta nel produrre
+un verdetto, ma nel restituire la visibilità che il difetto sottrae.
 
 \subsection{API10:2023 -- Unsafe Consumption of APIs}
 \label{subsubsec:api10}
@@ -1305,9 +1305,9 @@ si fidano dei dati ricevuti da terze parti più di quanto si fidino dell'input
 dell'utente, e adottano standard più deboli quanto a trasporto, autenticazione e
 validazione~\cite{owasp2023api10}. Le cinque condizioni di vulnerabilità sono
 canale non cifrato, dati non validati, redirezioni seguite ciecamente, risorse
-non limitate e timeout assenti~\cite{owasp2023api10}; su di esse è stata
-sollevata in revisione un'obiezione fondata, e non recepita, secondo cui almeno
-tre apparterrebbero ad altre categorie~\cite{owasp2023apiissue80}.
+non limitate e timeout assenti~\cite{owasp2023api10}; nel repository
+pubblico del progetto è stata sollevata, senza esito, l'obiezione che almeno tre
+di esse ricadano in altre categorie~\cite{owasp2023apiissue80}.
 
 I riferimenti esterni sono generici --- CWE-20, CWE-200 e CWE-319 --- ma la
 genericità riflette una proprietà reale: l'impatto varia a seconda di ciò che
@@ -1368,7 +1368,7 @@ terzo può dunque veicolare dati malevoli perché compromesso, perché usato com
 deposito, o perché trasmette contenuti altrui: solo il primo caso richiede
 un'intrusione.
 
-\paragraph{Impatto essenziale}
+\paragraph{Impatto}
 
 L'impatto varia a seconda di ciò che l'API bersaglio fa con i dati prelevati:
 esposizione di informazioni sensibili, molti tipi di iniezione o denial of
@@ -1384,49 +1384,43 @@ fornitore raggiunge tutte le applicazioni che lo integrano.
 
 \paragraph{Mitigazione}
 
-Le contromisure che OWASP elenca sono quattro~\cite{owasp2023api10}: esaminare
-la postura di sicurezza dei fornitori al momento della scelta; imporre un canale
-di trasporto sicuro; validare e sanificare sempre i dati ricevuti dalle API
-integrate; mantenere una lista delle posizioni verso cui esse possono redirigere.
-La terza è il nucleo della categoria, formulata in termini deliberatamente
-identici a quelli riservati all'input dell'utente: la contromisura consiste
-appunto nell'abolire la distinzione fra le due sorgenti.
+OWASP elenca quattro contromisure~\cite{owasp2023api10}: valutare la postura di
+sicurezza dei fornitori al momento della scelta, imporre un canale di trasporto
+sicuro, validare e sanificare i dati ricevuti dalle API integrate, mantenere una
+lista delle posizioni verso cui esse possono redirigere. La terza è il nucleo
+della categoria ed è formulata negli stessi termini riservati all'input
+dell'utente: la contromisura consiste nell'abolire la distinzione fra le due
+sorgenti. Due delle cinque condizioni --- timeout e limiti sulle risposte ---
+restano però prive di contromisura corrispondente. Quando il contratto del
+fornitore è noto, la risposta può essere validata rispetto a uno schema: il
+controllo non intercetta un payload conforme, ma trasforma la fiducia implicita
+in un vincolo dichiarato.
 
-Resta un'asimmetria interna al documento, perché due delle cinque condizioni ---
-timeout e limiti sulle risposte --- non trovano contromisura corrispondente. Se
-il contratto del fornitore è noto, poi, la risposta può essere validata rispetto
-a uno schema: ciò non intercetta un payload che lo rispetti, ma trasforma la
-fiducia implicita in un vincolo dichiarato.
+\paragraph{Rilevabilità}
 
-\paragraph{Rilevabilità: stato dell'arte in letteratura}
+OWASP classifica la rilevabilità come media senza indicare come procedere,
+limitandosi a osservare che l'attaccante deve identificare i servizi con cui il
+bersaglio si integra ed eventualmente comprometterli~\cite{owasp2023api10}.
 
-OWASP classifica la rilevabilità come media e non indica come procedere: la
-descrizione si limita a osservare che gli attaccanti devono identificare i
-servizi con cui il bersaglio si integra ed eventualmente
-comprometterli~\cite{owasp2023api10}.
-
-Sul piano statico il problema si formula con precisione. L'analisi della
-contaminazione, su cui si fondano il rilevamento delle iniezioni e dell'SSRF,
-richiede un insieme di sorgenti e uno di destinazioni, e per convenzione
-consolidata le sorgenti sono i punti in cui entra l'input dell'utente. Per API10
-la sorgente è un'altra: il valore restituito da una chiamata HTTP in uscita. Un
-motore configurato secondo quella convenzione non lo considera contaminato, e un
-flusso dalla risposta di un fornitore a una query SQL non produce segnalazione,
-benché sia identico a uno che partisse da un parametro di richiesta. Non serve
-una tecnica nuova, ma una diversa configurazione di una tecnica nota.
-
-Due dei cinque difetti si prestano invece a un rilevamento diretto, perché basta
-osservare la configurazione locale della chiamata: la redirezione seguita per
-impostazione predefinita e il timeout mancante. In entrambi il segnale non è la
-presenza di un'opzione errata, ma l'assenza di un'opzione che disattivi il
+Sul piano statico il problema è di configurazione più che di tecnica. L'analisi
+della contaminazione richiede un insieme di sorgenti e uno di destinazioni, e per
+convenzione consolidata le sorgenti sono i punti in cui entra l'input
+dell'utente; per API10 la sorgente è invece il valore restituito da una chiamata
+HTTP in uscita. Un motore configurato secondo quella convenzione non lo considera
+contaminato, e un flusso dalla risposta di un fornitore a una query SQL non
+produce segnalazione, benché sia identico a uno che partisse da un parametro di
+richiesta. Due dei cinque difetti si prestano invece a un rilevamento diretto,
+perché basta osservare la configurazione locale della chiamata: la redirezione
+seguita per impostazione predefinita e il timeout mancante, dove il segnale non è
+la presenza di un'opzione errata ma l'assenza di un'opzione che disattivi il
 predefinito insicuro.
 
 Sul piano dinamico la verifica è ostacolata da un problema di controllo: provare
 che un'applicazione accetti dati malevoli richiede che il fornitore li
-restituisca, possibile solo se il servizio consente di immettervi contenuti o
-sostituendolo con un doppio in collaudo, che però verifica l'applicazione e non
-l'integrazione reale. La letteratura dedicata alla categoria è infine pressoché
-assente, per quanto è stato possibile verificare: i lavori sulla catena di
-fornitura riguardano le dipendenze da pacchetti, quelli sulla contaminazione
-assumono la convenzione appena discussa, e il caso dell'API che si fida di
-un'altra API si colloca fra i due~\cite{owasp2023apireleasenotes}.
+restituisca, il che è possibile solo se il servizio consente di immettervi
+contenuti oppure sostituendolo con un doppio in collaudo, che però verifica
+l'applicazione e non l'integrazione reale. La letteratura dedicata alla categoria
+è pressoché assente, per quanto è stato possibile verificare: i lavori sulla
+catena di fornitura riguardano le dipendenze da pacchetti, quelli sulla
+contaminazione assumono la convenzione appena discussa, e il caso dell'API che si
+fida di un'altra API si colloca fra i due.
