@@ -747,88 +747,55 @@ delle utenze.
 
 La prescrizione centrale riguarda il valore predefinito: negare ogni accesso e
 richiedere concessioni esplicite ai ruoli per ogni
-funzione~\cite{owasp2023api5}. L'inversione conta più di quanto sembri, perché
-sposta il costo dell'errore. Col diniego predefinito una dimenticanza produce un
-\texttt{403}, che emerge al primo test funzionale; col permesso predefinito
-produce silenzio, e il silenzio non è un sintomo che qualcuno vada a cercare.
+funzione~\cite{owasp2023api5}. Il vantaggio sta in come si manifesta l'errore.
+Se il default è il diniego, una dimenticanza produce un \texttt{403} e il primo
+test funzionale la rivela; se il default è il permesso, la stessa dimenticanza
+non produce alcun segnale.
 
-Segue la revisione degli endpoint condotta tenendo presenti la logica di
+Segue la revisione degli endpoint, condotta tenendo presenti la logica di
 business e la gerarchia dei gruppi~\cite{owasp2023api5}: nessuna scorciatoia
 rispetto alla conoscenza del dominio, coerentemente col fatto che il percorso
 non basta a riconoscere una funzione riservata.
 
-La terza raccomandazione è l'unica con una forma sintattica, ed è per questo la
-più utile: i controller amministrativi devono ereditare da un controller
-astratto che applichi il controllo in base a ruolo o gruppo, e le funzioni
-amministrative ospitate in un controller ordinario devono applicarlo in
-proprio~\cite{owasp2023api5}. La misura non aggiunge verifiche, le riposiziona.
-Il controllo diventa una proprietà della gerarchia delle classi, e ometterlo
-richiede l'atto deliberato di collocare un gestore fuori da quella gerarchia:
-una discontinuità che si vede in revisione e che uno strumento automatico può
-cercare senza conoscere le intenzioni di chi ha scritto il codice.
+La terza raccomandazione è l'unica con una forma sintattica: i controller
+amministrativi devono ereditare da un controller astratto che applichi il
+controllo in base a ruolo o gruppo, e le funzioni amministrative ospitate in un
+controller ordinario devono applicarlo in proprio~\cite{owasp2023api5}. La
+misura non aggiunge verifiche, le riposiziona. Il controllo diventa una
+proprietà della gerarchia delle classi, e ometterlo richiede l'atto deliberato
+di collocare un gestore fuori da quella gerarchia: una discontinuità visibile in
+revisione e cercabile da uno strumento automatico.
 
 Nessuna delle tre misure risolve la copertura. Il controllo protegge solo la
 superficie servita dal codice che lo contiene, e restano scoperte le versioni
 deprecate~\cite{owasp2023api9} e le vie alternative lasciate
-attive~\cite{owasp2023api8}. Va notata anche una differenza rispetto ad
-API4:2023, dove delegare l'onere a un gateway è una scelta legittima: qui la
-delega è solo parziale, perché un gateway può negare un prefisso di percorso, ma
-la gerarchia di ruoli, gruppi e sotto-utenti~\cite{owasp2023api5} vive nel
-modello di dominio, e la decisione che vi si fonda non si prende altrove.
+attive~\cite{owasp2023api8}.
 
-\paragraph{Rilevabilità: stato dell'arte in letteratura}
+\paragraph{Rilevabilità}
 
-OWASP giudica facile la rilevabilità, per la ragione già vista: le API sono
-strutturate e il modo di raggiungere una funzione è
-prevedibile~\cite{owasp2023api5}. Il giudizio riguarda però metà del problema.
-Formulare la chiamata candidata è facile; stabilire se la risposta fosse dovuta
-non lo è, perché un \texttt{200 OK} attesta che l'operazione è stata eseguita,
-non che fosse legittimo eseguirla. Servirebbe sapere che cosa il chiamante
-avrebbe dovuto poter fare, e quel dato non sta nel sistema osservato. Nemmeno il
-percorso aiuta, come la fonte primaria stessa avverte~\cite{owasp2023api5}: una
-regola che segnali i soli gestori sotto \texttt{api/admins} privi di verifica
-manca per costruzione i casi più comuni.
+OWASP giudica facile la rilevabilità: le API sono strutturate e il modo di
+raggiungere una funzione è prevedibile~\cite{owasp2023api5}. Il giudizio
+riguarda però metà del problema. Formulare la chiamata candidata è facile;
+stabilire se la risposta fosse dovuta non lo è, perché un \texttt{200 OK}
+attesta che l'operazione è stata eseguita, non che fosse legittimo eseguirla.
+Nemmeno il percorso aiuta, come avverte la fonte primaria~\cite{owasp2023api5}:
+una regola che segnali i soli gestori sotto \texttt{api/admins} privi di
+verifica manca per costruzione i casi più comuni.
 
-Da qui muove la letteratura, il cui contributo principale non è ispezionare il
-codice ma ricostruire la specifica mancante. Sun, Xu e Su la ricavano dalla
-navigazione, derivando dalle pagine raggiungibili da ciascun ruolo le regole
-implicite dell'applicazione e verificando poi quali percorsi le
-aggirino~\cite{sun2011static}. RoleCast la ricava dalla forma del codice: le
-applicazioni web sono partizionate per ruolo e, dentro una partizione, i
-controlli sono applicati in modo coerente; da quella coerenza il sistema
-inferisce quali condizioni siano controlli di sicurezza --- senza sapere in
-anticipo che aspetto abbiano --- e segnala i percorsi in cui
+Il contributo della letteratura non è ispezionare il codice ma ricostruire la
+specifica mancante. Sun, Xu e Su la ricavano dalla navigazione, derivando dalle
+pagine raggiungibili da ciascun ruolo le regole implicite
+dell'applicazione~\cite{sun2011static}. RoleCast la ricava dalla forma del
+codice: poiché dentro una partizione per ruolo i controlli sono applicati in
+modo coerente, da quella coerenza il sistema inferisce quali condizioni siano
+controlli di sicurezza e segnala i percorsi in cui
 mancano~\cite{son2011rolecast}. MACE ragiona sul contesto di autorizzazione e
 copre entrambe le direzioni dell'escalation su applicazioni di dimensioni
 reali~\cite{monshizadeh2014mace}. Atlidakis, Godefroid e Polishchuk rinunciano a
 inferire e scrivono: definiscono regole di sicurezza per le API REST e le
 verificano con fuzzing stateful guidato dalla descrizione
-dell'interfaccia~\cite{atlidakis2020checking}, che fornisce la grammatica delle
-richieste mentre le regole forniscono l'oracolo assente dal codice. Il lavoro
-più recente affronta lo stesso problema dall'esterno, in black
-box~\cite{liu2025bacscan}.
-
-Il confronto con API4:2023 chiarisce di quale incertezza si tratti, perché le
-due categorie condividono il sintomo --- lo strumento non trova un controllo ---
-ma non la causa. Per API4 l'assenza è locale e forse irrilevante, dato che il
-limite può stare nel gateway: lo strumento non sa dove guardare. Per API5
-l'assenza è autentica, perché la decisione sul ruolo non si prende fuori
-dall'applicazione, ma manca la norma rispetto a cui essa è un difetto: lo
-strumento non sa che cosa cercare.
-
-L'unico oracolo che non richieda di leggere le intenzioni del progettista è
-allora comparativo: la stessa chiamata, due account di privilegio diverso, esiti
-che divergono. Il differenziale sostituisce la norma assente con
-un'osservazione, e mostra anche che cosa la facilità dichiarata da OWASP dia per
-scontato, ossia credenziali su almeno due livelli della gerarchia. La sonda è
-inoltre invasiva per natura, perché le chiamate da provare sono proprio quelle
-che creano, modificano e cancellano. Ne discende la divisione dei compiti
-adottata nel seguito: il segnale statico --- un gestore che espone
-un'operazione riservata senza controllo di ruolo, o che vive fuori dalla
-gerarchia amministrativa raccomandata~\cite{owasp2023api5} --- seleziona i pochi
-endpoint su cui vale la pena esporsi, e il verdetto spetta alla verifica
-differenziale su quel sottoinsieme. Preso da solo, il segnale statico resta
-un'ipotesi: dice che un controllo non c'è, non che sarebbe dovuto esserci.
+dell'interfaccia~\cite{atlidakis2020checking}. Il lavoro più recente affronta lo
+stesso problema in black box~\cite{liu2025bacscan}.
 
 \subsection{API6:2023 -- Unrestricted Access to Sensitive Business Flows}
 \label{subsubsec:api6}
