@@ -671,103 +671,228 @@ API9 & Versioni vecchie ed endpoint deprecati espongono funzioni amministrative 
 
 \paragraph{Cause e meccanismi tecnici tipici}
 
-La radice è un'asimmetria di costo: produrre una richiesta costa al client
-quasi nulla, servirla può costare al server una quantità che cresce con
-parametri che il client controlla. Finché quella funzione non ha un limite
-superiore l'API resta esposta.
+Il controllo funzionale non manca per una svista isolata: manca perché il luogo
+in cui dovrebbe stare non è uno solo. OWASP osserva che l'autorizzazione su una
+funzione o una risorsa è gestita di norma tramite configurazione oppure a
+livello di codice, e che implementare controlli corretti può risultare un
+compito confuso, dato che le applicazioni moderne contengono molti tipi di
+ruoli, gruppi e gerarchie di utenti complesse, con sotto-utenti e utenti
+titolari di più di un ruolo~\cite{owasp2023api5}. La difficoltà non sta nello
+scrivere il singolo confronto, che è banale, ma nel sapere quale confronto
+scrivere e nel ricordarsene in ogni punto in cui una funzione riservata viene
+esposta.
 
-Il caso più semplice è l'assenza di un tetto alla frequenza, che OWASP giudica
-sfruttabile senza competenze particolari~\cite{owasp2023api4}. Più insidiosa è
-la presenza del limite in una sola dimensione: un tetto per indirizzo IP cade
-contro un attacco distribuito, uno per endpoint non intercetta il batching, uno
-per utente autenticato lascia scoperti gli endpoint anonimi di registrazione e
-recupero credenziali. Altrove il difetto sta nei parametri che governano la
-dimensione della risposta, e un endpoint paginato che accetta
-\texttt{limit=100000} trasforma una chiamata in una scansione completa della
-tabella. Il batching moltiplica invece le operazioni dentro una richiesta sola,
-come nello scenario GraphQL in cui centinaia di \texttt{uploadPic} aggregate
-saturano la memoria aggirando sia il rate limiting sia il controllo sulle
-dimensioni~\cite{owasp2023api4}; Cha et al. hanno mostrato che nel caso
-peggiore una query impone al server un lavoro
-esponenziale~\cite{cha2020graphql}. Resta la famiglia che dipende dal costo
-algoritmico di una singola richiesta~\cite{crosby2003algorithmic}, di cui il ReDoS è
-l'istanza più diffusa nei server a thread singolo~\cite{staicu2018redos}.
+A questa dispersione si somma una scelta di progetto che OWASP rende esplicita
+solo dal lato della contromisura, prescrivendo un meccanismo che neghi ogni
+accesso per impostazione predefinita e richieda concessioni esplicite ai
+singoli ruoli per ogni funzione~\cite{owasp2023api5}. La prescrizione descrive
+in negativo ciò che si osserva nella pratica: il valore predefinito è
+permissivo, e una rotta aggiunta a un controller esistente eredita il routing e
+l'autenticazione, non l'autorizzazione. La funzione nasce quindi raggiungibile,
+e resta tale finché qualcuno non decide che non dovrebbe esserlo.
 
-Che limiti tanto semplici manchino dipende da due fatti. Il limite può
-risiedere nel framework, nel proxy, nel gateway o presso il fornitore cloud, e
-quando ogni livello presume che se ne occupi un altro non se ne occupa nessuno.
-Il difetto, poi, non produce errori: un endpoint senza limiti supera ogni test
-funzionale, e l'elasticità dell'infrastruttura converte l'esaurimento in costo,
-facendo comparire il sintomo sulla fattura anziché nel monitoraggio.
+Lo sfruttamento, di conseguenza, non richiede alcuna manipolazione. OWASP
+osserva che è sufficiente inviare chiamate legittime a un endpoint cui non si
+dovrebbe avere accesso, e che questi difetti sono più facili da scoprire nelle
+API perché le API sono più strutturate e il modo di raggiungere certe funzioni
+è più prevedibile, come nella sostituzione del metodo \texttt{GET} con
+\texttt{PUT} o della stringa \texttt{users} con \texttt{admins}
+nell'URL~\cite{owasp2023api5}. È un'osservazione che va letta per intero: la
+stessa regolarità che rende un'API documentabile e prevedibile per un client
+legittimo la rende enumerabile per chiunque altro, e ciò che nel web
+tradizionale richiedeva di indovinare il nome di una pagina qui si riduce a
+percorrere le poche varianti che una convenzione ammette.
+
+Il primo scenario del documento mostra il meccanismo nella sua forma più
+istruttiva. In un'applicazione ad accesso su invito, l'app mobile invoca
+\texttt{GET /api/invites/\{invite\_guid\}} e riceve un JSON con i dettagli
+dell'invito, fra cui il ruolo e l'indirizzo di posta dell'utente. L'attaccante
+duplica la richiesta, ne modifica metodo ed endpoint in \texttt{POST
+/api/invites/new} --- un endpoint che dovrebbe essere invocato soltanto dagli
+amministratori attraverso la console di amministrazione, la quale non
+implementa alcuna autorizzazione a livello di funzione --- e si invia un invito
+con ruolo \texttt{admin}, ottenendo un \texttt{201 Created}~\cite{owasp2023api5}.
+Due dettagli meritano di essere isolati. Il primo è che il controllo, in un
+certo senso, esisteva: risiedeva nella console, cioè nel fatto che soltanto un
+amministratore vedesse quel pulsante. L'applicazione ha usato la
+raggiungibilità dell'interfaccia come sostituto del diritto, e la sostituzione
+regge finché il client è l'unico modo di parlare con l'API. Il secondo è che la
+lettura precedente ha fornito la forma del corpo da inviare, mostrando
+l'esistenza del campo \texttt{role}: l'endpoint di lettura non era vulnerabile,
+ma ha reso banale la costruzione della richiesta di scrittura. Il secondo
+scenario è più diretto e vale come promemoria sul valore dell'oscurità: un
+endpoint \texttt{GET /api/admin/v1/users/all}, che restituisce i dettagli di
+tutti gli utenti e non implementa controlli a livello di funzione, viene
+raggiunto da un attaccante che, avendo appreso la struttura dell'API, tira a
+indovinare~\cite{owasp2023api5}.
+
+Una raccomandazione del documento chiude il quadro delle cause e conviene
+riportarla per esteso, perché smentisce l'euristica più diffusa: non si deve
+presumere che un endpoint sia ordinario o amministrativo sulla sola base del
+percorso, poiché, per quanto gli sviluppatori tendano a esporre la maggior
+parte degli endpoint amministrativi sotto un percorso dedicato come
+\texttt{api/admins}, è molto comune trovarli sotto altri percorsi insieme a
+quelli ordinari, per esempio \texttt{api/users}~\cite{owasp2023api5}. La
+funzione amministrativa, in altri termini, non è tipograficamente
+riconoscibile.
+
+Restano due fattori che spostano il difetto fuori dal codice applicativo. Le
+configurazioni che lasciano abilitati verbi HTTP non necessari riaprono
+un'operazione attraverso un metodo che nessuno ha pensato di
+proteggere~\cite{owasp2023api8}, ed è esattamente la mossa del primo scenario;
+le versioni obsolete e gli host dimenticati continuano a servire il gestore
+precedente al controllo, come mostra lo scenario in cui una vecchia versione
+esposta consente di cambiare la password di qualunque
+utente~\cite{owasp2023api9}. In entrambi i casi il controllo è stato scritto,
+ma non copre tutta la superficie su cui la funzione è raggiungibile.
 
 \paragraph{Impatto essenziale}
 
-L'esito immediato è il denial of service per esaurimento, che CWE-770 enumera
-come conseguenza principale sulla disponibilità~\cite{cwe770}. Il punto di
-rottura è la logica applicativa anziché la banda, e il traffico richiesto può
-essere di ordini di grandezza inferiore: una richiesta ReDoS o un solo batch
-GraphQL bastano, e nessuna difesa perimetrale basata sul volume li riconosce
-come anomali. L'edizione 2023 dà pari dignità alla dimensione economica, e due
-dei tre scenari non producono alcuna interruzione: un flusso di recupero
-password che invia SMS a 0,05 dollari l'uno, invocato decine di migliaia di
-volte, e un file che supera la soglia di cache, con la fattura mensile che
-passa da circa 13 a circa 8\,000 dollari~\cite{owasp2023api4}.
+OWASP colloca l'impatto tecnico nella fascia grave e ne descrive la
+progressione: difetti di questo tipo consentono all'attaccante di accedere a
+funzionalità non autorizzate, le funzioni amministrative sono il bersaglio
+privilegiato, e l'esito può essere la divulgazione, la perdita o la corruzione
+dei dati, fino all'interruzione del servizio~\cite{owasp2023api5}.
+
+L'elemento che distingue questa categoria è che il danno non scala con il
+numero di identificatori ma con la potenza della funzione raggiunta. Una BOLA
+produce un record per richiesta, e ottenere l'intera base dati richiede
+un'enumerazione che lascia nel traffico una traccia riconoscibile; una BFLA su
+un endpoint di esportazione produce lo stesso risultato con una chiamata sola,
+indistinguibile per volume da qualunque altra. La rumorosità dell'attacco è
+inversamente proporzionale al privilegio della funzione che lo consente.
+
+La seconda differenza riguarda la durata. Il primo scenario non si conclude con
+la lettura di un dato: si conclude con un account amministrativo creato
+attraverso il flusso legittimo dell'applicazione~\cite{owasp2023api5}. La
+vulnerabilità, cioè, converte un accesso occasionale in un'identità stabile, e
+da quel momento ogni azione successiva è a tutti gli effetti l'azione di un
+amministratore: autenticata, autorizzata, indistinguibile nei registri. Chiudere
+il difetto in un secondo momento non revoca l'account, e la bonifica smette di
+essere una modifica al codice per diventare una verifica sull'inventario delle
+utenze.
+
+Vale infine osservare che le tre proprietà di sicurezza cadono qui insieme,
+perché le funzioni riservate sono in prevalenza funzioni di scrittura. Lo
+stesso difetto che espone l'esportazione degli utenti espone, sull'endpoint
+accanto, la loro cancellazione, e l'interruzione di servizio che OWASP elenca
+come esito ultimo non nasce dall'esaurimento di una risorsa, come in
+API4:2023, ma da una funzione distruttiva perfettamente funzionante invocata da
+chi non doveva poterla invocare.
 
 \paragraph{Mitigazione}
 
-Nessun livello basta da solo. I limiti fisici su memoria, CPU e processi OWASP
-li affida a piattaforme che li rendono dichiarativi~\cite{owasp2023api4},
-difesa di ultima istanza che confina l'abuso senza impedirlo. All'ingresso dei
-dati la regola è dichiarare una dimensione massima per ogni parametro e
-payload, con attenzione a quelli che governano il numero di record
-restituiti~\cite{owasp2023api4}; il contratto OpenAPI è il luogo naturale per
-esplicitare questi vincoli, che così diventano verificabili da uno strumento.
-Sul piano delle interazioni il rate limiting va tarato per endpoint e
-affiancato da un limite sulle esecuzioni della singola operazione per utente,
-che il conteggio delle chiamate non cattura~\cite{owasp2023api4}, e si
-irrigidisce sugli endpoint di autenticazione~\cite{owasp2023api2}. NIST lo
-colloca nel gateway o nella mesh anziché nel singolo
-servizio~\cite{nist2019sp800204}: scelta corretta purché ogni host esposto stia
-dietro quel gateway, mentre il limite scritto nel codice viaggia con
-l'applicazione in ogni ambiente.
+La prescrizione centrale è una sola e riguarda il valore predefinito: il
+meccanismo di applicazione deve negare ogni accesso per impostazione
+predefinita, richiedendo concessioni esplicite ai ruoli specifici per l'accesso
+a ogni funzione~\cite{owasp2023api5}. L'inversione conta più di quanto la sua
+formulazione lasci intendere, perché sposta il costo dell'errore: con il
+diniego predefinito una dimenticanza produce un \texttt{403} che emerge al
+primo test funzionale, con il permesso predefinito produce silenzio, e il
+silenzio non è un sintomo che qualcuno vada a cercare.
 
-\paragraph{Rilevabilità}
+Su questo impianto il documento innesta una revisione degli endpoint condotta
+tenendo presenti la logica di business dell'applicazione e la gerarchia dei
+gruppi~\cite{owasp2023api5}: nessuna scorciatoia, quindi, rispetto alla
+conoscenza del dominio, ed è coerente con l'osservazione che il percorso non
+dice se una funzione sia amministrativa.
 
-OWASP giudica facile la rilevabilità di API4: richieste con parametri di
-dimensione crescente e osservazione di stato, tempo e lunghezza della risposta
-bastano di norma a far emergere il problema~\cite{owasp2023api4}. CWE-770
-sostiene quasi l'opposto, e cioè che per le allocazioni prive di limite
-l'analisi statica automatica offre un'utilità limitata~\cite{cwe770}. Il
-contrasto è apparente. Le due fonti non parlano dello stesso osservatore: OWASP
-descrive un tester in black box, CWE uno strumento che legge il codice
-sorgente. Il test dinamico interroga il sistema nel suo insieme e riconosce il
-limite ovunque sia stato applicato, ma vede soltanto l'host che interroga; un
-ambiente beta esposto senza gateway resta fuori dal suo campo finché qualcuno
-non lo inventaria. Sul versante statico la letteratura si è concentrata su
-sottoclassi ben delimitate, il ReDoS~\cite{staicu2018redos} e il costo di
-valutazione delle query GraphQL~\cite{cha2020graphql}. Per quanto è stato
-possibile verificare, manca invece un corpo di lavori sottoposti a revisione
-paritaria sul rilevamento statico dell'assenza di rate limiting, timeout o
-limiti di paginazione nel codice di API REST. Ciò che esiste proviene dalla
-pratica degli strumenti più che dalla ricerca: regole che ispezionano il
-codice, i manifest infrastrutturali e il contratto OpenAPI. Di queste tre
-direzioni solo le ultime due trovano appoggio in una fonte primaria,
-nell'osservazione di CWE-770 sui file di configurazione che non fissano alcun
-valore massimo~\cite{cwe770}.
+La terza raccomandazione è l'unica ad avere una forma sintattica, e per questo
+è anche la più interessante: i controller amministrativi devono ereditare da un
+controller astratto amministrativo che implementi i controlli di autorizzazione
+in base al gruppo o al ruolo dell'utente, e le funzioni amministrative
+collocate dentro un controller ordinario devono implementare il controllo in
+base al ruolo~\cite{owasp2023api5}. La misura non aggiunge verifiche, le
+riposiziona: il controllo diventa una proprietà della gerarchia delle classi
+anziché del singolo gestore, e ometterlo richiede l'atto positivo di collocare
+un gestore fuori da quella gerarchia. È una differenza sostanziale sia per la
+revisione umana, cui l'anomalia si presenta come una discontinuità strutturale,
+sia per l'analisi automatica, che acquisisce finalmente un predicato
+verificabile senza conoscere le intenzioni di chi ha scritto il codice.
 
-La differenza rispetto alle categorie precedenti riguarda la natura stessa del
-segnale statico. In una BOLA, o in un difetto di autenticazione, l'assenza del
-controllo nel gestore coincide con la vulnerabilità, perché il controllo non
-può risiedere altrove. Per API4 questa coincidenza si spezza. L'analisi del
-codice non può affermare che il difetto esista, dato che il limite potrebbe
-trovarsi nel gateway o nella piattaforma di orchestrazione; può affermare
-soltanto che a un dato livello non c'è. È un'assenza locale, e come tale
-diventa finding solo quando un secondo segnale --- un altro livello ispezionato,
-una sonda dinamica --- la conferma. Lo scenario di API9 illustra il caso
-simmetrico: il limite presente a un livello non protegge necessariamente tutti
-gli host esposti~\cite{owasp2023api9}. Per questa categoria, dunque, la
-correlazione fra segnali eterogenei non è un raffinamento dell'analisi ma la
-condizione perché un giudizio sia possibile.
+Resta il problema della copertura, che nessuna delle tre misure risolve. Un
+controllo corretto protegge soltanto la superficie effettivamente servita dal
+codice che lo contiene: le versioni deprecate e gli host ancora esposti
+continuano a servire il gestore privo di
+verifica~\cite{owasp2023api9}, e le funzionalità non necessarie lasciate
+attive, verbi HTTP compresi, offrono all'operazione una via che il controllo
+non presidia~\cite{owasp2023api8}. Va inoltre segnalata una differenza rispetto
+ad API4:2023, dove la delega dell'onere a un gateway è una scelta
+architetturale legittima. Qui la delega può essere solo parziale: un gateway
+può negare un prefisso di percorso, ma la gerarchia di ruoli, gruppi,
+sotto-utenti e utenti con più ruoli che OWASP descrive~\cite{owasp2023api5}
+vive nel modello di dominio dell'applicazione, e la decisione che vi si fonda
+non può essere presa altrove.
+
+\paragraph{Rilevabilità: stato dell'arte in letteratura}
+
+OWASP classifica la rilevabilità come facile e ne dà la ragione: le API sono
+strutturate e il modo di raggiungere certe funzioni è prevedibile, al punto che
+sostituire un verbo o un segmento del percorso basta a produrre il
+tentativo~\cite{owasp2023api5}. Il giudizio è corretto, ma riguarda una sola
+metà del problema. Ciò che è facile è formulare la chiamata candidata; ciò che
+resta difficile è stabilire se la risposta ottenuta fosse dovuta, perché un
+\texttt{200 OK} attesta che l'operazione è stata eseguita, non che fosse
+legittimo eseguirla. Il verdetto richiede una nozione di ciò che il chiamante
+avrebbe dovuto poter fare, e quella nozione non risiede nel sistema osservato.
+
+Che la scorciatoia sintattica non basti lo dichiara la fonte primaria stessa,
+quando avverte di non dedurre dal percorso la natura amministrativa di un
+endpoint~\cite{owasp2023api5}. Una regola che segnali i gestori esposti sotto
+\texttt{api/admins} e privi di verifica produce quindi falsi negativi per
+costruzione, e li produce proprio nei casi che il documento indica come i più
+comuni.
+
+È da questa lacuna che muove la letteratura sul rilevamento, il cui contributo
+principale non è l'ispezione del codice ma la ricostruzione della specifica
+mancante. Se ne riconoscono quattro strategie. La prima ricava la specifica
+dalla navigazione: Sun, Xu e Su derivano dalle pagine raggiungibili da ciascun
+ruolo le regole di controllo di accesso implicite nell'applicazione, e
+verificano poi staticamente quali percorsi consentano di aggirarle~\cite{sun2011static}.
+La seconda la ricava dalla forma del codice: RoleCast parte da
+un'osservazione di ingegneria del software, e cioè che le applicazioni web sono
+partizionate per ruolo e che all'interno di una partizione i controlli sono
+applicati in modo coerente, e da quella coerenza inferisce quali condizioni
+siano controlli di sicurezza --- senza sapere in anticipo che aspetto abbiano,
+come il titolo dichiara --- segnalando i percorsi in cui
+mancano~\cite{son2011rolecast}. La terza ragiona sul contesto di
+autorizzazione: MACE affronta l'escalation nelle due direzioni distinte più
+sopra, verticale e orizzontale, su applicazioni di dimensioni
+reali~\cite{monshizadeh2014mace}. La quarta rinuncia a inferire e sceglie di
+scrivere: Atlidakis, Godefroid e Polishchuk definiscono un insieme di regole di
+sicurezza per le API REST e le verificano con un fuzzing stateful guidato dalla
+descrizione dell'interfaccia~\cite{atlidakis2020checking}, dove la descrizione
+fornisce la grammatica delle richieste e le regole l'oracolo che il codice non
+contiene. Sul versante black box si colloca il lavoro più recente, che affronta
+il rilevamento automatico dei difetti di controllo di accesso osservando
+l'applicazione dall'esterno~\cite{liu2025bacscan}.
+
+Il confronto con API4:2023 chiarisce di quale incertezza si tratti, perché le
+due categorie condividono il sintomo --- lo strumento non trova un controllo ---
+e non la causa. Per API4 l'assenza è locale e potenzialmente irrilevante,
+giacché il limite può risiedere nel gateway o nella piattaforma: lo strumento
+non sa dove guardare. Per API5 l'assenza è invece autentica, dato che la
+decisione sul ruolo non può essere presa fuori dall'applicazione, ma manca la
+norma rispetto a cui quell'assenza costituisce un difetto: lo strumento non sa
+che cosa cercare. È la ragione per cui ciascuno dei lavori citati dedica la
+parte più consistente del proprio contributo a costruire una specifica, e
+soltanto la parte residua a verificarla.
+
+La conseguenza operativa è che l'unico oracolo che non richieda di leggere le
+intenzioni di chi ha progettato il sistema è comparativo: la stessa chiamata,
+due account di privilegio diverso, esiti che divergono. Il differenziale
+sostituisce la norma assente con un'osservazione, e proprio per questo la
+facilità dichiarata da OWASP presuppone in silenzio una condizione non sempre
+disponibile, ossia il possesso di credenziali su almeno due livelli della
+gerarchia. La sonda, inoltre, è invasiva per natura, perché le chiamate da
+mettere alla prova sono esattamente quelle che creano, modificano e cancellano.
+Ne discende la divisione dei compiti adottata nel seguito: il segnale statico
+--- un gestore che espone un'operazione riservata senza che alcun controllo di
+ruolo lo protegga, o che vive fuori dalla gerarchia amministrativa raccomandata
+da OWASP~\cite{owasp2023api5} --- serve a selezionare i pochi endpoint su cui
+vale la pena esporsi, mentre il verdetto spetta alla verifica differenziale su
+quel sottoinsieme ridotto. Preso da solo, il segnale statico resta un'ipotesi:
+dice che un controllo non c'è, non che sarebbe dovuto esserci.
 
 \subsection{API6:2023 -- Unrestricted Access to Sensitive Business Flows}
 \label{subsubsec:api6}
@@ -923,7 +1048,7 @@ Da questi lavori si ricavano i tre problemi che qualunque rilevatore statico di 
 
 Resta la distinzione fra le due forme dell'attacco, che ha una ricaduta diretta sulla strategia di verifica. Per l'SSRF con ritorno la conferma dinamica è immediata: si punta l'endpoint verso un indirizzo controllato e si osserva se la richiesta arriva. Per l'SSRF cieco la conferma richiede un canale laterale, tipicamente una risoluzione DNS o una connessione verso un servizio d'ascolto dedicato, ed è la ragione per cui OWASP parla di sforzo e creatività~\cite{owasp2023api7}. In una pipeline che combina segnale statico e sonda dinamica, come quella adottata nel seguito, la conseguenza operativa è che l'assenza di conferma dinamica non deve declassare il finding statico: significa soltanto che il canale di ritorno non è stato osservato.
 
-\subsubsection{API8:2023 -- Security Misconfiguration}
+\subsection{API8:2023 -- Security Misconfiguration}
 \label{subsubsec:api8}
 
 \paragraph{Definizione e collocazione}
@@ -1010,7 +1135,7 @@ La letteratura accademica su questo problema specifico è scarsa, e vale la pena
 Ne discende una conclusione sulla natura del segnale che chiude la trattazione di questa categoria. Per API9 non esiste un rilevamento nel senso in cui esiste per le categorie precedenti, cioè l'individuazione di un difetto in un artefatto. Esiste la misura di una divergenza fra rappresentazioni indipendenti dello stesso sistema — il contratto, il codice, l'inventario degli host, il traffico osservato — e ogni divergenza è un indizio la cui gravità dipende da cosa si trovi dall'altra parte. Il valore di questa misura non sta nel produrre un verdetto ma nel restituire visibilità: ciò che il difetto sottrae per definizione.
 
 
-\subsubsection{API10:2023 -- Unsafe Consumption of APIs}
+\subsection{API10:2023 -- Unsafe Consumption of APIs}
 \label{subsubsec:api10}
 
 \paragraph{Definizione e collocazione}
