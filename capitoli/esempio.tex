@@ -494,50 +494,18 @@ Le due verifiche non sono sostituibili l'una con l'altra: un'API può accettare 
 \label{subsubsec:api4}
 
 \paragraph{Definizione e collocazione}
-Ogni richiesta servita da un'API consuma risorse: banda, CPU, memoria, storage e, con frequenza crescente,la categoria API4:2023 raccoglie i casi in cui almeno uno dei limiti che dovrebbero governare tale consumo è assente o dimensionato in modo inadeguato~\cite{owasp2023api4}. Il documento OWASP elenca i limiti attesi: timeout di esecuzione, memoria allocabile, numero di descrittori di file e di processi,insieme a molte altre categorie.~\cite{owasp2023api4}.
 
+Ogni richiesta servita da un'API consuma risorse: banda, CPU, memoria, storage
+e, con frequenza crescente, servizi a pagamento di terze parti. La categoria
+API4:2023 raccoglie i casi in cui almeno uno dei limiti che dovrebbero governare
+quel consumo è assente o dimensionato male, fra cui i timeout di esecuzione, la
+memoria allocabile e il numero di processi~\cite{owasp2023api4}.
 
-La collocazione nella Top~10 richiede un chiarimento ulteriore, perché il consumo di risorse non è un difetto di una specifica funzione ma una proprietà trasversale di qualunque endpoint, e i limiti che lo governano sono la difesa in profondità di altre categorie. Quattro relazioni contano più delle altre.
-
-Con API2:2023 il rapporto è di specializzazione. Broken Authentication chiede
-che gli endpoint di autenticazione e di recupero credenziali siano protetti da
-meccanismi anti-brute-force più severi del rate limiting ordinario applicato al
-resto dell'API~\cite{owasp2023api2}. Il meccanismo di aggiramento è però lo
-stesso che API4 elenca fra i limiti mancanti, ossia il numero di operazioni
-ammesse in una singola richiesta come nel batching
-GraphQL~\cite{owasp2023api4}. A cambiare è il bene protetto, e i due scenari
-illustrativi lo mostrano bene: in API2 il batch aggrega tentativi di login per
-superare un limite di tre richieste al minuto e arrivare alla
-credenziale~\cite{owasp2023api2}, in API4 aggrega caricamenti di immagini fino
-a esaurire la memoria del server~\cite{owasp2023api4}.
-
-Con API6:2023 il vettore resta l'automazione delle richieste e cambia l'esito.
-OWASP colloca il danno sul piano del business e scrive, nella descrizione degli
-impatti, che un impatto tecnico in generale non è atteso~\cite{owasp2023api6}.
-Lo scenario di apertura descrive l'acquisto automatico dell'intero stock di una
-console distribuito su indirizzi IP e località
-diverse~\cite{owasp2023api6}: una costruzione che aggira per definizione il
-throttling per IP, cioè la forma di limitazione più semplice da implementare e
-anche la più fragile.
-
-Con API10:2023 la sovrapposizione è nel testo stesso. Fra gli indicatori di
-Unsafe Consumption of APIs compaiono l'assenza di un limite alle risorse
-impiegate per elaborare le risposte dei servizi terzi e l'assenza di timeout
-nelle interazioni con essi~\cite{owasp2023api10}, due condizioni che API4
-annovera già fra i limiti la cui mancanza rende un'API
-vulnerabile~\cite{owasp2023api4}. A distinguerle è la direzione del consumo:
-API4 guarda alle risorse che un client sottrae al server, API10 a quelle che un
-fornitore a monte può far spendere al server.
-
-Con API9:2023 il problema non è l'assenza del limite ma la sua copertura
-parziale. Lo scenario di Improper Inventory Management descrive un rate
-limiting collocato non nel codice dell'API ma in un componente separato fra
-client e API ufficiale, e un host beta che espone la stessa API senza quel
-componente: da lì è stato possibile forzare per tentativi il token di reset a
-sei cifre e cambiare la password di qualunque utente~\cite{owasp2023api9}.
-OWASP ne ricava due indicazioni operative, documentare il rate limiting fra gli
-aspetti del contratto API ed estendere le misure di protezione esterne a tutte
-le versioni esposte e non solo a quella in produzione~\cite{owasp2023api9}.
+La collocazione richiede un chiarimento, perché il consumo di risorse non è il
+difetto di una funzione specifica ma una proprietà trasversale di qualunque
+endpoint, e i limiti che lo governano sono la difesa in profondità di altre
+categorie. Le quattro relazioni che contano sono riassunte nella
+Tabella~\ref{tab:api4_relazioni}.
 
 \begin{table}[H]
 \centering
@@ -546,10 +514,10 @@ le versioni esposte e non solo a quella in produzione~\cite{owasp2023api9}.
 \hline
 \textbf{Categoria} & \textbf{Punto di contatto con API4} & \textbf{Elemento distintivo} \\
 \hline
-API2 & Gli endpoint di autenticazione e recupero credenziali richiedono limiti più severi di quelli ordinari; il batching GraphQL aggira il rate limiting in entrambe le categorie & Bene protetto: la segretezza della credenziale (CWE-307), dove API4 tutela disponibilità e costo (CWE-770, CWE-799) \\
-API6 & Automazione di richieste di per sé legittime; distribuendo l'attacco si elude il throttling per indirizzo IP & Danno collocato sul piano del business, con impatto tecnico in generale non atteso; contromisure comportamentali \\
-API9 & Il limite può risiedere in un componente esterno al codice dell'API e non coprire tutti gli host esposti & Difetto di inventario e documentazione: il codice resta corretto mentre la superficie esposta rimane scoperta \\
-API10 & Assenza di timeout e di limiti sulle risorse impiegate per elaborare le risposte di servizi terzi & Direzione del consumo: le risorse che un fornitore a monte fa spendere al server \\
+API2 & Endpoint di autenticazione con limiti più severi; batching che aggira il rate limiting & Bene protetto: segretezza della credenziale contro disponibilità e costo \\
+API6 & Automazione di richieste legittime; l'attacco distribuito elude il throttling per IP & Danno sul piano del business, impatto tecnico non atteso \\
+API9 & Il limite risiede fuori dal codice e non copre tutti gli host esposti & Difetto di inventario: il codice è corretto, la superficie no \\
+API10 & Timeout e limiti assenti sulle risposte di servizi terzi & Direzione del consumo: risorse che un fornitore fa spendere al server \\
 \hline
 \end{tabular}
 \caption{Relazioni fra API4:2023 e le categorie contigue della OWASP API Security Top~10 2023.}
@@ -557,53 +525,128 @@ API10 & Assenza di timeout e di limiti sulle risorse impiegate per elaborare le 
 \end{table}
 
 \paragraph{Cause e meccanismi tecnici tipici}
-La radice comune è un'asimmetria: produrre una richiesta costa al client una quantità trascurabile di risorse, mentre servirla può costare al server una quantità che cresce in funzione di parametri controllati dal client stesso. Ogni volta che questa funzione di costo non è limitata superiormente, l'API è esposta. Conviene distinguere quattro meccanismi, perché ciascuno richiede una difesa diversa e presenta un profilo di rilevabilità distinto, e poi chiedersi perché, in pratica, i limiti vengano omessi.
 
-Il primo meccanismo è il volume puro: l'assenza di un limite alla frequenza delle richieste per client, per utenza o per endpoint. OWASP osserva che lo sfruttamento non richiede competenze particolari, poiché richieste concorrenti possono essere generate da una singola macchina o da risorse cloud noleggiate, e che la maggior parte degli strumenti automatici disponibili mira proprio a saturare il tasso di servizio~\cite{owasp2023api4}. La forma più insidiosa non è però l'assenza totale del limite, ma la sua presenza in una sola dimensione: un limite per indirizzo IP è inefficace contro un attacco distribuito, un limite per endpoint è inefficace contro il batching, un limite per utente autenticato non copre gli endpoint anonimi, che sono tipicamente quelli di registrazione e recupero credenziali.
+La radice comune è un'asimmetria: produrre una richiesta costa al client quasi
+nulla, servirla può costare al server una quantità che cresce in funzione di
+parametri che il client controlla. Finché quella funzione di costo non ha un
+limite superiore, l'API resta esposta. Quattro meccanismi meritano distinzione,
+perché ciascuno richiede una difesa diversa.
 
-Il secondo è il parametro che governa la dimensione della risposta. Un endpoint paginato che accetta \texttt{limit=100000}, o che non impone alcun tetto, trasforma una singola richiesta in una scansione completa della tabella sottostante. Non a caso OWASP colloca fra le contromisure la validazione lato server dei parametri che controllano il numero di record restituiti~\cite{owasp2023api4}. Il caso si intreccia con API3:2023, già trattato: la stessa disattenzione verso la forma della richiesta produce lì esposizione di proprietà, qui esplosione del carico, e un endpoint che soffre di entrambe consente a un attaccante di estrarre l'intero insieme di dati sensibili con una manciata di chiamate.
+Il primo è il volume puro, che OWASP giudica sfruttabile senza competenze
+particolari~\cite{owasp2023api4}. Più insidiosa dell'assenza totale del limite è
+però la sua presenza in una sola dimensione: un tetto per indirizzo IP cade
+contro un attacco distribuito, uno per endpoint non intercetta il batching, uno
+per utente autenticato lascia scoperti gli endpoint anonimi di registrazione e
+recupero credenziali.
 
-Il terzo meccanismo è la moltiplicazione di operazioni in una sola richiesta. Lo scenario GraphQL riportato da OWASP è istruttivo: un'API applica rate limiting all'endpoint \texttt{/graphql} e controlla la dimensione delle immagini caricate, ma non limita il numero di mutazioni aggregate in un unico batch; l'attaccante invia centinaia di \texttt{uploadPic} in una richiesta sola, ciascuna delle quali innesca la generazione di miniature, e satura la memoria del server aggirando entrambe le protezioni~\cite{owasp2023api4}. La letteratura ha formalizzato il fenomeno: Cha et~al. mostrano che una query GraphQL nel caso peggiore impone al server una quantità di lavoro esponenziale e ricordano, richiamando lo studio empirico precedente dello stesso gruppo, che la maggioranza degli schemi pubblici espone il fornitore a query ad alto costo~\cite{cha2020graphql}. Il meccanismo non è esclusivo di GraphQL: qualunque endpoint REST che accetti un array di operazioni, come un'importazione massiva o un aggiornamento in blocco, presenta lo stesso profilo se non limita la cardinalità dell'array.
+Il secondo riguarda i parametri che governano la dimensione della risposta: un
+endpoint paginato che accetta \texttt{limit=100000} trasforma una chiamata in
+una scansione completa della tabella, ed è per questo che OWASP ne prescrive la
+validazione lato server~\cite{owasp2023api4}.
 
-Il quarto meccanismo non dipende dal numero di richieste ma dalla complessità algoritmica dell'elaborazione di un singolo input. È la famiglia degli attacchi di complessità algoritmica descritta da Crosby e Wallach~\cite{crosby2003algorithmic}, di cui il ReDoS (\emph{Regular expression Denial of Service}) è l'istanza più diffusa nel contesto delle API: un'espressione regolare soggetta a backtracking catastrofico, applicata a un input costruito ad arte, può bloccare un thread per minuti. Staicu e Pradel hanno documentato la gravità del fenomeno nei server basati su JavaScript, la cui esecuzione a thread singolo rende un'unica richiesta sufficiente a congelare l'intero processo~\cite{staicu2018redos}. Nella stessa famiglia rientrano i timeout mancanti sulle chiamate in uscita verso altri servizi, che consentono a un fornitore lento di trattenere indefinitamente connessioni e worker.
+Il terzo moltiplica le operazioni dentro una richiesta sola: nello scenario
+GraphQL un'API limita la frequenza sull'endpoint e la dimensione delle immagini,
+ma non le mutazioni aggregate, e centinaia di \texttt{uploadPic} in un unico
+batch saturano la memoria aggirando entrambe le protezioni~\cite{owasp2023api4}.
+Cha et~al.\ mostrano che nel caso peggiore una query impone un lavoro
+esponenziale~\cite{cha2020graphql}, e lo stesso vale per ogni endpoint REST che
+accetti un array di operazioni senza limitarne la cardinalità.
 
-A questi si aggiunge la causa che l'edizione 2023 porta in primo piano: l'assenza di soglie di spesa verso i fornitori esterni. Qui la risorsa consumata non è computazionale ma economica, e il limite mancante non risiede nel codice ma nel contratto con il provider~\cite{owasp2023api4}.
+Il quarto dipende dal costo algoritmico di una singola
+richiesta~\cite{crosby2003algorithmic}: l'istanza più diffusa è il ReDoS, che
+Staicu e Pradel documentano nei server JavaScript, dove il thread singolo rende
+una richiesta sufficiente a congelare il processo~\cite{staicu2018redos}. Vi si
+aggiunge la causa che l'edizione 2023 porta in primo piano, l'assenza di soglie
+di spesa verso i fornitori esterni, dove la risorsa non è computazionale ma
+economica~\cite{owasp2023api4}.
 
-Resta da spiegare perché limiti così semplici da enunciare vengano omessi con la frequenza che OWASP classifica come diffusa. Tre ragioni ricorrono. La prima è la diffusione della responsabilità: un limite può essere applicato dal framework, dal reverse proxy, dal gateway, dall'orchestratore o dal fornitore cloud, e quando ogni livello presume che lo faccia un altro il risultato è che nessuno lo fa. La seconda è che il difetto non produce errori: un endpoint senza limiti funziona perfettamente sotto carico normale e supera ogni test funzionale, sicché nulla nel ciclo di sviluppo lo segnala. La terza è l'elasticità dell'infrastruttura, che nasconde il sintomo trasformando l'esaurimento in scalabilità automatica e quindi in costo; il problema diventa visibile alla fattura successiva, non nel monitoraggio.
+Che limiti tanto semplici manchino dipende da due fatti: possono risiedere nel
+framework, nel proxy, nel gateway o presso il fornitore cloud, e quando ogni
+livello presume che se ne occupi un altro non se ne occupa nessuno; e il difetto
+non produce errori, sicché un endpoint senza limiti supera ogni test
+funzionale.
 
 \paragraph{Impatto essenziale}
-L'esito più immediato è il denial of service per esaurimento. CWE-770 lo enumera come conseguenza principale sulla disponibilità, per CPU, memoria o altre risorse, notando che l'attaccante può ottenerlo sia con molte richieste rapide sia inducendo l'uso di risorse più grandi del necessario~\cite{cwe770}. Diversamente da un attacco volumetrico di rete, il punto di rottura non è la banda ma la logica applicativa, e la quantità di traffico necessaria può essere di ordini di grandezza inferiore: una singola richiesta ReDoS o un solo batch GraphQL sono sufficienti, e nessuna difesa perimetrale basata sul volume li riconosce come anomali.
 
-L'edizione 2023 insiste però su una seconda dimensione, quella economica, e le riconosce pari dignità. Due dei tre scenari illustrativi non causano alcuna interruzione del servizio. Nel primo, un flusso di recupero password che invia un codice via SMS attraverso un fornitore che tariffa 0,05 dollari a messaggio viene invocato decine di migliaia di volte da uno script, con perdite di migliaia di dollari in pochi minuti. Nel terzo, un file distribuito tramite API supera la soglia di 15\,GB oltre la quale la cache non opera e, in assenza di allarmi sui costi, la fattura mensile per lo storage passa da circa 13 a circa 8\,000 dollari~\cite{owasp2023api4}. Il tratto comune è che l'infrastruttura elastica converte l'esaurimento in spesa: il servizio resta disponibile, ma a un costo che nessuno ha autorizzato. OWASP nota anche che l'attaccante, pur privo di visibilità diretta sui costi, può inferirli dal modello di prezzo del provider~\cite{owasp2023api4}.
+L'esito immediato è il denial of service per esaurimento, che CWE-770 enumera
+come conseguenza principale sulla disponibilità~\cite{cwe770}. Il punto di
+rottura è però la logica applicativa anziché la banda, e il traffico richiesto
+può essere di ordini di grandezza inferiore: una sola richiesta ReDoS o un solo
+batch GraphQL bastano, e nessuna difesa perimetrale basata sul volume li
+riconosce come anomali.
 
-Un terzo effetto, meno citato, è la degradazione progressiva: prima del collasso, la latenza cresce per tutti gli utenti legittimi e, nelle architetture a microservizi, l'esaurimento di un componente si propaga a monte attraverso code e tentativi ripetuti. In questo senso l'impatto di API4 è raramente confinato all'endpoint vulnerabile: un pool di connessioni al database saturato da una query di paginazione senza tetto rende indisponibili anche gli endpoint correttamente limitati che condividono lo stesso pool.
+L'edizione 2023 dà pari dignità alla dimensione economica, e due dei tre scenari
+non producono alcuna interruzione: un recupero password che invia SMS a 0,05
+dollari l'uno, invocato decine di migliaia di volte, e un file che supera la
+soglia oltre la quale la cache non opera, con la fattura mensile che passa da
+circa 13 a circa 8\,000 dollari~\cite{owasp2023api4}.
 
 \paragraph{Mitigazione}
-Le contromisure si dispongono su livelli distinti e nessuno, da solo, è sufficiente. Al livello più basso, OWASP raccomanda di affidare i limiti fisici (memoria, CPU, numero di processi e descrittori, riavvii) a piattaforme che li rendono dichiarativi, come container e funzioni serverless~\cite{owasp2023api4}. Si tratta di una difesa di ultima istanza: non impedisce l'abuso, lo confina.
 
-Al livello dell'ingresso dei dati, la regola è dichiarare e applicare una dimensione massima per ogni parametro e payload: lunghezza delle stringhe, cardinalità degli array, dimensione dei file e, in particolare, il valore dei parametri che controllano il numero di record restituiti~\cite{owasp2023api4}. CWE-770 inquadra la stessa misura come validazione dell'input per lista di valori ammessi, con l'avvertenza che copre solo i casi in cui l'input influenza dimensione o frequenza delle allocazioni~\cite{cwe770}. Il contratto OpenAPI è il luogo naturale per rendere questi vincoli espliciti attraverso \texttt{maxLength}, \texttt{maxItems} e \texttt{maximum} sui parametri di paginazione. Un contratto che dichiara i limiti ha un valore che va oltre la documentazione: rende i limiti verificabili da uno strumento, tema su cui si tornerà.
+Nessun livello basta da solo. I limiti fisici su memoria, CPU e processi OWASP
+li affida a piattaforme che li rendono dichiarativi~\cite{owasp2023api4}: difesa
+di ultima istanza, che non impedisce l'abuso ma lo confina.
 
-Al livello delle interazioni, il rate limiting resta la contromisura di riferimento, con due precisazioni ricorrenti nel documento OWASP: va tarato per endpoint in base alle esigenze di business, e va affiancato da un limite sul numero di esecuzioni di una singola operazione per utente (validazione di un OTP, richiesta di reset), che il solo conteggio delle chiamate all'endpoint non cattura~\cite{owasp2023api4}. La seconda precisazione è quella che lo scenario GraphQL rende evidente. Per gli endpoint di autenticazione il requisito si irrigidisce: OWASP chiede meccanismi anti-brute-force più severi del rate limiting ordinario e il trattamento degli endpoint di recupero credenziali alla stregua di quelli di login~\cite{owasp2023api2}, e le linee guida NIST sull'autenticazione digitale prescrivono al verificatore controlli di throttling contro gli attacchi di indovinamento in linea~\cite{nist2025sp80063b}. Sul piano protocollare, HTTP fornisce il codice di stato \texttt{429 Too Many Requests}, definito in RFC~6585~\cite{rfc6585}, e l'IETF sta standardizzando i campi \texttt{RateLimit} e \texttt{RateLimit-Policy} con cui il server comunica al client quota residua e finestra temporale, consentendo una regolazione cooperativa del traffico~\cite{polli2026ratelimit}; al momento della stesura il documento è ancora una Internet-Draft. NIST tratta il throttling tra le strategie di sicurezza per le applicazioni a microservizi, collocandolo nel gateway o nella mesh piuttosto che nel singolo servizio~\cite{nist2019sp800204}. Quest'ultima indicazione va letta insieme allo scenario dell'host beta già richiamato: collocare il limite nel gateway è corretto purché ogni host che espone l'API stia dietro quel gateway, e il limite applicato nel codice, per quanto meno elegante, ha il vantaggio di viaggiare con l'applicazione in ogni ambiente in cui viene distribuita.
+All'ingresso dei dati la regola è dichiarare una dimensione massima per ogni
+parametro e payload, soprattutto per quelli che governano il numero di record
+restituiti~\cite{owasp2023api4}. Il contratto OpenAPI è il luogo naturale per
+esplicitare quei vincoli, che così diventano verificabili da uno strumento.
 
-Per la famiglia algoritmica la mitigazione è specifica: timeout su ogni operazione potenzialmente lunga (chiamate in uscita, elaborazione di immagini, matching di espressioni regolari) e, per il ReDoS, l'adozione di motori regex a tempo lineare o la riscrittura delle espressioni vulnerabili~\cite{staicu2018redos}. Per GraphQL, l'analisi statica del costo di una query prima della sua esecuzione, come quella proposta da Cha et~al., permette di rifiutare richieste il cui limite superiore di complessità eccede una soglia~\cite{cha2020graphql}.
+Sul piano delle interazioni il rate limiting va tarato per endpoint e affiancato
+da un limite sulle esecuzioni della singola operazione per utente, che il
+conteggio delle chiamate non cattura~\cite{owasp2023api4}; sugli endpoint di
+autenticazione si irrigidisce~\cite{owasp2023api2,nist2025sp80063b}. HTTP
+fornisce il codice \texttt{429}~\cite{rfc6585}, di cui l'IETF sta
+standardizzando i campi complementari~\cite{polli2026ratelimit}. NIST colloca il
+throttling nel gateway anziché nel singolo servizio~\cite{nist2019sp800204}:
+scelta corretta purché ogni host esposto stia dietro quel gateway, mentre il
+limite scritto nel codice viaggia con l'applicazione in ogni ambiente.
 
-Per la dimensione economica, infine, OWASP prescrive soglie di spesa su tutti i fornitori integrati e, dove il provider non le supporta, almeno allarmi di fatturazione~\cite{owasp2023api4}. È una misura amministrativa più che tecnica, ma è l'unica che intercetta lo scenario del file da 18\,GB.
-
-CWE-770 aggiunge una considerazione di progetto che vale come avvertenza: il throttling su base identitaria può a sua volta diventare un vettore, perché un attaccante che impersona un utente legittimo può farlo bloccare; il throttling uniforme evita questo problema ma non risolve l'attacco, si limita a renderlo più costoso~\cite{cwe770}. Il compromesso fra le due strategie va deciso caso per caso, e la risposta cambia fra un endpoint di login, dove il blocco dell'account è un rischio concreto di negazione del servizio mirata, e un endpoint di ricerca, dove il throttling per utente non danneggia terzi.
+Per la famiglia algoritmica servono timeout su ogni operazione lunga e, per il
+ReDoS, motori a tempo lineare~\cite{staicu2018redos}; per GraphQL, l'analisi
+statica del costo di una query prima di eseguirla~\cite{cha2020graphql}. Per la
+dimensione economica OWASP prescrive soglie di spesa o allarmi di
+fatturazione~\cite{owasp2023api4}.
 
 \paragraph{Rilevabilità}
-Le due fonti primarie sembrano contraddirsi. OWASP classifica la rilevabilità come facile, motivando che richieste costruite con parametri che controllano il numero di risorse restituite, seguite dall'analisi di stato, tempo e lunghezza della risposta, sono normalmente sufficienti a identificare il problema, e che lo stesso vale per le operazioni batch~\cite{owasp2023api4}. CWE-770, nella sezione sui metodi di rilevamento, giudica invece l'analisi statica automatica di utilità limitata per le allocazioni senza limite, con eccezioni circoscritte (mancato rilascio di risorse di sistema, argomenti non verificati alle allocazioni di memoria, file di configurazione privi di un valore massimo), e la ritiene inadatta per le risorse definite dall'applicazione, come una politica che consenta a un utente un numero massimo di operazioni al giorno~\cite{cwe770}. La contraddizione è apparente: OWASP descrive la prospettiva del tester in black box, CWE quella dello strumento che analizza il codice. Le due prospettive vanno trattate separatamente.
 
-Sul versante dinamico l'evidenza è consolidata. CWE-770 riconosce che le tecniche automatiche basate sulla generazione di un numero elevato di richieste in un intervallo breve sono efficaci nel produrre gli effetti collaterali dell'allocazione incontrollata, pur richiedendo interpretazione manuale dei risultati, e che il fuzzing può rilevare la debolezza in modo opportunistico, specialmente quando l'allocazione dipende da input numerici~\cite{cwe770}. Il lavoro di Antunes, Neves e Veríssimo, citato dalla stessa voce CWE, è fra i primi a proporre un approccio sistematico di rilevamento e predizione delle vulnerabilità da esaurimento nei server di rete tramite iniezione di carico~\cite{antunes2008resource}. La metodologia OWASP, ridotta all'essenziale, è una forma di test differenziale: si confrontano le risposte a richieste con parametri di dimensione crescente, e un tempo o una lunghezza che crescono senza saturare rivelano l'assenza del limite. Il test dinamico ha un vantaggio decisivo rispetto a ogni analisi del codice: osserva il sistema nel suo insieme, e quindi vede il limite ovunque sia applicato. Ha però un limite simmetrico: osserva solo l'host che interroga, e un host beta senza gateway resta invisibile finché non viene inventariato.
+Le due fonti primarie sembrano contraddirsi. OWASP giudica facile la
+rilevabilità, perché richieste con parametri di dimensione crescente e
+l'osservazione di stato, tempo e lunghezza della risposta bastano a far emergere
+il problema~\cite{owasp2023api4}; CWE-770 giudica invece di utilità limitata
+l'analisi statica per le allocazioni prive di limite~\cite{cwe770}. La
+contraddizione è apparente, perché le due fonti non parlano dello stesso
+osservatore: OWASP descrive un tester in black box, CWE uno strumento che legge
+il codice.
 
-Sul versante statico la letteratura si concentra su sottoclassi ben delimitate. Per il ReDoS esiste un filone maturo: Staicu e Pradel combinano identificazione statica di espressioni regolari vulnerabili e verifica dinamica su siti reali, mostrando che il problema è diffuso e sfruttabile in produzione~\cite{staicu2018redos}. Per GraphQL, l'analisi di Cha et~al. calcola in tempo lineare un limite superiore del costo di una query senza eseguirla, ed è stata validata su API commerciali confrontando la complessità predetta con quella osservata nelle risposte~\cite{cha2020graphql}; è a tutti gli effetti un rilevatore statico, sebbene operi sulla query in arrivo e non sul codice del server.
+Sul versante dinamico l'evidenza è consolidata: CWE-770 riconosce efficaci le
+tecniche basate sulla generazione di molte richieste in un intervallo
+breve~\cite{cwe770}, e Antunes, Neves e Veríssimo sono fra i primi a proporre un
+rilevamento sistematico per iniezione di carico~\cite{antunes2008resource}. Il
+metodo OWASP è in sostanza un test differenziale, e ha un vantaggio decisivo su
+ogni analisi del codice: osserva il sistema nel suo insieme, e vede quindi il
+limite ovunque sia applicato. Vede però solo l'host che interroga.
 
-Ciò che manca, per quanto è stato possibile verificare, è un corpo di lavori sottoposti a revisione paritaria dedicato al rilevamento statico dell'assenza di rate limiting, di timeout o di limiti di paginazione nel codice sorgente di API REST. Le pratiche esistenti in questo spazio provengono dagli strumenti e non dalla letteratura, e si lasciano raggruppare in tre famiglie di segnali. La prima opera sul codice: regole di pattern matching che segnalano chiamate HTTP in uscita prive di timeout, applicazioni web che non registrano alcun middleware di limitazione, parametri di paginazione letti dalla richiesta e passati alla query senza un tetto, espressioni regolari con struttura vulnerabile applicate a input esterni. La seconda opera sui manifest infrastrutturali: presenza di limiti di risorse per i container, dimensione massima del corpo della richiesta nel reverse proxy, piani di throttling sui gateway. La terza opera sul contratto OpenAPI: schemi privi di \texttt{maxLength}, \texttt{maxItems} o \texttt{maximum}, endpoint che dichiarano parametri di paginazione senza vincoli, assenza di risposte \texttt{429} documentate. L'osservazione di CWE-770 sui file di configurazione privi di un massimo è, di fatto, la sola indicazione proveniente da una fonte primaria che legittima la seconda e la terza direzione~\cite{cwe770}.
+Sul versante statico la letteratura si concentra su sottoclassi ben delimitate,
+il ReDoS~\cite{staicu2018redos} e il costo delle query
+GraphQL~\cite{cha2020graphql}; manca invece, per quanto è stato possibile
+verificare, un corpo di lavori sottoposti a revisione paritaria sul rilevamento
+statico dell'assenza di rate limiting, timeout o limiti di paginazione nel
+codice di API REST. Ciò che esiste proviene dalla pratica degli strumenti ---
+regole sul codice, manifest infrastrutturali, contratto OpenAPI --- e solo le
+ultime due direzioni trovano appoggio in una fonte primaria~\cite{cwe770}.
 
-Il quadro suggerisce una conclusione precisa sulla natura del segnale statico, che distingue API4 dalle categorie trattate finora. Per una BOLA o un difetto di autenticazione, l'assenza del controllo nel codice del gestore è la vulnerabilità, perché il controllo non può che stare lì. Per API4 l'analisi del codice non può affermare la presenza della vulnerabilità, perché il limite potrebbe essere applicato altrove: nel gateway, nel reverse proxy, nella piattaforma di orchestrazione. Può però affermare con buona confidenza l'assenza di un controllo in un dato livello, e questa assenza diventa un finding solo quando è confermata sugli altri livelli o da una sonda dinamica. Lo scenario di API9 mostra anche il caso opposto: la presenza del limite in un livello non garantisce la copertura di tutti gli host~\cite{owasp2023api9}. È il caso in cui la correlazione fra segnali eterogenei, provenienti dal codice, dall'infrastruttura e dal contratto, non è un raffinamento ma una condizione necessaria per formulare un giudizio, ed è il criterio che la parte sperimentale di questo lavoro adotta per la categoria.
-
-
-
+Se ne ricava una conclusione sulla natura del segnale statico che distingue API4
+dalle categorie precedenti. In una BOLA l'assenza del controllo nel gestore
+coincide con la vulnerabilità, perché il controllo non può risiedere altrove.
+Qui la coincidenza si spezza: l'analisi del codice non può affermare che il
+difetto esista, dato che il limite potrebbe stare nel gateway o nella
+piattaforma di orchestrazione, ma solo che a un dato livello non c'è. È
+un'assenza locale, che diventa finding quando un secondo segnale la conferma; e
+lo scenario di API9 mostra il caso simmetrico, in cui il limite presente a un
+livello non copre tutti gli host esposti~\cite{owasp2023api9}. La correlazione
+fra segnali eterogenei non è dunque un raffinamento dell'analisi, ma la
+condizione perché un giudizio sia possibile.
 
 \subsection{API5:2023 -- Broken Function Level Authorization}
 \label{subsubsec:api5}
