@@ -68,7 +68,7 @@
 \usepackage{courier}
 % IMPAGINAZIONE MANUALE DELLA PAGINA
 \usepackage[a4paper,top=3.0cm,bottom=2.5cm,left=2.0cm,right=2.0cm,%
-bindingoffset=15mm,marginpar=1.5cm,reversemp]{geometry}
+bindingoffset=15mm,marginpar=2cm,headheight=15pt,reversemp]{geometry}
 \usepackage{chngpage}
 % Per modificare una singola pagina
 \usepackage{eso-pic}
@@ -98,8 +98,8 @@ bindingoffset=15mm,marginpar=1.5cm,reversemp]{geometry}
 \pagestyle{fancy} 
 \fancyhf{}
 % header e footer
-\fancyhead[RO,RE]{\nouppercase{\slshape \rightmark}}
-\fancyfoot[CE,CO]{\thepage}
+\fancyhead[R]{\nouppercase{\slshape \rightmark}}
+\fancyfoot[C]{\thepage}
 \renewcommand{\footrulewidth}{0.0pt}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\chaptermark}[1]{\markright{\thechapter\ $\:-\:$ #1}}
@@ -145,7 +145,6 @@ bindingoffset=15mm,marginpar=1.5cm,reversemp]{geometry}
 \usepackage{tikz}
 % Il pacchetto per i grafici in ps ed in pdf
 \usetikzlibrary{arrows}
-\usetikzlibrary{snakes}
 \usetikzlibrary{backgrounds}
 %\usepackage{pgflibraryarrows}
 %\usepackage{pgflibrarysnakes}

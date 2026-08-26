@@ -10,3 +10,10 @@ build/
 *.run.xml
 *.fls
 *.fdb_latexmk
+# file derivati dalla compilazione (main.pdf resta invece versionato)
+*.brf
+*.lof
+*.lot
+*.xmpi
+*.xmpdata
+*.synctex.gz

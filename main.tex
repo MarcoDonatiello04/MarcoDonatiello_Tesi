@@ -19,7 +19,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   PREAMBOLO DEL DOCUMENTO     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\documentclass[a4paper,12pt,oneside,top=3cm,bottom=3cm,left=3.5cm,right=3.5cm,openright,reqno,table]{book}
+\documentclass[a4paper,12pt,oneside,openright,reqno,table]{book}
+% NB: i margini NON si dichiarano qui. Se ne occupa geometry in packages.sty:
+% opzioni come top/bottom/left/right passate alla classe diventano opzioni
+% globali, finiscono a pacchetti che non le capiscono (lineno, caricato da
+% minted) e vengono comunque sovrascritte da geometry.
 % openany - fa iniziare i capitoli direttamente nella pagina successiva
 % openright - fa iniziare i capitoli nella prima pagina destra disponibile 
 % fleqn  - allinea le formule a sinistra anzichè centrarle
@@ -33,16 +37,19 @@
 % [lingua_secondaria,lingua_principale]
 \usepackage[italian]{babel}
 \usepackage{colorprofiles}
-\usepackage[colorlinks,hyperindex,pagebackref]{hyperref}
+% pdfx carica hyperref per conto proprio: le opzioni vanno quindi passate
+% prima, altrimenti hyperref risulta gia' caricato e pdfx non puo' piu'
+% impostare pdfa/pdftex.
+\PassOptionsToPackage{colorlinks,hyperindex,pagebackref}{hyperref}
+% per generare il PDF-A2
+\usepackage[a-2b,mathxmp]{pdfx}[2018/12/22]
 \hypersetup{
 			citecolor=black,
 			filecolor=black,
 			linkcolor=black,
-			urlcolor=black
+			urlcolor=black,
+			pdfstartview=
 }
-% per generare il PDF-A2
-\usepackage[a-2b,mathxmp]{pdfx}[2018/12/22]
-\hypersetup{pdfstartview=}
 
 % tutti i package sono specificati in un file a parte: packages.sty
 \usepackage{packages}

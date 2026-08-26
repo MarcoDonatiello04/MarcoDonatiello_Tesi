@@ -1,0 +1,34 @@
+{
+  // Un solo strumento: latexmk, che legge .latexmkrc e quindi sa gia' di
+  // dover usare la shell escape per minted e BibTeX per la bibliografia.
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk",
+      "command": "latexmk",
+      "args": ["-pdf", "-interaction=nonstopmode", "%DOC%"],
+      "env": {}
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    { "name": "latexmk", "tools": ["latexmk"] }
+  ],
+
+  // Il file principale e' sempre main.tex, anche premendo cmd+opt+b mentre si
+  // sta scrivendo dentro un capitolo.
+  "latex-workshop.latex.rootFile": "main.tex",
+
+  // L'output resta nella cartella del progetto: main.pdf e' sempre aggiornato.
+  "latex-workshop.latex.outDir": "%DIR%",
+
+  // Ricompila a ogni salvataggio e mostra il PDF in una scheda dell'editor.
+  // La scheda si aggiorna da sola dopo ogni compilazione.
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.view.pdf.viewer": "tab",
+
+  // Gli ausiliari servono alle compilazioni successive: non vanno cancellati.
+  "latex-workshop.latex.autoClean.run": "never",
+
+  // Il log di questo progetto contiene warning innocui di pdfx: non aprire
+  // il pannello dei problemi a ogni build.
+  "latex-workshop.message.badbox.show": false
+}
