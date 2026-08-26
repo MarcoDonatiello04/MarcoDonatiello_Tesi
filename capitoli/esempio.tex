@@ -652,48 +652,32 @@ condizione perché un giudizio sia possibile.
 \label{subsubsec:api5}
 
 \paragraph{Definizione e collocazione}
-Un'API espone operazioni, e non tutte sono destinate a tutti gli utenti.
-Creare un invito con privilegi amministrativi, esportare l'elenco completo
-degli utenti, cancellare un account altrui: sono funzioni che l'applicazione
-riserva a un ruolo, e il controllo che verifica il ruolo del chiamante prima di
-eseguirle è l'autorizzazione a livello di funzione. API5:2023 raccoglie i casi
-in cui tale controllo manca o è aggirabile, e in cui un utente anonimo o
-ordinario riesce di conseguenza a invocare funzioni
-riservate~\cite{owasp2023api5}.
+
+Un'API espone operazioni, e non tutte sono destinate a tutti. Creare un invito
+con privilegi amministrativi, esportare l'elenco degli utenti, cancellare un
+account altrui sono funzioni riservate a un ruolo, e il controllo che verifica
+quel ruolo prima di eseguirle è l'autorizzazione a livello di funzione.
+API5:2023 raccoglie i casi in cui tale controllo manca o è aggirabile, e un
+utente ordinario riesce a invocare funzioni riservate~\cite{owasp2023api5}.
 
 La differenza rispetto ad API1:2023 è di livello, ed è l'unica che OWASP fissi
-in modo prescrittivo. Nella pagina dedicata alla BOLA si legge che l'accesso
-dell'utente all'endpoint vulnerabile è previsto dal progetto e che la
+in modo prescrittivo: nella BOLA l'accesso all'endpoint è previsto e la
 violazione avviene manipolando l'identificatore dell'oggetto, mentre se
-l'attaccante raggiunge un endpoint o una funzione cui non dovrebbe accedere il
-caso ricade sotto la BFLA~\cite{owasp2023api1}. La domanda da porsi davanti a
-un finding non riguarda quindi i dati esposti, ma la legittimità della chiamata
-in sé: chi sostituisce un identificatore su un endpoint cui ha legittimamente
-accesso e legge il profilo altrui commette una BOLA; chi invoca l'esportazione
-completa degli utenti commette una BFLA, anche se il risultato include il
-proprio profilo. La letteratura sul rilevamento nomina le due forme come
-escalation orizzontale e verticale, intendendo per verticale il caso in cui un
-utente ordinario assume privilegi amministrativi e per orizzontale quello in
-cui assume i privilegi di un altro utente
-ordinario~\cite{monshizadeh2014mace}: API5 è la forma verticale.
+l'attaccante raggiunge una funzione cui non dovrebbe accedere il caso ricade
+sotto la BFLA~\cite{owasp2023api1}. Davanti a un finding non conta dunque quali
+dati siano esposti, ma la legittimità della chiamata: chi legge il profilo altrui
+sostituendo un identificatore commette una BOLA, chi invoca l'esportazione
+completa degli utenti commette una BFLA. È la forma che la letteratura chiama
+escalation verticale~\cite{monshizadeh2014mace}.
 
-Il riferimento tassonomico indicato da OWASP è CWE-285 \emph{Improper
-Authorization}~\cite{owasp2023api5}, che descrive il prodotto che non esegue,
-o esegue scorrettamente, un controllo di autorizzazione quando un attore tenta
-di accedere a una risorsa o compiere un'azione~\cite{cwe285}. MITRE ne
+Il riferimento tassonomico è CWE-285 \emph{Improper Authorization}, di cui MITRE
 sconsiglia l'uso per mappare vulnerabilità reali, trattandosi di una classe di
-livello elevato, e rimanda alle figlie: CWE-862 \emph{Missing Authorization}
-quando il controllo è assente, CWE-863 \emph{Incorrect Authorization} quando
-esiste ma decide male~\cite{cwe285}. La stessa voce dedica una nota
-terminologica alla distinzione fra autorizzazione e autenticazione,
-raccomandando le abbreviazioni AuthZ e AuthN separate ed evitando la forma
-ambigua \emph{Auth}~\cite{cwe285}. La distinzione vale anche qui: un'API può
-autenticare in modo impeccabile e restare priva di autorizzazione funzionale, e
-un token contraffatto fornisce un'identità, ma è il controllo funzionale
-mancante a trasformarla in privilegio.
-
-Oltre ad API1, la categoria tocca altre quattro voci dell'elenco, riassunte
-nella Tabella~\ref{tab:api5_relazioni}.
+livello elevato, rimandando alle figlie CWE-862 quando il controllo è assente e
+CWE-863 quando esiste ma decide male~\cite{cwe285}. La voce insiste inoltre
+sulla distinzione fra autorizzazione e autenticazione, che vale anche qui: un'API
+può autenticare in modo impeccabile e restare priva di autorizzazione
+funzionale. Le relazioni con le altre categorie sono nella
+Tabella~\ref{tab:api5_relazioni}.
 
 \begin{table}[H]
 \centering
@@ -702,11 +686,11 @@ nella Tabella~\ref{tab:api5_relazioni}.
 \hline
 \textbf{Categoria} & \textbf{Punto di contatto con API5} & \textbf{Criterio di distinzione} \\
 \hline
-API1 & Difetti di autorizzazione su un chiamante autenticato & L'accesso all'endpoint è previsto (API1) oppure indebito (API5); demarcazione fissata da OWASP \\
-API2 & Precede API5 nella catena: senza identità non c'è ruolo da verificare & Accertamento dell'identità (AuthN) contro verifica dei privilegi (AuthZ) \\
-API3 & Il campo che codifica il ruolo nel corpo della richiesta appartiene a entrambe & Scrivibilità della proprietà (API3) contro raggiungibilità dell'operazione (API5) \\
-API8 & Verbi HTTP non necessari e discrepanze fra i server della catena aggirano il controllo & Difetto di configurazione dello stack anziché di logica applicativa \\
-API9 & Versioni vecchie ed endpoint deprecati espongono funzioni amministrative protette altrove & Difetto di inventario: il controllo esiste ma non copre tutta la superficie \\
+API1 & Autorizzazione difettosa su un chiamante autenticato & Accesso all'endpoint previsto (API1) oppure indebito (API5) \\
+API2 & Senza identità accertata non c'è ruolo da verificare & AuthN contro AuthZ \\
+API3 & Il campo che codifica il ruolo nel corpo della richiesta & Scrivibilità della proprietà contro raggiungibilità dell'operazione \\
+API8 & Verbi HTTP non necessari lasciati abilitati & Configurazione dello stack anziché logica applicativa \\
+API9 & Versioni obsolete servono funzioni riservate protette altrove & Il controllo esiste ma non copre tutta la superficie \\
 \hline
 \end{tabular}
 \caption{Relazioni fra API5:2023 e le altre categorie della OWASP API Security Top~10 2023.}
@@ -715,19 +699,13 @@ API9 & Versioni vecchie ed endpoint deprecati espongono funzioni amministrative 
 
 \paragraph{Cause e meccanismi tecnici tipici}
 
-Il controllo funzionale manca perché non ha un luogo obbligato. OWASP osserva
+Il controllo funzionale manca perché non ha un luogo obbligato: OWASP osserva
 che l'autorizzazione su una funzione è gestita tramite configurazione oppure a
-livello di codice, e che scrivere controlli corretti è un compito confuso,
-perché le applicazioni moderne contengono molti ruoli, gruppi e gerarchie
-complesse, con sotto-utenti e utenti titolari di più ruoli~\cite{owasp2023api5}.
-Il singolo confronto è banale: difficile è sapere quale scrivere e ricordarsene
-ovunque.
-
-Vi si somma il valore predefinito. OWASP prescrive un meccanismo che neghi ogni
-accesso salvo concessioni esplicite ai singoli ruoli~\cite{owasp2023api5}, e la
-prescrizione descrive in negativo ciò che accade di norma: una rotta aggiunta a
-un controller eredita il routing e l'autenticazione, non l'autorizzazione. Nasce
-raggiungibile, e tale resta finché qualcuno non decide il contrario.
+livello di codice, e che scrivere controlli corretti è confuso, date le molte
+gerarchie di ruoli e gruppi delle applicazioni moderne~\cite{owasp2023api5}. Vi
+si somma il valore predefinito, perché una rotta aggiunta a un controller eredita
+il routing e l'autenticazione, non l'autorizzazione: nasce raggiungibile e tale
+resta.
 
 Sfruttarla non richiede manipolazioni. Bastano chiamate legittime verso un
 endpoint cui non si dovrebbe accedere, e nelle API il tentativo è più facile
@@ -735,29 +713,23 @@ perché la struttura è prevedibile: si sostituisce \texttt{GET} con \texttt{PUT
 oppure \texttt{users} con \texttt{admins}~\cite{owasp2023api5}. La stessa
 regolarità che rende un'API documentabile la rende enumerabile.
 
-Il primo scenario del documento lo mostra bene. In un'applicazione ad accesso su
-invito l'app mobile chiama \texttt{GET /api/invites/\{invite\_guid\}} e riceve
-un JSON con ruolo e indirizzo di posta. L'attaccante ne cambia metodo ed
-endpoint in \texttt{POST /api/invites/new}, riservato agli amministratori
-attraverso una console che non implementa alcun controllo di funzione, e si
-invia un invito con ruolo \texttt{admin}: \texttt{201
-Created}~\cite{owasp2023api5}. Il controllo, in un certo senso, esisteva: stava
-nella console, cioè nel fatto che solo un amministratore vedesse quel pulsante.
-L'applicazione ha scambiato la raggiungibilità dell'interfaccia per un diritto,
-e lo scambio regge finché il client ufficiale è l'unico modo di parlare con
-l'API. La lettura iniziale, per giunta, aveva già rivelato il campo
-\texttt{role}, cioè la forma della richiesta da costruire. Il secondo scenario è
-più spiccio: \texttt{GET /api/admin/v1/users/all} restituisce i dettagli di
-tutti gli utenti, e vi arriva chi, appresa la struttura dell'API, tira a
+Il primo scenario lo mostra bene. In un'applicazione ad accesso su invito l'app
+mobile chiama \texttt{GET /api/invites/\{invite\_guid\}} e riceve un JSON con
+ruolo e indirizzo di posta; l'attaccante ne cambia metodo ed endpoint in
+\texttt{POST /api/invites/new}, riservato agli amministratori attraverso una
+console priva di controllo di funzione, e si invia un invito con ruolo
+\texttt{admin}~\cite{owasp2023api5}. Il controllo, in un certo senso, esisteva:
+stava nella console, nel fatto che solo un amministratore vedesse quel pulsante.
+Il secondo scenario è più spiccio: \texttt{GET /api/admin/v1/users/all}
+restituisce i dettagli di tutti gli utenti a chi tira a
 indovinare~\cite{owasp2023api5}.
 
-Restano tre osservazioni che spostano il difetto fuori dal singolo gestore. Il
+Tre osservazioni spostano infine il difetto fuori dal singolo gestore. Il
 percorso non dice se un endpoint sia amministrativo, perché le funzioni
-riservate si trovano spesso insieme a quelle ordinarie sotto \texttt{api/users}
-anziché sotto \texttt{api/admins}~\cite{owasp2023api5}. I verbi HTTP lasciati
-abilitati per inerzia riaprono l'operazione da una via non
-presidiata~\cite{owasp2023api8}, ed è la mossa del primo scenario. Le versioni
-obsolete, infine, continuano a servire il gestore precedente al
+riservate stanno spesso sotto \texttt{api/users} anziché sotto
+\texttt{api/admins}~\cite{owasp2023api5}; i verbi HTTP lasciati abilitati per
+inerzia riaprono l'operazione da una via non presidiata~\cite{owasp2023api8}; le
+versioni obsolete continuano a servire il gestore precedente al
 controllo~\cite{owasp2023api9}.
 
 \paragraph{Impatto essenziale}
@@ -767,79 +739,62 @@ funzionalità non autorizzate, le funzioni amministrative sono il bersaglio
 privilegiato, e l'esito va dalla divulgazione alla perdita o corruzione dei
 dati, fino all'interruzione del servizio~\cite{owasp2023api5}.
 
-Il danno non scala però con il numero di identificatori: scala con la potenza
+Il danno non scala però con il numero di identificatori, bensì con la potenza
 della funzione raggiunta. Una BOLA restituisce un record per richiesta, e
-arrivare all'intera base dati richiede un'enumerazione che nel traffico si vede;
-una BFLA su un endpoint di esportazione ottiene lo stesso risultato con una
-chiamata sola, indistinguibile per volume da qualunque altra. Più la funzione è
-privilegiata, più l'attacco è silenzioso. E poiché le funzioni riservate sono in
-prevalenza funzioni di scrittura, lo stesso difetto che espone l'esportazione
-degli utenti espone, sull'endpoint accanto, la loro cancellazione:
-l'interruzione di servizio non nasce dall'esaurimento di una risorsa, come in
-API4:2023, ma da una funzione distruttiva che funziona benissimo, invocata da
-chi non doveva poterla invocare.
+l'intera base dati richiede un'enumerazione che nel traffico si vede; una BFLA
+su un endpoint di esportazione ottiene lo stesso con una chiamata sola. E poiché
+le funzioni riservate sono in prevalenza funzioni di scrittura, il difetto che
+espone l'esportazione degli utenti espone, sull'endpoint accanto, la loro
+cancellazione.
 
 Conta infine la durata. Il primo scenario non finisce con un dato letto, ma con
 un account amministrativo creato attraverso il flusso legittimo
-dell'applicazione~\cite{owasp2023api5}. Un accesso occasionale diventa
-un'identità stabile, e le azioni successive sono autenticate, autorizzate e
-indistinguibili nei registri da quelle di un vero amministratore. Correggere il
-difetto non revoca l'account: la bonifica si sposta dal codice all'inventario
-delle utenze.
+dell'applicazione~\cite{owasp2023api5}: le azioni successive sono
+indistinguibili nei registri da quelle di un vero amministratore, e correggere
+il difetto non revoca l'account.
 
 \paragraph{Mitigazione}
 
 La prescrizione centrale riguarda il valore predefinito: negare ogni accesso e
 richiedere concessioni esplicite ai ruoli per ogni
-funzione~\cite{owasp2023api5}. Il vantaggio sta in come si manifesta l'errore.
-Se il default è il diniego, una dimenticanza produce un \texttt{403} e il primo
-test funzionale la rivela; se il default è il permesso, la stessa dimenticanza
-non produce alcun segnale.
+funzione~\cite{owasp2023api5}. Il vantaggio sta in come si manifesta l'errore:
+se il default è il diniego, una dimenticanza produce un \texttt{403} che il
+primo test funzionale rivela; se il default è il permesso, la stessa
+dimenticanza non produce alcun segnale.
 
 Segue la revisione degli endpoint, condotta tenendo presenti la logica di
 business e la gerarchia dei gruppi~\cite{owasp2023api5}: nessuna scorciatoia
-rispetto alla conoscenza del dominio, coerentemente col fatto che il percorso
-non basta a riconoscere una funzione riservata.
+rispetto alla conoscenza del dominio.
 
 La terza raccomandazione è l'unica con una forma sintattica: i controller
 amministrativi devono ereditare da un controller astratto che applichi il
-controllo in base a ruolo o gruppo, e le funzioni amministrative ospitate in un
-controller ordinario devono applicarlo in proprio~\cite{owasp2023api5}. La
-misura non aggiunge verifiche, le riposiziona. Il controllo diventa una
-proprietà della gerarchia delle classi, e ometterlo richiede l'atto deliberato
-di collocare un gestore fuori da quella gerarchia: una discontinuità visibile in
-revisione e cercabile da uno strumento automatico.
-
-Nessuna delle tre misure risolve la copertura. Il controllo protegge solo la
-superficie servita dal codice che lo contiene, e restano scoperte le versioni
-deprecate~\cite{owasp2023api9} e le vie alternative lasciate
-attive~\cite{owasp2023api8}.
+controllo in base a ruolo o gruppo~\cite{owasp2023api5}. La misura non aggiunge
+verifiche, le riposiziona: il controllo diventa proprietà della gerarchia delle
+classi, e ometterlo richiede l'atto deliberato di collocare un gestore fuori da
+essa, discontinuità visibile in revisione e cercabile da uno strumento. Nessuna
+delle tre risolve però la copertura, perché il controllo protegge solo la
+superficie servita dal codice che lo
+contiene~\cite{owasp2023api9,owasp2023api8}.
 
 \paragraph{Rilevabilità}
 
-OWASP giudica facile la rilevabilità: le API sono strutturate e il modo di
-raggiungere una funzione è prevedibile~\cite{owasp2023api5}. Il giudizio
-riguarda però metà del problema. Formulare la chiamata candidata è facile;
+OWASP giudica facile la rilevabilità, perché le API sono strutturate e il modo
+di raggiungere una funzione è prevedibile~\cite{owasp2023api5}. Il giudizio
+riguarda però metà del problema: formulare la chiamata candidata è facile,
 stabilire se la risposta fosse dovuta non lo è, perché un \texttt{200 OK}
 attesta che l'operazione è stata eseguita, non che fosse legittimo eseguirla.
-Nemmeno il percorso aiuta, come avverte la fonte primaria~\cite{owasp2023api5}:
-una regola che segnali i soli gestori sotto \texttt{api/admins} privi di
-verifica manca per costruzione i casi più comuni.
+Nemmeno il percorso aiuta, come avverte la fonte primaria~\cite{owasp2023api5}.
 
 Il contributo della letteratura non è ispezionare il codice ma ricostruire la
-specifica mancante. Sun, Xu e Su la ricavano dalla navigazione, derivando dalle
-pagine raggiungibili da ciascun ruolo le regole implicite
-dell'applicazione~\cite{sun2011static}. RoleCast la ricava dalla forma del
-codice: poiché dentro una partizione per ruolo i controlli sono applicati in
-modo coerente, da quella coerenza il sistema inferisce quali condizioni siano
-controlli di sicurezza e segnala i percorsi in cui
-mancano~\cite{son2011rolecast}. MACE ragiona sul contesto di autorizzazione e
-copre entrambe le direzioni dell'escalation su applicazioni di dimensioni
-reali~\cite{monshizadeh2014mace}. Atlidakis, Godefroid e Polishchuk rinunciano a
-inferire e scrivono: definiscono regole di sicurezza per le API REST e le
-verificano con fuzzing stateful guidato dalla descrizione
-dell'interfaccia~\cite{atlidakis2020checking}. Il lavoro più recente affronta lo
-stesso problema in black box~\cite{liu2025bacscan}.
+specifica mancante. Sun, Xu e Su la ricavano dalla navigazione, dalle pagine
+raggiungibili da ciascun ruolo~\cite{sun2011static}; RoleCast dalla forma del
+codice, perché dentro una partizione per ruolo i controlli sono applicati in modo
+coerente e da quella coerenza si inferisce quali condizioni siano controlli di
+sicurezza~\cite{son2011rolecast}; MACE dal contesto di
+autorizzazione~\cite{monshizadeh2014mace}. Atlidakis, Godefroid e Polishchuk
+rinunciano a inferire e scrivono regole di sicurezza per le API REST,
+verificandole con fuzzing stateful~\cite{atlidakis2020checking}; il lavoro più
+recente affronta lo stesso problema in black box~\cite{liu2025bacscan}.
 
 \subsection{API6:2023 -- Unrestricted Access to Sensitive Business Flows}
 \label{subsubsec:api6}
@@ -951,9 +906,9 @@ nella Tabella~\ref{tab:api7_relazioni}.
 \hline
 \textbf{Categoria} & \textbf{Punto di contatto con API7} & \textbf{Criterio di distinzione} \\
 \hline
-API3 & L'URL non validato è una proprietà dell'oggetto in ingresso & Esito: alterazione di un dato (API3) contro alterazione del comportamento di rete (API7) \\
-API4 & Timeout sulle chiamate in uscita; l'SSRF può causare denial of service & Difetto primario: assenza di limite (API4) contro destinazione scelta dall'attaccante (API7) \\
-API10 & Entrambe riguardano il traffico in uscita; comune il divieto di seguire redirezioni & Chi sceglie la destinazione: l'attaccante (API7) contro un fornitore legittimo ma non validato (API10) \\
+API3 & L'URL non validato è una proprietà dell'oggetto in ingresso & Alterazione di un dato (API3) contro del comportamento di rete (API7) \\
+API4 & Timeout sulle chiamate in uscita; l'SSRF può causare denial of service & Assenza di limite (API4) contro destinazione scelta dall'attaccante (API7) \\
+API10 & Entrambe riguardano il traffico in uscita & Chi sceglie la destinazione: l'attaccante (API7) o un fornitore legittimo (API10) \\
 \hline
 \end{tabular}
 \caption{Relazioni fra API7:2023 e le categorie contigue della OWASP API Security Top~10 2023.}
@@ -1064,33 +1019,30 @@ indica soltanto che il canale di ritorno non è stato osservato.
 \paragraph{Definizione e collocazione}
 
 Le categorie viste finora individuano un difetto in un punto preciso: un
-controllo che manca in un handler, un limite non impostato, un URL non validato.
-API8:2023 non ha un punto. OWASP dichiara che la configurazione insicura può
-verificarsi a qualunque livello dello stack, dalla rete all'applicazione, e i
-suoi otto indicatori attraversano tutti quei livelli, dall'hardening assente ai
-verbi HTTP lasciati abilitati, dal TLS mancante ai messaggi di errore che
-espongono tracce dello stack~\cite{owasp2023api8}. Hanno una sola cosa in
-comune: nessuno è un errore di logica applicativa. Il codice fa quello che deve;
-è l'ambiente in cui gira, o un valore lasciato al predefinito, a produrre
-l'esposizione.
+controllo che manca, un limite non impostato, un URL non validato. API8:2023 non
+ha un punto. OWASP dichiara che la configurazione insicura può verificarsi a
+qualunque livello dello stack, dalla rete all'applicazione, e i suoi otto
+indicatori attraversano tutti quei livelli, dall'hardening assente ai verbi HTTP
+lasciati abilitati, dal TLS mancante ai messaggi di errore che espongono tracce
+dello stack~\cite{owasp2023api8}. Hanno una sola cosa in comune: nessuno è un
+errore di logica applicativa. Il codice fa quello che deve; è l'ambiente in cui
+gira a produrre l'esposizione.
 
 La particolarità tassonomica lo conferma. OWASP associa alla categoria sette
 voci CWE, più di qualunque altra della Top~10, ma diverse non sono debolezze:
-CWE-16 \emph{Configuration} è una categoria, e MITRE ne dichiara proibita la
+CWE-16 \emph{Configuration} è una categoria di cui MITRE dichiara proibita la
 mappatura, indicando di analizzare piuttosto il comportamento che la
-configurazione ha determinato~\cite{cwe16}. Se ne ricava il criterio da fissare:
-la configurazione non è una debolezza, è il meccanismo attraverso cui una
-debolezza viene introdotta. Una politica CORS permissiva non è insicura in
-astratto, lo diventa perché produce un difetto di controllo di accesso;
-l'assenza di TLS è la causa di una trasmissione in chiaro.
+configurazione ha determinato~\cite{cwe16}. Se ne ricava il criterio: la
+configurazione non è una debolezza, è il meccanismo attraverso cui una debolezza
+viene introdotta. Una politica CORS permissiva non è insicura in astratto, lo
+diventa perché produce un difetto di controllo di accesso.
 
 Le metriche collocano API8 fra le voci più gravi: sfruttabilità facile,
 prevalenza diffusa, rilevabilità facile, impatto tecnico
 severo~\cite{owasp2023api8}. Gli attaccanti cercano difetti non corretti e
 servizi con impostazioni predefinite insicure, in larga parte conoscenza
-pubblica per cui possono esistere exploit~\cite{owasp2023api8}: non serve
-comprendere l'applicazione, serve sapere cosa cercare. Con le categorie contigue
-il rapporto non è di parentela ma di sovrapposizione ricorrente, riassunta nella
+pubblica~\cite{owasp2023api8}: non serve comprendere l'applicazione, serve
+sapere cosa cercare. Le sovrapposizioni con le categorie contigue sono nella
 Tabella~\ref{tab:api8_relazioni}.
 
 \begin{table}[H]
@@ -1100,9 +1052,9 @@ Tabella~\ref{tab:api8_relazioni}.
 \hline
 \textbf{Categoria} & \textbf{Punto di contatto con API8} & \textbf{Criterio di distinzione} \\
 \hline
-API4 & Limiti di risorse dichiarati nei file di orchestrazione & Difetto di consumo (API4) contro impostazione mancante nello stack (API8) \\
-API5 & Verbi HTTP non necessari abilitati sulla catena dei server & Livello del rimedio: applicazione (API5) contro configurazione dei server (API8) \\
-API7 & Politica di rete in uscita permissiva come precondizione dello sfruttamento & Origine della richiesta: input non validato (API7) contro assenza di segmentazione (API8) \\
+API4 & Limiti di risorse nei file di orchestrazione & Difetto di consumo (API4) contro impostazione mancante (API8) \\
+API5 & Verbi HTTP non necessari abilitati sulla catena & Rimedio applicativo (API5) contro configurazione dei server (API8) \\
+API7 & Politica di rete in uscita permissiva & Input non validato (API7) contro assenza di segmentazione (API8) \\
 \hline
 \end{tabular}
 \caption{Sovrapposizioni fra API8:2023 e le categorie contigue della OWASP API Security Top~10 2023.}
@@ -1114,18 +1066,17 @@ API7 & Politica di rete in uscita permissiva come precondizione dello sfruttamen
 La causa strutturale è che la configurazione non risiede in un luogo unico né
 sotto una responsabilità unica: si distribuisce fra codice, file di
 orchestrazione, gateway, impostazioni cloud e valori predefiniti delle librerie,
-ciascuno con un proprietario e un ciclo di vita propri. Un valore corretto al
-rilascio può cessare di esserlo dopo un aggiornamento che nessuno ha collegato
-alla sicurezza.
+ciascuno con un ciclo di vita proprio. Un valore corretto al rilascio può
+cessare di esserlo dopo un aggiornamento che nessuno ha collegato alla
+sicurezza.
 
-Il primo scenario di OWASP mostra il predefinito pericoloso, ed è
-riconoscibilmente il caso Log4Shell. Un'utilità di logging diffusa supporta le
-ricerche JNDI, abilitate per impostazione predefinita; l'attaccante invia una
-richiesta verso \texttt{/health} con un'intestazione contenente un riferimento
-JNDI a un server LDAP che controlla, e nel momento in cui l'utilità espande quel
-valore per scriverlo nel registro scarica ed esegue l'oggetto
-malevolo~\cite{owasp2023api8}. Nella catena non c'è alcun difetto del codice
-applicativo, e l'endpoint colpito è quello di verifica dello stato di salute.
+Il primo scenario mostra il predefinito pericoloso, ed è riconoscibilmente il
+caso Log4Shell. Un'utilità di logging diffusa supporta le ricerche JNDI,
+abilitate per impostazione predefinita; l'attaccante invia una richiesta verso
+\texttt{/health} con un'intestazione contenente un riferimento JNDI a un server
+LDAP che controlla, e quando l'utilità espande quel valore per scriverlo nel
+registro scarica ed esegue l'oggetto malevolo~\cite{owasp2023api8}. Nella catena
+non c'è alcun difetto del codice applicativo.
 
 Il secondo mostra il meccanismo opposto, l'impostazione assente: un social
 network espone i messaggi privati tramite \path{/dm/user_updates.json} e, non
@@ -1134,8 +1085,7 @@ finiscano nella cache del browser~\cite{owasp2023api8}. Qui non c'è nulla da
 disabilitare, c'è una direttiva che nessuno ha inviato. Resta poi la causa più
 diffusa, che l'elenco mette al secondo posto: patch mancanti e sistemi non
 aggiornati~\cite{owasp2023api8}, difetto di manutenzione più che di
-configurazione, la cui presenza qui segnala quanto il confine fra le due cose
-sia poco netto.
+configurazione.
 
 \paragraph{Impatto essenziale}
 
@@ -1147,11 +1097,11 @@ conversazioni private da un lato, esecuzione di codice arbitrario dall'altro.
 
 Ciò che distingue API8 è però la natura abilitante del difetto, che raramente
 costituisce l'attacco e quasi sempre la condizione che ne rende praticabile un
-altro. Una traccia di stack non compromette nulla di per sé, ma rivela versioni
-e percorsi interni e abbassa il costo della ricognizione; una politica di uscita
-permissiva trasforma un SSRF cieco in uno con ritorno. Vi si aggiunge
-l'ampiezza: essendo trasversale, un difetto di configurazione non riguarda un
-endpoint ma tutti quelli serviti da quel componente.
+altro. Una traccia di stack non compromette nulla di per sé, ma rivela versioni e
+percorsi interni e abbassa il costo della ricognizione; una politica di uscita
+permissiva trasforma un SSRF cieco in uno con ritorno. Vi si aggiunge l'ampiezza:
+essendo trasversale, un difetto di configurazione non riguarda un endpoint ma
+tutti quelli serviti da quel componente.
 
 \paragraph{Mitigazione}
 
@@ -1163,14 +1113,13 @@ configurazione va trattata come artefatto versionato e verificabile, non come
 stato accumulato di una macchina.
 
 Sul piano dei controlli le sei misure elencate riguardano il canale cifrato
-verso ogni componente a monte o a valle, i verbi HTTP da dichiarare e
-restringere, la politica CORS e le intestazioni di sicurezza per i client
-browser, i tipi di contenuto accettati, l'elaborazione uniforme delle richieste
-lungo la catena e infine gli schemi dei payload di risposta, comprese quelle di
-errore~\cite{owasp2023api8}. Due meritano una nota. Il canale cifrato è
-prescritto anche per le API interne, il che chiude l'assunto per cui il traffico
-interno sarebbe fidato; e lo schema dichiarato per le risposte di errore non è
-documentazione, ma un vincolo che a runtime impedisce strutturalmente la fuga di
+verso ogni componente, i verbi HTTP da restringere, la politica CORS e le
+intestazioni di sicurezza, i tipi di contenuto accettati, l'elaborazione
+uniforme delle richieste lungo la catena e gli schemi dei payload di risposta,
+comprese quelle di errore~\cite{owasp2023api8}. Due meritano una nota: il canale
+cifrato è prescritto anche per le API interne, il che chiude l'assunto per cui il
+traffico interno sarebbe fidato; e lo schema dichiarato per le risposte di errore
+non è documentazione, ma un vincolo che a runtime impedisce la fuga di
 informazioni diagnostiche.
 
 \paragraph{Rilevabilità: stato dell'arte in letteratura}
@@ -1182,31 +1131,26 @@ formulazione è simmetrica: gli stessi strumenti servono a chi difende e a chi
 attacca, perché ciò che cercano è pubblicamente noto.
 
 La ragione per cui il rilevamento funziona si comprende per contrasto. Per
-l'autorizzazione funzionale lo strumento non sapeva se un controllo fosse
-dovuto; per il consumo di risorse non sapeva se un limite fosse applicato
-altrove. Per la configurazione l'oracolo è esterno e pubblico --- valori
-raccomandati, predefiniti noti come pericolosi, versioni vulnerabili --- e
-verificare la conformità a un riferimento è un problema di confronto, non di
-inferenza. È l'unica categoria della Top~10 con un mercato maturo di strumenti
-che operano su artefatti dichiarativi anziché su codice.
+l'autorizzazione funzionale lo strumento non sapeva se un controllo fosse dovuto;
+per il consumo di risorse non sapeva se un limite fosse applicato altrove. Per la
+configurazione l'oracolo è esterno e pubblico --- valori raccomandati,
+predefiniti noti come pericolosi, versioni vulnerabili --- e verificare la
+conformità a un riferimento è un problema di confronto, non di inferenza.
 
 Restano tre limiti. La copertura: ciò che non è dichiarato in un file non è
 ispezionabile prima dell'esecuzione. La deriva: un'analisi statica attesta ciò
-che un file dichiara, non ciò che è attivo sul sistema. Il contesto: una
-politica CORS che ammette qualunque origine è un difetto per un'API a client
-autenticati e una scelta legittima per un'API pubblica di sola lettura, sicché
-la verifica sintattica non stabilisce se un'impostazione sia sbagliata, ma solo
-se si discosta da un riferimento la cui pertinenza dipende dalla funzione
-dell'endpoint.
+che un file dichiara, non ciò che è attivo sul sistema. Il contesto: una politica
+CORS che ammette qualunque origine è un difetto per un'API a client autenticati e
+una scelta legittima per un'API pubblica di sola lettura, sicché la verifica
+sintattica non stabilisce se un'impostazione sia sbagliata, ma solo se si
+discosta da un riferimento la cui pertinenza dipende dall'endpoint.
 
 Va infine notata la natura del segnale. Per le categorie di autorizzazione
 l'analisi cerca l'assenza di qualcosa che avrebbe dovuto esserci; per API8 cerca
 la presenza di qualcosa che non avrebbe dovuto esserci, o l'assenza di qualcosa
 che ha un valore corretto noto. Il secondo problema si presta al confronto e
 produce falsi positivi contestuali ma pochi falsi negativi; il primo richiede di
-ricostruire l'intenzione del progettista, e l'asimmetria spiega perché la stessa
-infrastruttura di analisi dia risultati molto diversi secondo la categoria cui
-viene applicata.
+ricostruire l'intenzione del progettista.
 
 \subsection{API9:2023 -- Improper Inventory Management}
 \label{subsubsec:api9}
@@ -1215,27 +1159,26 @@ viene applicata.
 
 Le categorie viste finora descrivono un difetto in qualcosa che l'organizzazione
 sa di avere: un handler, un limite, una configurazione. API9:2023 riguarda ciò
-che l'organizzazione non sa di avere. Il difetto non è nel codice ma nella
-visibilità, e OWASP lo definisce come scarsa catalogazione degli host e delle
-versioni di un'API, articolandolo in due punti ciechi~\cite{owasp2023api9}.
+che non sa di avere. Il difetto non è nel codice ma nella visibilità, e OWASP lo
+definisce come scarsa catalogazione degli host e delle versioni di un'API,
+articolandolo in due punti ciechi~\cite{owasp2023api9}.
 
 Il primo è quello della documentazione: restano senza risposta esplicita le
-domande su quale ambiente ospiti un'API, su chi debba avervi accesso di rete e
-su quale versione sia in esecuzione, la documentazione manca o è obsoleta, e non
-esistono né un piano di dismissione delle versioni né un inventario aggiornato
-degli host~\cite{owasp2023api9}. Il secondo è quello dei flussi di dati, e
-ricorre quando dati sensibili raggiungono terze parti senza motivazione di
-business, approvazione o visibilità su cosa venga condiviso~\cite{owasp2023api9}.
+domande su quale ambiente ospiti un'API, chi debba avervi accesso di rete e quale
+versione sia in esecuzione, la documentazione manca o è obsoleta, e non esistono
+né un piano di dismissione né un inventario aggiornato degli
+host~\cite{owasp2023api9}. Il secondo è quello dei flussi di dati, e ricorre
+quando dati sensibili raggiungono terze parti senza motivazione di business,
+approvazione o visibilità su cosa venga condiviso~\cite{owasp2023api9}.
 
 Il riferimento tassonomico conferma la particolarità della categoria. OWASP
-rinvia a CWE-1059, di cui MITRE dichiara proibita la mappatura~\cite{cwe1059}:
-è la seconda volta nell'elenco, dopo CWE-16 per API8, che la voce di riferimento
+rinvia a CWE-1059, di cui MITRE dichiara proibita la mappatura~\cite{cwe1059}: è
+la seconda volta nell'elenco, dopo CWE-16 per API8, che la voce di riferimento
 non serve a classificare una vulnerabilità reale. Qui però non è
 un'imprecisione della tassonomia, bensì una proprietà della categoria, perché
 l'assenza di un inventario non è un comportamento del prodotto. Le metriche sono
 sfruttabilità facile, prevalenza diffusa, rilevabilità media e impatto tecnico
-moderato~\cite{owasp2023api9}; i rapporti con le altre categorie sono nella
-Tabella~\ref{tab:api9_relazioni}.
+moderato~\cite{owasp2023api9}.
 
 \begin{table}[H]
 \centering
@@ -1244,9 +1187,9 @@ Tabella~\ref{tab:api9_relazioni}.
 \hline
 \textbf{Categoria} & \textbf{Punto di contatto con API9} & \textbf{Criterio di distinzione} \\
 \hline
-API2 & Anti-brute-force attivo sul solo host ufficiale & Controllo assente (API2) contro controllo non esteso a tutti gli host (API9) \\
-API4 & Limite applicato a un livello ma non a ogni host esposto & Il limite in sé (API4) contro la superficie che raggiunge (API9) \\
-API5 & Versioni obsolete servono funzioni riservate protette altrove & Difetto di logica (API5) contro difetto di inventario (API9) \\
+API2 & Anti-brute-force sul solo host ufficiale & Controllo assente (API2) contro controllo non esteso (API9) \\
+API4 & Limite applicato a un livello ma non a ogni host & Il limite (API4) contro la superficie che raggiunge (API9) \\
+API5 & Versioni obsolete servono funzioni riservate & Difetto di logica (API5) contro di inventario (API9) \\
 API8 & Ambienti non di produzione con requisiti più deboli & Impostazione sbagliata (API8) contro host ignoto (API9) \\
 \hline
 \end{tabular}
@@ -1256,51 +1199,49 @@ API8 & Ambienti non di produzione con requisiti più deboli & Impostazione sbagl
 
 \paragraph{Cause e meccanismi tecnici tipici}
 
-La causa è un'asimmetria fra due costi: esporre una nuova istanza richiede
-pochi minuti, catalogarla e prevederne la dismissione richiede un processo che
-nessuna pipeline esegue da sola. Ogni ambiente di collaudo è però un'API
-completa e raggiungibile, mentre l'inventario che dovrebbe elencarlo è un
-documento aggiornato a mano.
+La causa è un'asimmetria fra due costi: esporre una nuova istanza richiede pochi
+minuti, catalogarla e prevederne la dismissione richiede un processo che nessuna
+pipeline esegue da sola. Ogni ambiente di collaudo è però un'API completa e
+raggiungibile, mentre l'inventario che dovrebbe elencarlo è un documento
+aggiornato a mano.
 
-Il primo scenario di OWASP ne mostra la conseguenza. Un social network protegge
-il recupero della password dalla forza bruta, ma il meccanismo non è nel codice
+Il primo scenario ne mostra la conseguenza. Un social network protegge il
+recupero della password dalla forza bruta, ma il meccanismo non è nel codice
 dell'API: risiede in un componente interposto fra il client e l'host ufficiale.
 Un ricercatore individua \path{beta.api.socialnetwork.owasp.org}, che esegue la
 stessa API senza esserne coperto, e reimposta la password di qualunque utente
 indovinando un token di sei cifre~\cite{owasp2023api9}. Il controllo esisteva ed
-era corretto: era collocato su un percorso che non copriva tutti gli host che
-servivano quel codice.
+era corretto: non copriva tutti gli host che servivano quel codice.
 
-Il secondo scenario riguarda l'altro punto cieco. Un'applicazione malevola
+Il secondo scenario riguarda l'altro punto cieco: un'applicazione malevola
 ottiene il consenso di 270.000 utenti ma, attraverso di essi, accede alle
-informazioni private di 50.000.000 di loro contatti, per assenza di restrizioni
-e monitoraggio sui flussi di dati~\cite{owasp2023api9}. Qui non c'è alcun
-sistema non aggiornato né alcun host dimenticato: manca la conoscenza di dove i
-dati finiscano e in quale volume.
+informazioni private di 50.000.000 di contatti, per assenza di restrizioni e
+monitoraggio sui flussi~\cite{owasp2023api9}. Qui non c'è alcun host
+dimenticato: manca la conoscenza di dove i dati finiscano.
 
 \paragraph{Impatto essenziale}
 
 OWASP classifica l'impatto tecnico come moderato, osservando che gli attaccanti
 possono ottenere accesso non autorizzato a dati sensibili o compromettere i
 server~\cite{owasp2023api9}. Il dettaglio decisivo è però che versioni diverse
-della stessa API sono talvolta collegate alla medesima base di dati, con dati
-reali~\cite{owasp2023api9}: l'host dimenticato non è una copia isolata, è una
+della stessa API sono talvolta collegate alla medesima base di
+dati~\cite{owasp2023api9}: l'host dimenticato non è una copia isolata, è una
 seconda porta sugli stessi dati.
 
 Ne discende il tratto distintivo. API9 non introduce una vulnerabilità propria:
 rende raggiungibili quelle altrui e ne impedisce la correzione, perché una patch
 si applica a ciò che si sa di avere in esecuzione. Il giudizio di impatto
-moderato, letto da solo, è quindi fuorviante: la gravità effettiva è quella del
-difetto peggiore che l'host non inventariato continua a servire.
+moderato è quindi fuorviante: la gravità effettiva è quella del difetto peggiore
+che l'host non inventariato continua a servire.
 
 \paragraph{Mitigazione}
 
 Le contromisure muovono tutte dallo stesso presupposto, che la visibilità vada
 prodotta e non presupposta~\cite{owasp2023api9}. Le prime sono di inventario ---
 gli host, con ambiente, accesso di rete e versione, e i servizi integrati, con
-ruolo e sensibilità dei dati scambiati --- cui segue la documentazione dell'API,
-che deve coprire autenticazione, errori, redirezioni, limitazione di frequenza,
-politica CORS ed endpoint.
+ruolo e sensibilità dei dati --- cui segue la documentazione dell'API, che deve
+coprire autenticazione, errori, redirezioni, limitazione di frequenza, politica
+CORS ed endpoint.
 
 La misura più incisiva è però la successiva: generare la documentazione in modo
 automatico, con standard aperti e dentro la pipeline di integrazione
@@ -1309,11 +1250,10 @@ trasforma la documentazione da documento parallelo, che diverge appena qualcuno
 dimentica di aggiornarlo, in artefatto prodotto dalla compilazione.
 
 Restano tre prescrizioni sulle versioni: applicare le misure di sicurezza
-esterne a tutte quelle esposte e non alla sola produzione, che è ciò che il
-primo scenario mostra disatteso; non usare dati di produzione fuori dalla
-produzione, o proteggerli allo stesso modo; e, quando una versione nuova porta
-miglioramenti di sicurezza, decidere se riportarli sulle precedenti o imporre la
-migrazione~\cite{owasp2023api9}.
+esterne a tutte quelle esposte e non alla sola produzione, che è ciò che il primo
+scenario mostra disatteso; non usare dati di produzione fuori dalla produzione; e
+decidere, quando una versione nuova porta miglioramenti di sicurezza, se
+riportarli sulle precedenti o imporre la migrazione~\cite{owasp2023api9}.
 
 \paragraph{Rilevabilità: stato dell'arte in letteratura}
 
@@ -1327,28 +1267,25 @@ Ciò che si può fare per via automatica è un confronto fra rappresentazioni. L
 rotte implementate nel codice ma non dichiarate nel contratto sono candidate a
 essere API ombra, raggiungibili ma ignote a ogni revisione basata sulla
 specifica; quelle dichiarate ma non implementate segnalano documentazione
-obsoleta. Nessuna delle due è di per sé una vulnerabilità, ma entrambe misurano
-la divergenza fra il modello e la realtà, che è il difetto che la categoria
-descrive.
+obsoleta. Nessuna delle due è una vulnerabilità, ma entrambe misurano la
+divergenza fra il modello e la realtà.
 
 Il confronto ha però un limite intrinseco: opera fra due rappresentazioni della
 stessa applicazione e non dice nulla sugli host su cui essa è distribuita. Il
 primo scenario è precisamente il caso in cui codice e contratto coincidono e il
-difetto sta nella topologia di rete, il che richiede di enumerare gli host
-raggiungibili e confrontarli con l'inventario: ricognizione infrastrutturale,
-non analisi del software.
+difetto sta nella topologia di rete, il che richiede ricognizione
+infrastrutturale e non analisi del software.
 
 La letteratura sottoposta a revisione paritaria è qui scarsa, e conviene dirlo
 anziché colmare il vuoto con riferimenti impropri: non esiste un insieme di
 verità di riferimento contro cui misurare un rilevatore di API ombra, perché
 costruirlo richiederebbe l'inventario completo di organizzazioni reali, cioè
-proprio l'informazione che per ipotesi manca. Per API9, in conclusione, non
-esiste un rilevamento nel senso in cui esiste per le altre categorie, cioè
-l'individuazione di un difetto dentro un artefatto: esiste la misura di una
-divergenza fra rappresentazioni indipendenti dello stesso sistema ---
-contratto, codice, inventario degli host, traffico osservato --- il cui valore
-non sta nel produrre un verdetto, ma nel restituire la visibilità che il
-difetto per definizione sottrae.
+l'informazione che per ipotesi manca. Per API9 non esiste dunque un rilevamento
+nel senso in cui esiste per le altre categorie, cioè l'individuazione di un
+difetto dentro un artefatto: esiste la misura di una divergenza fra
+rappresentazioni indipendenti dello stesso sistema --- contratto, codice,
+inventario, traffico --- il cui valore non sta nel produrre un verdetto, ma nel
+restituire la visibilità che il difetto sottrae.
 
 \subsection{API10:2023 -- Unsafe Consumption of APIs}
 \label{subsubsec:api10}
@@ -1360,19 +1297,17 @@ attacco diretto. API10:2023 rovescia la prospettiva: l'attaccante non colpisce
 l'API bersaglio ma un servizio da cui essa dipende, e il danno arriva per un
 canale che l'applicazione considera fidato. Le note di rilascio dichiarano di
 aver introdotto la categoria perché gli attaccanti hanno cominciato a
-compromettere i servizi integrati di un bersaglio anziché colpirne direttamente
-le API~\cite{owasp2023apireleasenotes}.
+compromettere i servizi integrati anziché le API del
+bersaglio~\cite{owasp2023apireleasenotes}.
 
 La causa che OWASP individua è psicologica prima che tecnica: gli sviluppatori
 si fidano dei dati ricevuti da terze parti più di quanto si fidino dell'input
-dell'utente, tanto più se provengono da aziende note, e adottano standard più
-deboli quanto a trasporto, autenticazione e validazione~\cite{owasp2023api10}.
-Le cinque condizioni di vulnerabilità elencate sono canale non cifrato, dati
-ricevuti non validati, redirezioni seguite ciecamente, risorse non limitate
-nell'elaborare le risposte altrui e timeout assenti~\cite{owasp2023api10}. Su di
-esse è stata sollevata in revisione un'obiezione fondata, e non recepita,
-secondo cui almeno tre apparterrebbero ad altre
-categorie~\cite{owasp2023apiissue80}.
+dell'utente, e adottano standard più deboli quanto a trasporto, autenticazione e
+validazione~\cite{owasp2023api10}. Le cinque condizioni di vulnerabilità sono
+canale non cifrato, dati non validati, redirezioni seguite ciecamente, risorse
+non limitate e timeout assenti~\cite{owasp2023api10}; su di esse è stata
+sollevata in revisione un'obiezione fondata, e non recepita, secondo cui almeno
+tre apparterrebbero ad altre categorie~\cite{owasp2023apiissue80}.
 
 I riferimenti esterni sono generici --- CWE-20, CWE-200 e CWE-319 --- ma la
 genericità riflette una proprietà reale: l'impatto varia a seconda di ciò che
@@ -1388,10 +1323,10 @@ nella Tabella~\ref{tab:api10_relazioni}.
 \hline
 \textbf{Categoria} & \textbf{Punto di contatto con API10} & \textbf{Criterio di distinzione} \\
 \hline
-API4 & Timeout e limiti sulle risposte dei servizi integrati & Bene protetto: le risorse del server (API4) contro l'integrità del dato ricevuto (API10) \\
-API7 & Entrambe riguardano il traffico in uscita e vietano le redirezioni cieche & Destinazione scelta dall'attaccante (API7) contro fornitore legittimo ma non verificato (API10) \\
-API8 & Interazione con servizi terzi su canale non cifrato & Impostazione dello stack (API8) contro fiducia mal riposta nella dipendenza (API10) \\
-API9 & Inventario dei servizi integrati e dei dati scambiati & Cosa si condivide senza saperlo (API9) contro cosa si accetta senza verificarlo (API10) \\
+API4 & Timeout e limiti sulle risposte dei servizi integrati & Bene protetto: le risorse del server \\
+API7 & Traffico in uscita; entrambe vietano le redirezioni cieche & Destinazione scelta dall'attaccante (API7) o legittima (API10) \\
+API8 & Interazione con servizi terzi su canale non cifrato & Impostazione dello stack contro fiducia nel contenuto \\
+API9 & Inventario dei servizi integrati e dei dati scambiati & Cosa si condivide senza saperlo (API9) \\
 \hline
 \end{tabular}
 \caption{Relazioni fra API10:2023 e le categorie contigue della OWASP API Security Top~10 2023.}
@@ -1414,67 +1349,61 @@ injection associato a un'attività creata da loro, poi inducono l'API a
 prelevarla~\cite{owasp2023api10}. Ciò che lo distingue da un'iniezione ordinaria
 è che l'attaccante non invia mai il payload all'API bersaglio: lo deposita
 altrove, e sanificare l'input degli utenti non serve, perché quell'input è un
-innocuo nome di attività commerciale.
+innocuo nome di attività.
 
 Il secondo scenario mostra la redirezione seguita ciecamente. Un'API invia
 informazioni mediche a un fornitore su connessione cifrata; gli attaccanti lo
 compromettono ed esso risponde con un \texttt{308 Permanent Redirect}, sicché
-l'API ripete la richiesta identica, dati sensibili compresi, verso il server
-degli attaccanti~\cite{owasp2023api10}. Cifratura e scelta del fornitore erano
-corrette: la fuga avviene per un comportamento predefinito del client HTTP che
-nessuno ha valutato come decisione di sicurezza.
+l'API ripete la richiesta identica, dati sensibili compresi, verso il loro
+server~\cite{owasp2023api10}. La fuga avviene per un comportamento predefinito
+del client HTTP che nessuno ha valutato come decisione di sicurezza.
 
 Il terzo scenario è il più istruttivo, perché la terza parte non deve nemmeno
 essere compromessa: un attaccante crea un repository Git denominato
 \path{'; drop db;--}, e l'applicazione che vi si integra ne usa il nome per
 costruire una query SQL ritenendolo sicuro~\cite{owasp2023api10}. Il servizio ha
-restituito fedelmente il nome scelto dal proprio utente; è l'applicazione ad
-aver confuso l'autenticità del canale con l'affidabilità del contenuto. Un
-servizio terzo può dunque veicolare dati malevoli perché compromesso, perché
-usato come deposito da un attaccante che ne è utente legittimo, o perché
-trasmette contenuti altrui: solo il primo caso richiede un'intrusione.
+restituito fedelmente il nome scelto dal proprio utente; è l'applicazione ad aver
+confuso l'autenticità del canale con l'affidabilità del contenuto. Un servizio
+terzo può dunque veicolare dati malevoli perché compromesso, perché usato come
+deposito, o perché trasmette contenuti altrui: solo il primo caso richiede
+un'intrusione.
 
 \paragraph{Impatto essenziale}
 
 L'impatto varia a seconda di ciò che l'API bersaglio fa con i dati prelevati:
 esposizione di informazioni sensibili, molti tipi di iniezione o denial of
 service~\cite{owasp2023api10}. È classificato come severo, e i tre scenari ne
-coprono tre punti: esfiltrazione tramite iniezione, fuga di dati sanitari,
-distruzione di dati.
+coprono tre punti: esfiltrazione, fuga di dati sanitari, distruzione di dati.
 
 Ciò che caratterizza la categoria è che il difetto non ne determina l'entità:
-questa è funzione di dove il dato non validato finisce. Un'informazione
-prelevata da un fornitore e memorizzata può essere riletta mesi dopo da un
-componente che la tratta come dato interno, perché proviene dalla base di dati
-dell'organizzazione; la contaminazione sopravvive alla richiesta che l'ha
-introdotta. Vi si aggiunge la scala, perché compromettere un solo fornitore
-raggiunge tutte le applicazioni che lo integrano.
+questa è funzione di dove il dato non validato finisce. Un'informazione prelevata
+da un fornitore e memorizzata può essere riletta mesi dopo da un componente che
+la tratta come dato interno, perché proviene dalla base di dati
+dell'organizzazione. Vi si aggiunge la scala, perché compromettere un solo
+fornitore raggiunge tutte le applicazioni che lo integrano.
 
 \paragraph{Mitigazione}
 
 Le contromisure che OWASP elenca sono quattro~\cite{owasp2023api10}: esaminare
-la postura di sicurezza dei fornitori al momento della scelta, trattando
-l'integrazione come decisione architetturale; imporre un canale di trasporto
-sicuro; validare e sanificare sempre i dati ricevuti dalle API integrate prima
-dell'uso; mantenere una lista delle posizioni verso cui esse possono redirigere,
-anziché seguirle ciecamente. La terza è il nucleo della categoria, ed è
-formulata in termini deliberatamente identici a quelli riservati all'input
-dell'utente: la contromisura consiste appunto nell'abolire la distinzione fra le
-due sorgenti.
+la postura di sicurezza dei fornitori al momento della scelta; imporre un canale
+di trasporto sicuro; validare e sanificare sempre i dati ricevuti dalle API
+integrate; mantenere una lista delle posizioni verso cui esse possono redirigere.
+La terza è il nucleo della categoria, formulata in termini deliberatamente
+identici a quelli riservati all'input dell'utente: la contromisura consiste
+appunto nell'abolire la distinzione fra le due sorgenti.
 
 Resta un'asimmetria interna al documento, perché due delle cinque condizioni ---
 timeout e limiti sulle risposte --- non trovano contromisura corrispondente. Se
 il contratto del fornitore è noto, poi, la risposta può essere validata rispetto
-a uno schema: ciò non intercetta un payload che lo rispetti, come il nome di
-repository del terzo scenario, ma trasforma la fiducia implicita in un vincolo
-dichiarato.
+a uno schema: ciò non intercetta un payload che lo rispetti, ma trasforma la
+fiducia implicita in un vincolo dichiarato.
 
 \paragraph{Rilevabilità: stato dell'arte in letteratura}
 
-OWASP classifica la rilevabilità come media e non indica, a differenza di altre
-categorie, come procedere: la descrizione si limita a osservare che gli
-attaccanti devono identificare i servizi con cui il bersaglio si integra ed
-eventualmente comprometterli~\cite{owasp2023api10}.
+OWASP classifica la rilevabilità come media e non indica come procedere: la
+descrizione si limita a osservare che gli attaccanti devono identificare i
+servizi con cui il bersaglio si integra ed eventualmente
+comprometterli~\cite{owasp2023api10}.
 
 Sul piano statico il problema si formula con precisione. L'analisi della
 contaminazione, su cui si fondano il rilevamento delle iniezioni e dell'SSRF,
@@ -1484,8 +1413,7 @@ la sorgente è un'altra: il valore restituito da una chiamata HTTP in uscita. Un
 motore configurato secondo quella convenzione non lo considera contaminato, e un
 flusso dalla risposta di un fornitore a una query SQL non produce segnalazione,
 benché sia identico a uno che partisse da un parametro di richiesta. Non serve
-una tecnica nuova, ma una diversa configurazione di una tecnica nota, al costo
-di più falsi positivi.
+una tecnica nuova, ma una diversa configurazione di una tecnica nota.
 
 Due dei cinque difetti si prestano invece a un rilevamento diretto, perché basta
 osservare la configurazione locale della chiamata: la redirezione seguita per
@@ -1496,10 +1424,9 @@ predefinito insicuro.
 Sul piano dinamico la verifica è ostacolata da un problema di controllo: provare
 che un'applicazione accetti dati malevoli richiede che il fornitore li
 restituisca, possibile solo se il servizio consente di immettervi contenuti o
-sostituendolo con un doppio in collaudo --- che però verifica l'applicazione,
-non l'integrazione reale. La letteratura dedicata alla categoria è infine
-pressoché assente, per quanto è stato possibile verificare: i lavori sulla
-catena di fornitura riguardano le dipendenze da pacchetti e quelli sulla
-contaminazione assumono la convenzione appena discussa, mentre il caso dell'API
-che si fida di un'altra API si colloca fra i due, plausibilmente perché è
-entrato nella Top~10 solo nel 2023~\cite{owasp2023apireleasenotes}.
+sostituendolo con un doppio in collaudo, che però verifica l'applicazione e non
+l'integrazione reale. La letteratura dedicata alla categoria è infine pressoché
+assente, per quanto è stato possibile verificare: i lavori sulla catena di
+fornitura riguardano le dipendenze da pacchetti, quelli sulla contaminazione
+assumono la convenzione appena discussa, e il caso dell'API che si fida di
+un'altra API si colloca fra i due~\cite{owasp2023apireleasenotes}.
