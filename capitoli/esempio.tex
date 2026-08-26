@@ -987,38 +987,33 @@ dall'utente: se ne può confinare l'effetto, non impedirli.
 
 \paragraph{Rilevabilità: stato dell'arte in letteratura}
 
-Per la prima volta nel corso del capitolo le due fonti primarie concordano, e a
-favore dell'analisi statica. OWASP giudica facile la rilevabilità, precisando
-che la forma cieca richiede maggiore sforzo~\cite{owasp2023api7}; CWE-918 indica
-come metodo la sola analisi statica automatica, intesa come ricerca dei percorsi
-che connettono una sorgente di input a un sink, e ne dichiara alta
-l'efficacia~\cite{cwe918}.
-
-La differenza rispetto alle categorie precedenti sta in dove si trovi l'oracolo.
-Per API5 lo strumento vede l'assenza di un controllo ma non sa se fosse dovuto;
-per API4 vede l'assenza di un limite ma non sa se sia applicato altrove. Per
+Per la prima volta nel capitolo le due fonti primarie concordano, e a favore
+dell'analisi statica. OWASP giudica facile la rilevabilità, con la sola
+eccezione della forma cieca~\cite{owasp2023api7}; CWE-918 indica come metodo
+l'analisi statica automatica --- la ricerca dei percorsi che collegano una
+sorgente di input a un sink --- e ne dichiara alta l'efficacia~\cite{cwe918}.
+Il motivo è che qui l'oracolo è interno al codice: per API4 e API5 lo strumento
+osserva l'assenza di un controllo senza poter sapere se fosse dovuto, mentre per
 API7 la domanda non è se qualcosa manchi, ma se due punti del programma siano
-connessi: una proprietà verificabile senza conoscere le intenzioni del
-progettista.
+connessi, proprietà verificabile senza conoscere le intenzioni del progettista.
 
-La letteratura conferma il quadro e ne segnala i limiti: Wessels e colleghi
-validano a mano i risultati di un'analisi di flusso sul codice
-PHP~\cite{wessels2024ssrf}, Artemis pota i percorsi non sfruttabili per ridurre
-i falsi positivi~\cite{ji2025artemis}, SSRFuzz affianca il fuzzing alla
-marcatura dinamica~\cite{wang2024ssrfuzz}. Se ne ricavano i tre problemi che ogni
-rilevatore statico deve affrontare, validi anche per il modulo descritto nella
-parte sperimentale: l'inventario dei sink, perché ometterne uno produce un falso
+La letteratura conferma il quadro e ne segnala i limiti ricorrenti: un'analisi
+di flusso su codice PHP validata manualmente~\cite{wessels2024ssrf}, la potatura
+dei percorsi non sfruttabili per contenere i falsi positivi~\cite{ji2025artemis},
+il fuzzing affiancato alla marcatura dinamica~\cite{wang2024ssrfuzz}. Se ne
+ricavano tre problemi che anche il modulo descritto nella parte sperimentale
+deve affrontare: l'inventario dei sink, dato che ometterne uno produce un falso
 negativo silenzioso; la sovra-marcatura, perché non ogni stringa contaminata che
-raggiunge un sink produce un URL controllabile; e la validazione intermedia,
-perché distinguere un controllo efficace da uno aggirabile richiede di ragionare
-sulla sua semantica.
+raggiunge un sink produce un URL controllabile; la validazione intermedia, dove
+distinguere un controllo efficace da uno aggirabile richiede di ragionarne la
+semantica.
 
-La distinzione fra le due forme ricade infine sulla verifica. Con ritorno la
-conferma dinamica è immediata: si punta l'endpoint verso un indirizzo
+Resta la verifica dinamica, sulla quale ricade la distinzione fra le due forme.
+Con ritorno la conferma è immediata: si punta l'endpoint verso un indirizzo
 controllato e si osserva se la richiesta arriva; per la forma cieca serve un
 canale laterale, tipicamente una risoluzione DNS. Nella pipeline adottata nel
-seguito l'assenza di conferma dinamica non deve quindi declassare il finding
-statico: significa soltanto che il canale di ritorno non è stato osservato.
+seguito la mancata conferma non declassa quindi il finding statico, perché
+indica soltanto che il canale di ritorno non è stato osservato.
 
 \subsection{API8:2023 -- Security Misconfiguration}
 \label{subsubsec:api8}
