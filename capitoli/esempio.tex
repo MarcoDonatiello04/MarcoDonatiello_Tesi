@@ -880,23 +880,26 @@ che avvenga.
 \label{subsubsec:api7}
 
 \paragraph{Definizione e collocazione}
-Nelle categorie viste finora l'attaccante agisce sui dati che l'API restituisce o sulle operazioni che esegue. In API7:2023 agisce su un bersaglio diverso: le richieste che l'API emette verso l'esterno. Il difetto si presenta quando un'API recupera una risorsa remota senza validare l'URL fornito dall'utente, e consente all'attaccante di costringere l'applicazione a inviare una richiesta costruita ad arte verso una destinazione inattesa, anche quando essa è protetta da un firewall o da una VPN~\cite{owasp2023api7}. Il server diventa un intermediario involontario: agisce per conto di chi lo interroga, ma con i propri privilegi di rete.
 
-MITRE colloca il difetto esattamente in questi termini. CWE-918 \emph{Server-Side Request Forgery} descrive il server che riceve un URL da un componente a monte e ne recupera il contenuto senza accertarsi a sufficienza che la richiesta sia diretta alla destinazione attesa~\cite{cwe918}, ed è figlia diretta di CWE-441 \emph{Unintended Proxy or Intermediary}, che la letteratura di sicurezza conosce come problema del vicario confuso~\cite{cwe918}. La denominazione alternativa registrata dalla stessa voce, XSPA ovvero \emph{Cross Site Port Attack}, conserva traccia del primo uso documentato della tecnica, la scansione di porte interne attraverso un'applicazione web.
+Nelle categorie viste finora l'attaccante agisce sui dati che l'API restituisce.
+In API7:2023 agisce sulle richieste che l'API emette. Il difetto compare quando
+un'API recupera una risorsa remota senza validare l'URL fornito dall'utente:
+l'attaccante può allora costringere l'applicazione a inviare una richiesta verso
+una destinazione inattesa, anche se protetta da un firewall o da una
+VPN~\cite{owasp2023api7}. Il server diventa un intermediario involontario, che
+agisce per conto di chi lo interroga ma con i propri privilegi di rete. Non
+viola quindi un controllo di accesso applicativo: ne annulla uno di rete.
 
-Due proprietà della voce CWE meritano attenzione perché la distinguono da quelle incontrate finora. La prima è l'ordinalità: CWE-918 è classificata come \emph{resultant}, ossia una debolezza tipicamente legata alla presenza di altre debolezze~\cite{cwe918}, e ciò riflette il fatto che l'SSRF raramente è il fine dell'attacco quanto piuttosto il mezzo per raggiungerne un altro. La seconda è la persistenza nelle classifiche: la voce compare nelle CWE Top~25 del 2021, 2022, 2023, 2024 e 2025, cinque edizioni consecutive~\cite{cwe918}, e la sua rilevanza è cresciuta al punto che MITRE registra ora fra le tecnologie interessate quelle di intelligenza artificiale con prevalenza frequente, allegando esempi osservati che riguardano toolkit e framework per modelli linguistici~\cite{cwe918}.
-
-Anche la collocazione nelle tassonomie OWASP generaliste è istruttiva. Nella Top~10 del 2021 l'SSRF aveva una categoria propria, A10:2021, mentre nell'edizione 2025 la voce CWE-918 risulta ricondotta ad A01:2025 \emph{Broken Access Control}~\cite{cwe918}. Il riassorbimento non è arbitrario: la conseguenza principale registrata da MITRE sul piano del controllo di accesso è che fornendo URL verso host o porte inattesi l'attaccante fa apparire la richiesta come proveniente dal server, aggirando così controlli quali i firewall che gli impedirebbero di raggiungere quegli indirizzi direttamente~\cite{cwe918}. L'SSRF, in altre parole, non viola un controllo di accesso applicativo ma ne annulla uno di rete.
-
-Ciò che rende la categoria attuale è il contesto in cui le API operano oggi, e OWASP lo articola su due assi. Più comune, perché webhook, recupero di file da URL, single sign-on personalizzati e anteprime dei collegamenti spingono lo sviluppatore ad accedere a risorse esterne indicate dall'utente. Più pericoloso, perché tecnologie come i fornitori cloud, Kubernetes e Docker espongono canali di gestione e controllo su HTTP a percorsi prevedibili e ben noti, che costituiscono un bersaglio facile; a ciò si aggiunge la difficoltà di limitare il traffico in uscita, data la natura interconnessa delle applicazioni moderne~\cite{owasp2023api7}. Le metriche assegnate sono sfruttabilità facile, prevalenza comune, rilevabilità facile e impatto tecnico moderato~\cite{owasp2023api7}.
-
-Rispetto alle categorie contigue API7 intrattiene tre rapporti che conviene fissare.
-
-Con API10:2023 il legame è di simmetria sul traffico in uscita. Entrambe riguardano richieste che il server emette anziché ricevere, ma differiscono per chi sceglie la destinazione: in API7 la sceglie l'attaccante attraverso un input non validato, in API10 la destinazione è un fornitore legittimo di cui però l'applicazione si fida troppo, non validandone la risposta né seguendone ciecamente le redirezioni~\cite{owasp2023api10}. Le due categorie condividono peraltro una contromisura, il divieto di seguire redirezioni automatiche, che OWASP prescrive in entrambe~\cite{owasp2023api7,owasp2023api10}.
-
-Con API4:2023 il contatto è sul timeout. Un server indotto a contattare un host controllato dall'attaccante può essere trattenuto indefinitamente da una risposta che non arriva, e OWASP indica fra gli impatti possibili dell'SSRF proprio il denial of service e l'uso del server come proxy per mascherare attività malevole~\cite{owasp2023api7}. La difesa è la stessa già discussa per il consumo di risorse, ma il difetto primario resta la libertà nella scelta della destinazione.
-
-Con API3:2023 il rapporto riguarda il punto d'ingresso. Il campo che contiene l'URL è una proprietà dell'oggetto in arrivo, e il primo controllo che avrebbe dovuto agire è quello sulla forma e sul valore ammessi per quella proprietà; se il contratto dichiarasse uno schema ristretto e la validazione lo applicasse, l'SSRF non si presenterebbe. La differenza sta nell'esito: in API3 una proprietà scritta indebitamente altera un dato, in API7 altera il comportamento di rete del server. La Tabella~\ref{tab:api7_relazioni} riassume i tre rapporti.
+MITRE classifica CWE-918 come debolezza \emph{resultant}, legata cioè alla
+presenza di altre~\cite{cwe918}: l'SSRF è raramente il fine dell'attacco, quasi
+sempre il mezzo. A renderla attuale è il contesto in cui le API operano. È più
+comune, perché webhook, recupero di file da URL e anteprime dei collegamenti
+spingono a raggiungere risorse esterne indicate dall'utente; ed è più
+pericolosa, perché fornitori cloud, Kubernetes e Docker espongono canali di
+gestione su HTTP a percorsi noti, mentre limitare il traffico in uscita resta
+difficile~\cite{owasp2023api7}. I rapporti con le categorie contigue, fra cui la
+contromisura condivisa con API10:2023~\cite{owasp2023api10}, sono riassunti
+nella Tabella~\ref{tab:api7_relazioni}.
 
 \begin{table}[H]
 \centering
@@ -915,42 +918,107 @@ API10 & Entrambe riguardano il traffico in uscita; comune il divieto di seguire 
 \end{table}
 
 \paragraph{Cause e meccanismi tecnici tipici}
-La causa immediata è la mancanza o l'inadeguatezza della validazione di un URI fornito dal client, e OWASP osserva che sono proprio i modelli di sviluppo moderni a incoraggiare l'accesso a URI di provenienza esterna~\cite{owasp2023api7}. Il difetto nasce quindi da una funzionalità voluta, non da un errore di codifica: nessuno introduce per sbaglio un endpoint che scarica un'immagine da un indirizzo scelto dall'utente.
 
-Il primo scenario del documento mostra la forma elementare. Un social network consente di caricare l'immagine del profilo indicandone l'URL anziché il file, il che innesca una chiamata a \texttt{POST /api/profile/upload\_picture} con il campo \texttt{picture\_url}. L'attaccante vi inserisce \texttt{localhost:8080} e, misurando il tempo di risposta, deduce se la porta sia aperta, avviando così una scansione della rete interna attraverso l'endpoint~\cite{owasp2023api7}. Il dettaglio importante è che l'informazione non arriva dal corpo della risposta ma dalla sua latenza: è la forma cieca dell'attacco, in cui l'attaccante non riceve il contenuto della richiesta interna e deve inferirne l'esito da canali laterali.
+La causa immediata è l'assenza o l'inadeguatezza della validazione dell'URI
+fornito dal client, e sono i modelli di sviluppo moderni a incoraggiare
+l'accesso a URI di provenienza esterna~\cite{owasp2023api7}. Il difetto nasce
+quindi da una funzionalità voluta: nessuno introduce per sbaglio un endpoint che
+scarica un'immagine da un indirizzo scelto dall'utente.
 
-Il secondo scenario mostra la forma con ritorno, ed è quella economicamente rilevante. Un prodotto di sicurezza consente di configurare webhook verso un SIEM esterno; durante la creazione del canale il back-end invia una richiesta di prova all'URL indicato e ne mostra all'utente la risposta. L'attaccante sostituisce l'URL del SIEM con quello del servizio di metadati dell'ambiente cloud, \path{http://169.254.169.254/latest/meta-data/iam/security-credentials/}, e poiché l'applicazione visualizza la risposta della richiesta di prova, ottiene le credenziali dell'ambiente~\cite{owasp2023api7}. Qui si compongono i due assi indicati sopra: il webhook è la funzionalità che rende comune il difetto, l'indirizzo di metadati a percorso noto è ciò che lo rende grave.
+I due scenari del documento mostrano le due forme dell'attacco. Nella forma
+cieca un social network consente di indicare l'immagine del profilo tramite URL;
+l'attaccante scrive \texttt{localhost:8080} nel campo \texttt{picture\_url} e,
+misurando il tempo di risposta, deduce se la porta sia aperta, scandendo così la
+rete interna~\cite{owasp2023api7}. L'informazione non arriva dal corpo della
+risposta, ma dalla sua latenza. Nella forma con ritorno un prodotto di sicurezza
+invia una richiesta di prova al webhook che l'utente sta configurando e gliene
+mostra la risposta; l'attaccante vi indica il servizio di metadati dell'ambiente
+cloud e ne ottiene le credenziali~\cite{owasp2023api7}. Il webhook rende comune
+il difetto, l'indirizzo di metadati a percorso noto lo rende grave.
 
-Una terza famiglia di meccanismi non riguarda l'assenza di validazione ma il suo aggiramento, e OWASP la segnala includendo fra le contromisure l'uso di un parser di URL collaudato per evitare i problemi causati da incoerenze di analisi sintattica~\cite{owasp2023api7}. Gli esempi osservati raccolti da MITRE ne documentano il funzionamento: in un caso, la validazione errata del formato decimale di un indirizzo IP consente l'analisi di formati ottali o esadecimali, permettendo l'aggiramento di un meccanismo di protezione contro l'SSRF~\cite{cwe918}. Rientrano nella stessa famiglia le redirezioni seguite automaticamente, per cui un URL inizialmente lecito rimanda a uno interno, e l'uso di schemi diversi da HTTP: MITRE cita esplicitamente \texttt{file://} per accedere a documenti sul sistema e \texttt{gopher://} o \texttt{tftp://}, che possono offrire all'attaccante un controllo maggiore sul contenuto delle richieste~\cite{cwe918}, oltre a un caso in cui una libreria di download segue automaticamente redirezioni verso \texttt{file://} e \texttt{scp://}~\cite{cwe918}. Il punto generale è che la validazione dell'URL è un problema di parsing, e i problemi di parsing si risolvono male con espressioni regolari scritte a mano.
-
-Un'osservazione di Wessels, Koch, Pellegrino e Johns chiude il quadro delle cause. Analizzando 27.078 applicazioni PHP open source, gli autori rilevano che le difese note sono scarsamente adottate e che la stragrande maggioranza dei flussi di dati controllati dall'attaccante da loro individuati risulta vulnerabile, concludendo che gli sviluppatori sono tuttora in larga parte inconsapevoli degli abusi possibili sulle richieste server-side e della necessità di difendersene~\cite{wessels2024ssrf}. La causa più diffusa, in altri termini, non è una difesa mal implementata ma l'assenza di qualunque difesa.
+Una terza famiglia riguarda non l'assenza della validazione ma il suo
+aggiramento --- formati alternativi di un indirizzo IP, redirezioni verso host
+interni, schemi come \texttt{file://}~\cite{cwe918}. Validare un URL è insomma
+un problema di parsing, che le espressioni regolari scritte a mano risolvono
+male. Un'analisi su oltre 27.000 applicazioni PHP mostra però che la
+causa più diffusa non è una difesa mal costruita, ma l'assenza di qualunque
+difesa~\cite{wessels2024ssrf}.
 
 \paragraph{Impatto essenziale}
-OWASP elenca come esiti di uno sfruttamento riuscito l'enumerazione dei servizi interni, tipicamente attraverso scansione di porte, la divulgazione di informazioni, l'aggiramento di firewall o altri meccanismi di sicurezza, e in alcuni casi il denial of service o l'uso del server come proxy per occultare attività malevole~\cite{owasp2023api7}. CWE-918 organizza gli stessi effetti sulle tre proprietà: lettura di dati applicativi sulla riservatezza, esecuzione di codice o comandi non autorizzati sull'integrità, aggiramento dei meccanismi di protezione sul controllo di accesso~\cite{cwe918}.
 
-L'elemento che distingue l'impatto dell'SSRF è il cambio di perimetro. L'attaccante non ottiene direttamente un dato: ottiene una posizione, quella del server, e da lì raggiunge ciò che dalla propria posizione gli era precluso. Questo spiega perché la voce CWE sia classificata come debolezza risultante e perché il valore dell'attacco dipenda interamente da cosa sia raggiungibile dall'interno. In un'architettura piatta, dove i servizi interni si fidano reciprocamente perché protetti dal perimetro, un singolo endpoint vulnerabile annulla la protezione di tutti; in un'architettura segmentata, lo stesso endpoint consente poco più di una scansione.
+OWASP elenca come esiti l'enumerazione dei servizi interni per scansione di
+porte, la divulgazione di informazioni, l'aggiramento di firewall e, in alcuni
+casi, il denial of service o l'uso del server come proxy~\cite{owasp2023api7}.
 
-Il caso dei servizi di metadati cloud merita una nota, perché è quello che converte l'SSRF da problema di ricognizione a compromissione. Quei servizi rispondono a un indirizzo fisso e ben noto, non richiedono autenticazione perché presuppongono che solo l'istanza possa raggiungerli, ed espongono le credenziali del ruolo associato alla macchina. Un SSRF con ritorno verso quell'indirizzo produce quindi credenziali valide per l'infrastruttura, non un dato applicativo. Che il rischio non sia teorico lo attestano gli esempi osservati registrati da MITRE, fra cui due vulnerabilità SSRF, in un mail server e in una piattaforma cloud, entrambe indicate come sfruttate attivamente secondo il catalogo KEV di CISA~\cite{cwe918}.
+L'elemento che distingue l'SSRF è il cambio di perimetro: l'attaccante non
+ottiene un dato, ottiene una posizione, quella del server. Il valore
+dell'attacco dipende perciò da cosa sia raggiungibile dall'interno: in
+un'architettura piatta un solo endpoint vulnerabile annulla la protezione di
+tutti i servizi che si fidano del perimetro, in una segmentata consente poco più
+di una scansione.
+
+I servizi di metadati cloud convertono poi l'SSRF da ricognizione a
+compromissione: rispondono a un indirizzo fisso e noto, non richiedono
+autenticazione perché presuppongono che solo l'istanza possa raggiungerli, ed
+espongono le credenziali del ruolo associato alla macchina, e MITRE ne registra
+casi sfruttati attivamente~\cite{cwe918}.
 
 \paragraph{Mitigazione}
-Le contromisure che OWASP elenca si dispongono su due piani. Sul piano dell'architettura di rete, la raccomandazione è di isolare il meccanismo di recupero delle risorse, osservando che tali funzionalità mirano di norma a recuperare risorse remote e non interne~\cite{owasp2023api7}. È la difesa più robusta perché non dipende dalla correttezza della validazione: se il componente che effettua le richieste in uscita non ha rotta verso la rete interna, un URL malevolo non produce nulla.
 
-Sul piano applicativo il documento prescrive l'uso, ove possibile, di liste di elementi ammessi su tre dimensioni distinte: le origini remote da cui gli utenti sono attesi scaricare risorse, gli schemi di URL e le porte, e i tipi di media accettati per una data funzionalità~\cite{owasp2023api7}. La tripartizione è significativa perché ciascuna dimensione blocca una famiglia di aggiramenti diversa, e la seconda in particolare chiude gli schemi alternativi discussi sopra. Seguono la disabilitazione delle redirezioni HTTP, l'uso di un parser di URL collaudato e mantenuto, la validazione e sanificazione di tutti i dati forniti dal client, e il divieto di restituire al client le risposte grezze~\cite{owasp2023api7}. Quest'ultima misura non impedisce l'attacco ma ne degrada l'esito dalla forma con ritorno a quella cieca, riducendo drasticamente il valore dell'informazione ottenibile.
+Sul piano della rete OWASP raccomanda di isolare il meccanismo di recupero delle
+risorse, che di norma mira a risorse remote e non interne~\cite{owasp2023api7}.
+È la difesa più robusta perché non dipende dalla correttezza della validazione:
+se il componente che effettua le richieste in uscita non ha rotta verso la rete
+interna, un URL malevolo non produce nulla.
 
-CWE-918 aggiunge, nell'esempio dimostrativo, la forma più restrittiva della lista di ammessi, ossia il confronto dell'URL con un insieme finito di valori consentiti anziché con un pattern~\cite{cwe918}. È una misura applicabile solo quando le destinazioni legittime sono note in anticipo, il che esclude proprio i casi che rendono la categoria comune: un webhook definito dall'utente non può essere confrontato con una lista.
+Sul piano applicativo il documento prescrive liste di elementi ammessi su tre
+dimensioni --- origini remote attese, schemi di URL e porte, tipi di media
+accettati~\cite{owasp2023api7} --- ciascuna delle quali blocca una famiglia di
+aggiramenti diversa. Seguono la disabilitazione delle redirezioni, un parser di
+URL collaudato e il divieto di restituire al client le risposte
+grezze~\cite{owasp2023api7}: quest'ultima misura non impedisce l'attacco, ma ne
+degrada l'esito dalla forma con ritorno a quella cieca.
 
-Va infine registrata un'ammissione che OWASP fa esplicitamente e che nessun'altra categoria contiene: il rischio SSRF non può sempre essere eliminato del tutto, e nella scelta del meccanismo di protezione occorre considerare i rischi e le esigenze di business~\cite{owasp2023api7}. La ragione è che la funzionalità e la vulnerabilità coincidono. Un servizio che offre anteprime di collegamenti arbitrari deve, per definizione, effettuare richieste verso indirizzi che l'utente sceglie; ciò che si può fare è confinare l'effetto di quelle richieste, non impedirle.
+Va infine registrata un'ammissione che nessun'altra categoria contiene: il
+rischio SSRF non può sempre essere eliminato del tutto~\cite{owasp2023api7},
+perché funzionalità e vulnerabilità coincidono. Un servizio che offre anteprime
+di collegamenti arbitrari deve per definizione contattare indirizzi scelti
+dall'utente: se ne può confinare l'effetto, non impedirli.
 
 \paragraph{Rilevabilità: stato dell'arte in letteratura}
-Per la prima volta nel corso di questo capitolo le due fonti primarie concordano, e concordano nel senso favorevole all'analisi statica. OWASP classifica la rilevabilità come facile, precisando però che l'analisi delle richieste e delle risposte è necessaria per individuare il problema e che quando la risposta non viene restituita, nella forma cieca, il rilevamento richiede maggiore sforzo e creatività~\cite{owasp2023api7}. CWE-918 è ancora più netta: la sezione dei metodi di rilevamento contiene una sola voce, l'analisi statica automatica, descritta come costruzione di un modello di flusso dei dati e di controllo seguita dalla ricerca di pattern potenzialmente vulnerabili che connettono sorgenti, ossia le origini dell'input, a sink, ossia le destinazioni dove il dato interagisce con componenti esterni, e la sua efficacia è dichiarata alta~\cite{cwe918}.
 
-Il contrasto con quanto osservato per le categorie precedenti è netto e merita di essere esplicitato, perché individua la ragione strutturale per cui l'SSRF si presta all'analisi statica mentre l'autorizzazione non vi si presta. Per API5 lo strumento vede l'assenza di un controllo ma non sa se fosse dovuto; per API4 vede l'assenza di un limite ma non sa se esso sia applicato altrove; per API6 non ha nemmeno un artefatto in cui cercare. Per API7 l'oracolo è interno al codice: esiste un flusso di dati da un input controllabile dall'attaccante a una funzione che emette una richiesta di rete, e l'esistenza di quel flusso è una proprietà del programma, verificabile senza conoscere né il contesto di business né le intenzioni del progettista. La domanda che lo strumento deve risolvere non è se qualcosa manchi, ma se due punti del programma siano connessi.
+Per la prima volta nel corso del capitolo le due fonti primarie concordano, e a
+favore dell'analisi statica. OWASP giudica facile la rilevabilità, precisando
+che la forma cieca richiede maggiore sforzo~\cite{owasp2023api7}; CWE-918 indica
+come metodo la sola analisi statica automatica, intesa come ricerca dei percorsi
+che connettono una sorgente di input a un sink, e ne dichiara alta
+l'efficacia~\cite{cwe918}.
 
-La letteratura recente conferma il quadro ma ne segnala i limiti pratici. Wessels e colleghi applicano un'analisi di flusso dei dati su un grafo di proprietà del codice costruito a partire dal bytecode PHP, individuando gli input controllabili dall'attaccante che raggiungono funzioni note di richiesta server-side, e sottopongono i risultati a validazione manuale~\cite{wessels2024ssrf}: la scelta stessa di prevedere una fase manuale segnala che il segnale automatico, per quanto forte, non è conclusivo. Il lavoro su Artemis affronta il problema specifico dei falsi positivi in PHP, combinando la costruzione di grafi di chiamata espliciti e impliciti, regole che prevengono la propagazione eccessiva della marcatura quando una stringa contaminata non può più produrre un URL sfruttabile, e la potatura tramite analisi della compatibilità delle condizioni di percorso~\cite{ji2025artemis}. Sul versante dinamico, SSRFuzz combina l'inferenza dinamica della marcatura con il fuzzing, agganciando i sink noti in un ambiente di esecuzione strumentato per restringere lo spazio degli input~\cite{wang2024ssrfuzz}.
+La differenza rispetto alle categorie precedenti sta in dove si trovi l'oracolo.
+Per API5 lo strumento vede l'assenza di un controllo ma non sa se fosse dovuto;
+per API4 vede l'assenza di un limite ma non sa se sia applicato altrove. Per
+API7 la domanda non è se qualcosa manchi, ma se due punti del programma siano
+connessi: una proprietà verificabile senza conoscere le intenzioni del
+progettista.
 
-Da questi lavori si ricavano i tre problemi che qualunque rilevatore statico di SSRF deve affrontare, e che valgono anche per il modulo descritto nella parte sperimentale. Il primo è la completezza dell'inventario dei sink: le funzioni che emettono richieste di rete sono numerose, appartengono sia alla libreria standard sia a librerie di terze parti, e ometterne una produce un falso negativo silenzioso. Il secondo è la sovra-marcatura: una stringa contaminata concatenata con altre non produce necessariamente un URL controllabile, e trattare come vulnerabile ogni flusso che raggiunge un sink genera rumore. Il terzo è la validazione intermedia: fra la sorgente e il sink può trovarsi un controllo che rende il flusso innocuo, e distinguere una validazione efficace da una aggirabile richiede di ragionare sulla semantica del controllo, non solo sulla sua presenza. È esattamente il punto in cui il rilevamento dell'SSRF smette di essere un problema di raggiungibilità e torna a somigliare agli altri.
+La letteratura conferma il quadro e ne segnala i limiti: Wessels e colleghi
+validano a mano i risultati di un'analisi di flusso sul codice
+PHP~\cite{wessels2024ssrf}, Artemis pota i percorsi non sfruttabili per ridurre
+i falsi positivi~\cite{ji2025artemis}, SSRFuzz affianca il fuzzing alla
+marcatura dinamica~\cite{wang2024ssrfuzz}. Se ne ricavano i tre problemi che ogni
+rilevatore statico deve affrontare, validi anche per il modulo descritto nella
+parte sperimentale: l'inventario dei sink, perché ometterne uno produce un falso
+negativo silenzioso; la sovra-marcatura, perché non ogni stringa contaminata che
+raggiunge un sink produce un URL controllabile; e la validazione intermedia,
+perché distinguere un controllo efficace da uno aggirabile richiede di ragionare
+sulla sua semantica.
 
-Resta la distinzione fra le due forme dell'attacco, che ha una ricaduta diretta sulla strategia di verifica. Per l'SSRF con ritorno la conferma dinamica è immediata: si punta l'endpoint verso un indirizzo controllato e si osserva se la richiesta arriva. Per l'SSRF cieco la conferma richiede un canale laterale, tipicamente una risoluzione DNS o una connessione verso un servizio d'ascolto dedicato, ed è la ragione per cui OWASP parla di sforzo e creatività~\cite{owasp2023api7}. In una pipeline che combina segnale statico e sonda dinamica, come quella adottata nel seguito, la conseguenza operativa è che l'assenza di conferma dinamica non deve declassare il finding statico: significa soltanto che il canale di ritorno non è stato osservato.
+La distinzione fra le due forme ricade infine sulla verifica. Con ritorno la
+conferma dinamica è immediata: si punta l'endpoint verso un indirizzo
+controllato e si osserva se la richiesta arriva; per la forma cieca serve un
+canale laterale, tipicamente una risoluzione DNS. Nella pipeline adottata nel
+seguito l'assenza di conferma dinamica non deve quindi declassare il finding
+statico: significa soltanto che il canale di ritorno non è stato osservato.
 
 \subsection{API8:2023 -- Security Misconfiguration}
 \label{subsubsec:api8}
