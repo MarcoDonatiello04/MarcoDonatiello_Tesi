@@ -26,7 +26,7 @@ Il portale AppSecMaster ha elaborato una propria classificazione dei dieci risch
     
 \end{enumerate}
 
-Tra le problematiche precedentemente descritte , il presente lavoro si basa in particolarme su Insecure Cloud Configurations e Insecure API Exposure per via della loro rilevanza diretta rispetto agli obiettivi del sistema sviluppato e alla loro frequente ricorrenza negli scenari di autorizzazione tipici delle architetture basate su API.
+Tra le problematiche elencate, il presente lavoro si concentra sulla prima, Security Misconfiguration, e sulla componente di esposizione delle API della sesta, Insecure Deserialization / API Exposure: sono le due voci più direttamente legate agli obiettivi del sistema sviluppato e quelle che ricorrono con maggiore frequenza negli scenari di autorizzazione tipici delle architetture basate su API. La prima è approfondita nella sottosezione seguente; la seconda nella Sezione~\ref{sec:api_security_risks}, dove la classificazione OWASP dedicata alle API la articola in dieci categorie distinte.
 
 \subsection{Security Misconfiguration}
 Una misconfiguration, in ambito cloud, nasce da un errore nella configurazione
@@ -98,10 +98,20 @@ riguarda permessi di condivisione predefiniti di un cloud service provider
 lasciati aperti ad altri utenti su Internet, con conseguente esposizione di
 dati sensibili archiviati nello storage cloud.
 
-Fra i quattro scenari, due ricadono nel perimetro del sistema presentato in questo lavoro e due ne restano fuori.
+Fra i quattro scenari, due ricadono nel perimetro del sistema presentato in
+questo lavoro e due ne restano fuori. Rientrano il secondo e il quarto, perché
+in entrambi la configurazione difettosa è dichiarata in un artefatto
+ispezionabile --- la direttiva che abilita il directory listing nella
+configurazione del server, i permessi di condivisione fissati nel manifest della
+risorsa di storage --- e può quindi essere individuata prima del rilascio.
+Restano fuori il primo e il terzo: le applicazioni di esempio dimenticate in
+produzione non compaiono in alcun artefatto del progetto e presuppongono un
+inventario degli host effettivamente in esecuzione, mentre i messaggi di errore
+troppo dettagliati emergono soltanto dalle risposte prodotte a runtime.
 
 
 \section{API Security Risks}
+\label{sec:api_security_risks}
 
 Le API oggi fanno gran parte del lavoro che una volta faceva il sito web
 stesso: non restituiscono una pagina pensata per essere letta da una
@@ -1424,3 +1434,15 @@ l'applicazione e non l'integrazione reale. La letteratura dedicata alla categori
 catena di fornitura riguardano le dipendenze da pacchetti, quelli sulla
 contaminazione assumono la convenzione appena discussa, e il caso dell'API che si
 fida di un'altra API si colloca fra i due.
+
+Vale la pena osservare dove cada quel vuoto. Un'integrazione di terze parti è a
+tutti gli effetti una dipendenza, ma di natura diversa da quelle che gli
+strumenti della catena di fornitura sanno trattare: una SBOM elenca i componenti
+che entrano nell'artefatto costruito e la scansione delle dipendenze confronta
+versioni note con archivi di vulnerabilità, mentre un'API esterna non viene
+incorporata in nulla e il suo comportamento può cambiare dopo il rilascio senza
+che alcun numero di versione lo registri. La superficie da presidiare non è
+quindi l'insieme delle librerie compilate nel prodotto, ma quello dei servizi che
+esso interroga mentre è in esecuzione, e il controllo corrispondente non è
+un'analisi che precede il rilascio: è la validazione della risposta nel punto in
+cui viene ricevuta.
