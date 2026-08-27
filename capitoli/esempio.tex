@@ -115,7 +115,9 @@ Le API oggi fanno gran parte del lavoro che una volta faceva il sito web
 stesso: non restituiscono una pagina pensata per essere letta da una
 persona, ma dati grezzi destinati a un'altra app, a un altro servizio, a un
 sistema che poi decide cosa farne. Lo schema delle richieste è prevedibile,
-gli endpoint espongono operazioni precise su risorse precise. Per un
+gli endpoint\footnote{\emph{Endpoint}: il singolo punto di accesso di
+un'API, identificato da un URL e da un metodo HTTP, che espone una specifica
+operazione su una risorsa.} espongono operazioni precise su risorse precise. Per un
 attaccante questo significa meno lavoro di interpretazione: non deve capire
 un'interfaccia grafica, gli basta osservare come sono costruite le chiamate.
 
@@ -169,7 +171,10 @@ secondo OWASP~\cite{owasp2023apitop10}:
   dall'esterno.
 
   \item \textbf{API8:2023 -- Security Misconfiguration} — header di
-  sicurezza mancanti, CORS troppo permissivo, ambienti di debug ancora
+  sicurezza mancanti, CORS\footnote{CORS (\emph{Cross-Origin Resource Sharing}): il
+  meccanismo con cui un server dichiara quali siti di origine diversa possono
+  leggere le sue risposte dal browser. Una politica permissiva le rende
+  leggibili a qualunque origine.} troppo permissivo, ambienti di debug ancora
   attivi in produzione: stessa famiglia di errori vista nel capitolo
   precedente, qui applicata allo strato applicativo.
 
@@ -217,7 +222,10 @@ alla relazione specifica tra quell'utente e quell'oggetto.
 
 \paragraph{Funzionamento delle API e ruolo degli identificatori di risorsa}
 
-Le API REST, e in misura diversa quelle basate su GraphQL, espongono le risorse attraverso
+Le API REST, e in misura diversa quelle basate su GraphQL\footnote{\emph{GraphQL}: linguaggio
+di interrogazione per API in cui il client, anziché richiamare endpoint
+predefiniti, descrive in una sola richiesta l'esatto insieme di dati che
+desidera ricevere.}, espongono le risorse attraverso
 identificatori che compaiono nel percorso della richiesta, nei parametri di query, nel corpo del
 messaggio o negli header. Un endpoint come \texttt{GET /api/orders/482} restituisce, nella maggior
 parte delle implementazioni, l'oggetto ordine identificato dal valore 482, indipendentemente dal
@@ -485,7 +493,10 @@ La rilevazione di BOPLA si articola in due verifiche distinte, corrispondenti al
 
 La prima riguarda le proprietà esposte in risposta a una richiesta legittima, e si riduce al confronto fra gli attributi effettivamente restituiti e quelli previsti per il ruolo o il contesto dell'utente. È la verifica più diretta, perché l'evidenza è contenuta nella risposta stessa.
 
-La seconda riguarda le proprietà accettate in ingresso, ed è più onerosa perché il server non le dichiara. Individuarle richiede di modificare il payload delle richieste, eventualmente ricorrendo a tecniche di fuzzing per scoprire attributi non documentati, e di verificare poi se il server ne recepisca effettivamente il valore.
+La seconda riguarda le proprietà accettate in ingresso, ed è più onerosa perché il server non le dichiara. Individuarle richiede di modificare il payload delle richieste, eventualmente ricorrendo a tecniche di \emph{fuzzing}\footnote{\emph{Fuzzing}: tecnica di collaudo che
+sottopone al sistema grandi quantità di input generati automaticamente, spesso
+malformati o inattesi, per osservarne le reazioni anomale.} per scoprire
+attributi non documentati, e di verificare poi se il server ne recepisca effettivamente il valore.
 
 Le due verifiche non sono sostituibili l'una con l'altra: un'API può accettare in input una proprietà sensibile che non restituisce mai, oppure restituire dati riservati senza consentirne la modifica. Un'analisi che si limitasse a una sola direzione lascerebbe scoperta metà del problema.
 
@@ -520,14 +531,24 @@ richiesta sufficiente a congelare il processo~\cite{staicu2018redos}. Vi si
 aggiunge la causa che l'edizione 2023 porta in primo piano, l'assenza di soglie
 di spesa verso i fornitori esterni, dove la risorsa non è computazionale ma
 economica. Che limiti tanto semplici manchino dipende da due fatti: possono
-risiedere nel framework, nel proxy, nel gateway o presso il fornitore cloud, e
+risiedere nel framework, nel proxy, nel gateway\footnote{\emph{Gateway}: componente posto
+davanti ai servizi applicativi che riceve tutte le chiamate esterne e vi
+applica funzioni comuni quali autenticazione, instradamento e limiti di
+frequenza.} o presso il fornitore cloud, e
 quando ogni livello presume che se ne occupi un altro non se ne occupa nessuno;
 e la loro assenza non produce errori, sicché un endpoint privo di limiti supera
 ogni test funzionale.
 
-L'esito immediato è il denial of service per esaurimento, che CWE-770 enumera
+L'esito immediato è il denial of service per esaurimento, che
+CWE-770\footnote{CWE (\emph{Common Weakness Enumeration}): il catalogo pubblico
+delle debolezze software mantenuto da MITRE; ogni voce, indicata dalla sigla
+CWE seguita da un numero, descrive una classe di difetto indipendentemente dal
+prodotto in cui compare.} enumera
 come conseguenza principale sulla disponibilità~\cite{cwe770}, ma il punto di
-rottura è la logica applicativa anziché la banda: una sola richiesta ReDoS o un
+rottura è la logica applicativa anziché la banda: una sola richiesta
+ReDoS\footnote{ReDoS (\emph{Regular expression Denial of Service}): un input costruito
+ad arte che fa degenerare il tempo di valutazione di un'espressione regolare,
+saturando la CPU con una richiesta sola.} o un
 solo batch GraphQL bastano, e nessuna difesa perimetrale basata sul volume li
 riconosce come anomali.
 
@@ -553,7 +574,10 @@ giudica facile, perché richieste con parametri di dimensione crescente e
 l'osservazione di stato, tempo e lunghezza della risposta bastano a far
 emergere il problema~\cite{owasp2023api4}, mentre CWE-770 giudica di utilità
 limitata l'analisi statica per le allocazioni prive di limite~\cite{cwe770}. La
-contraddizione è apparente, perché OWASP descrive un tester in black box e CWE
+contraddizione è apparente, perché OWASP descrive un tester in \emph{black
+box}\footnote{\emph{Black box}: modalità di analisi che osserva il sistema solo dall'esterno,
+attraverso le risposte alle richieste, senza accesso al codice sorgente; vi si
+contrappone l'analisi \emph{white box}, che legge il codice.} e CWE
 uno strumento che legge il codice. Sul versante dinamico l'evidenza è
 consolidata, dalle tecniche basate sulla generazione di molte richieste in un
 intervallo breve al rilevamento per iniezione di
@@ -678,8 +702,8 @@ stesso problema in modalità black box~\cite{liu2025bacscan}.
 \subsection{API6:2023 -- Unrestricted Access to Sensitive Business Flows}
 \label{subsubsec:api6}
 
-Le categorie esaminate finora descrivono controlli assenti. Qui ogni singola
-chiamata è legittima: l'utente ha diritto di compierla, i controlli di
+Esistono attacchi che non violano alcuna regola. Qui ogni singola chiamata è
+legittima: l'utente ha diritto di compierla, i controlli di
 autorizzazione funzionano, il codice si comporta come progettato, e il danno
 nasce dal numero. OWASP definisce vulnerabile l'endpoint che espone un flusso
 di business sensibile senza limitarne adeguatamente l'accesso, portando come
@@ -735,7 +759,9 @@ rallentare le minacce automatizzate, non per impedirle, e la logica che li
 accomuna è economica: nessuno produce una decisione binaria affidabile, tutti
 spostano il costo dell'attacco fino a superare il profitto atteso.
 
-Il rilevamento automatico si scontra infine con l'assenza di un oracolo: nessun
+Il rilevamento automatico si scontra infine con l'assenza di un
+oracolo\footnote{\emph{Oracolo}: in collaudo del software, il criterio che permette di
+stabilire se un dato comportamento osservato sia corretto o difettoso.}: nessun
 artefatto analizzabile, che sia codice, contratto o configurazione, risponde
 alla domanda se un dato flusso in una data azienda vada protetto, e la mancanza
 di una mappatura CWE registra il fatto che non esiste una debolezza del
@@ -750,8 +776,10 @@ che avvenga.
 \subsection{API7:2023 -- Server Side Request Forgery}
 \label{subsubsec:api7}
 
-Nelle categorie viste finora l'attaccante agisce sui dati che l'API
-restituisce; in API7:2023 agisce sulle richieste che l'API emette. Il difetto
+Il traffico non viaggia in una sola direzione: verso servizi interni, archivi
+remoti e risorse indicate da chi interroga il servizio partono richieste che
+l'applicazione stessa emette, ed è su queste che agisce l'attaccante in
+API7:2023. Il difetto
 compare quando un'API recupera una risorsa remota senza validare l'URL fornito
 dall'utente: l'attaccante può allora costringere l'applicazione a inviare una
 richiesta verso una destinazione inattesa, anche se protetta da un firewall o
@@ -761,7 +789,9 @@ privilegi di rete; non viola quindi un controllo di accesso applicativo, ne
 annulla uno di rete. MITRE classifica CWE-918 come debolezza \emph{resultant},
 che emerge cioè in presenza di altre~\cite{cwe918}: l'SSRF è raramente il fine
 dell'attacco, quasi sempre il mezzo. A renderla attuale è il contesto in cui le
-API operano: è più comune, perché webhook, recupero di file da URL e anteprime
+API operano: è più comune, perché webhook\footnote{\emph{Webhook}: meccanismo per cui un
+servizio notifica un evento inviando una richiesta HTTP a un URL scelto e
+registrato dall'utente.}, recupero di file da URL e anteprime
 dei collegamenti spingono a raggiungere risorse esterne indicate dall'utente,
 ed è più pericolosa, perché fornitori cloud, Kubernetes e Docker espongono
 canali di gestione su HTTP a percorsi noti, mentre limitare il traffico in
@@ -823,7 +853,10 @@ Per la prima volta nel capitolo le due fonti primarie concordano, e a favore
 dell'analisi statica: OWASP giudica facile la rilevabilità, con la sola
 eccezione della forma cieca~\cite{owasp2023api7}, e CWE-918 indica come metodo
 l'analisi statica automatica --- la ricerca dei percorsi che collegano una
-sorgente di input a un sink --- dichiarandone alta l'efficacia~\cite{cwe918}.
+sorgente di input a un \emph{sink}\footnote{\emph{Sorgente} e \emph{sink}: nell'analisi del flusso dei dati,
+la \emph{sorgente} è il punto in cui un valore controllato dall'esterno entra
+nel programma e il \emph{sink} è l'operazione sensibile in cui quel valore
+viene infine usato.} --- dichiarandone alta l'efficacia~\cite{cwe918}.
 Il motivo è che qui l'oracolo è interno al codice: per API4 e API5 lo strumento
 osserva l'assenza di un controllo senza poter sapere se fosse dovuto, mentre
 per API7 la domanda non è se qualcosa manchi, ma se due punti del programma
@@ -845,12 +878,17 @@ conferma non declassa quindi la segnalazione statica.
 \subsection{API8:2023 -- Security Misconfiguration}
 \label{subsubsec:api8}
 
-Le categorie viste finora individuano un difetto in un punto preciso: un
-controllo che manca, un limite non impostato, un URL non validato. API8:2023
-non ha un punto: OWASP dichiara che la configurazione insicura può verificarsi
-a qualunque livello dello stack, dalla rete all'applicazione, e i suoi otto
-indicatori attraversano tutti quei livelli, dall'hardening assente ai verbi
-HTTP lasciati abilitati, dal TLS mancante ai messaggi di errore che espongono
+Un controllo che manca, un limite non impostato, un URL non validato: ciascuna
+delle categorie precedenti indica un punto preciso in cui il difetto risiede.
+API8:2023 non ha un punto: OWASP dichiara che la configurazione insicura può
+verificarsi a qualunque livello dello stack, dalla rete all'applicazione, e i suoi otto
+indicatori attraversano tutti quei livelli, dall'hardening\footnote{\emph{Hardening}: insieme
+delle operazioni con cui si riduce la superficie di attacco di un sistema:
+disattivazione di funzioni e servizi non necessari, rimozione delle credenziali
+predefinite, applicazione delle impostazioni consigliate.} assente ai verbi
+HTTP lasciati abilitati, dal TLS\footnote{TLS (\emph{Transport Layer Security}): il
+protocollo che cifra e autentica il canale di comunicazione su cui viaggia il
+traffico HTTP.} mancante ai messaggi di errore che espongono
 tracce dello stack~\cite{owasp2023api8}. Hanno una sola cosa in comune: nessuno
 è un errore di logica applicativa, perché il codice fa quello che deve ed è
 l'ambiente in cui gira a produrre l'esposizione. Lo conferma la particolarità
@@ -930,9 +968,10 @@ si discosti da un riferimento la cui pertinenza dipende dall'endpoint.
 \subsection{API9:2023 -- Improper Inventory Management}
 \label{subsubsec:api9}
 
-Le categorie viste finora descrivono un difetto in qualcosa che
-l'organizzazione sa di avere: un handler, un limite, una configurazione.
-API9:2023 riguarda ciò che non sa di avere: il difetto non è nel codice ma
+Correggere un difetto presuppone sapere che esiste il componente che lo
+ospita, e fin qui quel componente è sempre stato noto: un handler, un limite,
+una configurazione. API9:2023 riguarda invece ciò che l'organizzazione non sa
+di avere: il difetto non è nel codice ma
 nella visibilità, e OWASP lo definisce come scarsa catalogazione degli host e
 delle versioni di un'API, articolandolo in due punti
 ciechi~\cite{owasp2023api9}. Il primo è quello della documentazione, perché
@@ -1012,9 +1051,12 @@ un verdetto, ma nel restituire la visibilità che il difetto sottrae.
 \subsection{API10:2023 -- Unsafe Consumption of APIs}
 \label{subsubsec:api10}
 
-Le nove categorie esaminate finora descrivono tutte l'API come bersaglio di un
-attacco diretto. API10:2023 rovescia la prospettiva: l'attaccante non colpisce
-l'API bersaglio ma un servizio da cui essa dipende, e il danno arriva per un
+Il perimetro di un servizio non coincide con il codice che lo compone: ogni
+dipendenza esterna è una superficie che non gli appartiene. API10:2023
+rovescia perciò la prospettiva
+dell'attacco diretto, presupposta dalle nove categorie precedenti:
+l'attaccante non colpisce l'API bersaglio ma un servizio da cui essa dipende,
+e il danno arriva per un
 canale che l'applicazione considera fidato; le note di rilascio dichiarano di
 aver introdotto la categoria perché gli attaccanti hanno cominciato a
 compromettere i servizi integrati anziché le API del
@@ -1089,46 +1131,5 @@ restituisca dati malevoli, il che è possibile solo se il servizio consente di
 immettervi contenuti oppure sostituendolo con un doppio in collaudo, che però
 verifica l'applicazione e non l'integrazione reale.
 
-\label{subsec:oracolo}
 
-Le sottosezioni precedenti hanno esaminato ciascuna categoria per sé, ma lette in
-sequenza mostrano una regolarità su cui si fonda la parte sperimentale. Ogni
-rilevamento automatico presuppone un oracolo, cioè un criterio rispetto al quale
-decidere se ciò che si osserva sia un difetto, e le dieci categorie non lo
-collocano nello stesso posto: in alcune è interno all'artefatto analizzato, e la
-domanda si riduce a una proprietà verificabile del codice; in altre è esterno e
-pubblico, e la verifica diventa un confronto di conformità; in altre ancora va
-ricostruito, perché la specifica che direbbe cosa è lecito non è scritta da
-nessuna parte; e in un caso non esiste affatto. La
-Tabella~\ref{tab:oracolo_rilevamento} riassume questa distribuzione, che spiega
-perché nessuna tecnica singola copra l'intera classificazione.
 
-\begin{table}[htbp]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{p{0.10\textwidth} p{0.39\textwidth} p{0.35\textwidth}}
-\hline
-\textbf{Categoria} & \textbf{Dove risiede l'oracolo} & \textbf{Tecnica prevalente} \\
-\hline
-API1 & Interno al gestore: il confronto fra chiamante e proprietario dell'oggetto o c'è o manca & Analisi statica del gestore; richieste con identificatori altrui \\
-API2 & Duplice: regole deterministiche su token e cifratura, comportamento del traffico sugli endpoint di accesso & Ispezione delle librerie crittografiche; monitoraggio a runtime \\
-API3 & Le proprietà lecite per ruolo, che il server non dichiara & Confronto fra attributi restituiti e attesi; fuzzing del payload in ingresso \\
-API4 & Assente a livello locale: il limite può risiedere nel gateway o nella piattaforma & Test differenziale a carico crescente; correlazione fra segnali eterogenei \\
-API5 & La specifica dei ruoli, da ricostruire perché non documentata & Inferenza dei controlli per ruolo; fuzzing stateful con regole di sicurezza \\
-API6 & Inesistente: dipende dal modello di business, non dal software & Contromisure comportamentali a runtime \\
-API7 & Interno al codice: la raggiungibilità fra sorgente e sink & Analisi statica del flusso; conferma dinamica con canale di ritorno o DNS \\
-API8 & Esterno e pubblico: valori raccomandati, predefiniti noti come pericolosi, versioni vulnerabili & Confronto di conformità sui file di configurazione \\
-API9 & In nessun artefatto singolo: nella divergenza fra rappresentazioni dello stesso sistema & Confronto fra contratto, codice e inventario; ricognizione infrastrutturale \\
-API10 & Interno al codice, ma con l'insieme delle sorgenti da ridefinire & Analisi della contaminazione riconfigurata; ispezione delle opzioni di chiamata \\
-\hline
-\end{tabular}
-\caption{Collocazione dell'oracolo di rilevamento nelle dieci categorie della OWASP API Security Top~10 2023, con la tecnica di analisi che ne consegue.}
-\label{tab:oracolo_rilevamento}
-\end{table}
-
-Se ne ricava il criterio con cui, nel seguito, sono stati selezionati i rischi da
-affrontare per via automatica: sono trattabili le categorie il cui oracolo è
-interno all'artefatto o esterno ma pubblico, mentre quelle che richiedono di
-ricostruire una specifica assente, o che non ne ammettono una, restano fuori
-dalla portata di un'analisi che non conosca il dominio applicativo.
