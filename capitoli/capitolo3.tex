@@ -1,0 +1,326 @@
+%!TEX root = ../main.tex
+\chapter{Domande di ricerca e disegno dello studio}
+\label{cap:rq}
+
+%\begin{citazione}
+%In questo capitolo si definiscono l'obiettivo del lavoro, le domande di
+%ricerca che ne derivano e il disegno empirico adottato per rispondervi.
+%\end{citazione}
+
+Il capitolo precedente ha delimitato il perimetro del problema: le
+misconfigurazioni dichiarate negli artefatti di progetto e i rischi di
+sicurezza delle API descritti dalla classificazione OWASP. Questo capitolo
+compie il passaggio dal problema all'indagine, esplicitando che cosa il lavoro
+si propone di verificare, in che forma la verifica è misurabile e quali dati
+servono per condurla.
+
+\section{Obiettivo del lavoro}
+\label{sec:goal}
+
+\goal{Valutare se l'analisi statica di un'applicazione basata su API tragga
+un beneficio misurabile dalla \emph{correlazione} dei segnali prodotti su
+layer eterogenei --- codice applicativo, definizione dell'infrastruttura come
+codice e specifica OpenAPI --- rispetto all'esecuzione degli stessi strumenti
+in isolamento.}
+
+L'obiettivo si articola lungo due assi distinti, che danno luogo ad altrettante
+domande di ricerca. Il primo riguarda la capacità del sistema di riconoscere
+correttamente le singole condizioni di rischio all'interno di ciascun layer;
+il secondo, oggetto di questo capitolo, riguarda il valore aggiunto della
+correlazione fra layer.
+% TODO: inserire qui il rimando a RQ_1 una volta fissata la sua formulazione
+% definitiva (asse 1 -- accuratezza del riconoscimento per singolo layer).
+
+La distinzione non è puramente espositiva. Gli strumenti che alimentano il
+sistema esistono già, sono maturi e sono ampiamente adottati: Semgrep per
+l'analisi del codice sorgente~\cite{semgrep2026docs}, Checkov per i template
+Infrastructure-as-Code~\cite{checkov2026docs}, Spectral per la validazione
+delle specifiche OpenAPI~\cite{spectral2026docs}. Nessuno dei tre costituisce
+un contributo originale di questo lavoro. L'elemento che non esiste come
+componente autonomo, e che il sistema introduce, è il motore di correlazione:
+la logica che mette in relazione i segnali emessi dai tre strumenti su
+artefatti diversi dello stesso progetto e ne deriva condizioni di rischio che
+nessuno dei tre, da solo, è in grado di formulare. È su questo componente che
+si concentra la valutazione empirica.
+
+\section{Il limite dell'analisi per singolo layer}
+\label{sec:limite_layer}
+
+Ogni analizzatore statico opera entro un dominio delimitato e dispone di un
+oracolo\footnote{\emph{Oracolo}: il criterio che permette di stabilire se
+l'esito osservato di un'analisi sia corretto o meno.} definito su quel
+dominio soltanto. Semgrep ragiona su strutture sintattiche del codice
+sorgente e, nelle configurazioni più avanzate, su flussi di dati interni alla
+singola unità di compilazione; ignora però come e se quel codice sia
+raggiungibile dall'esterno. Checkov valuta le risorse dichiarate nei
+template infrastrutturali rispetto a un catalogo di politiche, ma non ha
+alcuna nozione delle funzioni applicative che quelle risorse ospitano.
+Spectral verifica la conformità di un documento OpenAPI~\cite{openapi2021spec}
+a un insieme di regole di stile e completezza, senza poter constatare se la
+specifica corrisponda al comportamento effettivamente implementato.
+
+Questa specializzazione è ciò che rende ciascuno strumento efficace nel proprio
+ambito, ed è anche ciò che ne definisce il punto cieco. Il fenomeno è noto in
+letteratura: già i primi confronti sistematici fra analizzatori statici
+rilevavano una sovrapposizione modesta fra gli insiemi di difetti segnalati da
+strumenti diversi applicati allo stesso programma, a indicare che ciascuno
+copre una porzione propria dello spazio dei difetti~\cite{rutar2004comparison}.
+Il caso qui in esame aggiunge una difficoltà ulteriore: gli strumenti non
+analizzano lo stesso artefatto con criteri diversi, ma artefatti diversi con
+criteri incommensurabili. Il loro output, di conseguenza, non è nemmeno
+direttamente confrontabile.
+
+\subsection{Uno scenario esemplificativo}
+\label{sec:scenario}
+
+Si consideri un servizio che espone la risorsa \texttt{/api/v1/exports/\{id\}}
+per il recupero di un report generato in precedenza. La specifica OpenAPI
+dichiara l'operazione senza alcun requisito di sicurezza associato:
+
+\begin{verbatim}
+paths:
+  /api/v1/exports/{id}:
+    get:
+      operationId: getExport
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+\end{verbatim}
+
+Il template Terraform che descrive l'infrastruttura rende il servizio
+raggiungibile dalla rete pubblica:
+
+\begin{verbatim}
+resource "aws_security_group_rule" "api_ingress" {
+  type        = "ingress"
+  from_port   = 443
+  to_port     = 443
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+\end{verbatim}
+
+Il gestore dell'operazione, infine, deriva la risorsa direttamente
+dall'identificatore fornito dal client, senza confrontarlo con l'identità del
+chiamante:
+
+\begin{verbatim}
+@app.get("/api/v1/exports/{id}")
+def get_export(id: str):
+    return db.exports.find_one({"_id": id})
+\end{verbatim}
+
+Preso singolarmente, nessuno dei tre frammenti costituisce un difetto
+inequivocabile. Un'operazione priva di requisito di sicurezza è del tutto
+legittima in un'API che espone deliberatamente risorse pubbliche, ed è per
+questo che Spectral la segnala, quando lo fa, come avvertimento di
+completezza della specifica. Una regola di ingresso aperta su
+\texttt{0.0.0.0/0} sulla porta 443 è la configurazione attesa per qualunque
+servizio destinato a essere raggiunto da Internet: Checkov la rileva, ma si
+tratta di una delle segnalazioni più frequentemente soppresse proprio perché,
+nella maggior parte dei casi, descrive una scelta intenzionale. Il gestore,
+dal canto suo, non presenta alcun flusso da sorgente a \emph{sink}
+pericoloso, e non attiva quindi le regole di iniezione; l'assenza di un
+controllo di autorizzazione a livello di oggetto è, per un analizzatore
+sintattico, l'assenza di qualcosa che non è dichiarato da nessuna parte, e
+come tale difficilmente riconoscibile con precisione accettabile.
+
+La condizione di rischio, però, esiste, ed è quella descritta nel capitolo
+precedente come Broken Object Level Authorization~\cite{owasp2023api1}: un
+endpoint dichiarato non autenticato, reso raggiungibile dalla rete pubblica
+dalla configurazione infrastrutturale, il cui gestore dereferenzia un
+identificatore controllato dal client senza verificarne la proprietà. La
+condizione non risiede in alcuno dei tre artefatti: risiede nella loro
+congiunzione. È esattamente il tipo di rischio che l'esecuzione separata dei
+tre strumenti non è in grado di formulare, non per un limite implementativo
+delle rispettive regole, ma perché la proposizione da verificare menziona
+entità che appartengono a domini diversi.
+
+Questo scenario chiarisce anche perché la questione non sia risolvibile
+semplicemente irrobustendo le regole dei singoli strumenti. Rendere più
+aggressiva la regola di Checkov sull'esposizione pubblica significherebbe
+segnalare ogni servizio destinato a Internet; rendere bloccante
+l'avvertimento di Spectral significherebbe segnalare ogni endpoint pubblico
+per progetto. In entrambi i casi il risultato sarebbe un aumento del rumore,
+con l'effetto ben documentato di indurre gli sviluppatori a disattivare o
+ignorare lo strumento~\cite{johnson2013why}. La correlazione agisce nella
+direzione opposta: è la coesistenza dei tre segnali a rendere l'insieme
+significativo, e sono i due terzi delle occorrenze in cui la coesistenza non
+si verifica a restare, correttamente, silenziose.
+
+\section{La domanda di ricerca}
+\label{sec:rq2}
+
+Da questa premessa discende la domanda che il presente lavoro intende
+verificare.
+
+\rqbox{2}{La correlazione di segnali provenienti da layer eterogenei ---
+codice applicativo, Infrastructure-as-Code e specifica OpenAPI --- consente di
+identificare condizioni di rischio non rilevabili da alcuno dei layer preso
+singolarmente?}
+
+La formulazione richiede due precisazioni, senza le quali la domanda
+rischierebbe di ammettere solo risposte affermative e di risultare, di
+conseguenza, priva di contenuto empirico.
+
+La prima riguarda il significato di \emph{condizione di rischio}. Con questa
+espressione si intende una proposizione verificabile su un progetto, che
+descrive una situazione riconducibile a una delle categorie di rischio
+delimitate nel capitolo precedente e formulata in termini di più artefatti
+distinti. Non coincide con la singola segnalazione di uno strumento, che è
+invece un \emph{segnale}: un fatto osservato su un unico artefatto. Il motore
+di correlazione consuma segnali e produce condizioni; la distinzione fra i due
+livelli è la premessa perché il confronto con la baseline abbia senso.
+
+La seconda riguarda l'espressione \emph{non rilevabile}. In senso stretto,
+ogni condizione prodotta dal motore è composta da segnali che gli strumenti
+hanno effettivamente emesso: se il criterio di confronto fosse la presenza di
+quei segnali nell'output della baseline, la risposta sarebbe negativa per
+costruzione e la domanda perderebbe interesse. Il criterio adottato è quindi
+un altro, ed è di natura semantica: una condizione si considera già rilevabile
+dai singoli strumenti quando nell'output della baseline esiste una
+segnalazione che descrive la stessa situazione di rischio sullo stesso
+bersaglio, con una gravità comparabile e con un contenuto informativo
+sufficiente a intraprendere l'azione correttiva. La presenza dei soli segnali
+componenti, dispersi fra strumenti diversi e ciascuno classificato come
+informativo, non soddisfa questo criterio.
+
+\section{Sotto-domanda operativa}
+\label{sec:rq21}
+
+Per rendere la verifica misurabile, RQ$_2$ si declina in una sotto-domanda che
+ne costituisce la formulazione quantitativa.
+
+\rqbox{2.1}{Quante delle condizioni di rischio prodotte dal motore di
+correlazione trovano un corrispettivo nell'output dei singoli strumenti
+eseguiti in isolamento sullo stesso bersaglio?}
+
+Il termine \emph{corrispettivo} è impiegato nel senso semantico appena
+definito. Ogni condizione prodotta dal motore viene classificata, rispetto
+alla baseline, in una fra tre categorie mutuamente esclusive.
+
+\begin{itemize}
+    \item \textbf{Ridondante.} Nella baseline esiste una segnalazione
+    equivalente per bersaglio, categoria di rischio e gravità. La correlazione
+    non aggiunge nulla che la sola esecuzione separata non avrebbe già
+    prodotto.
+    \item \textbf{Amplificata.} La baseline contiene tutti i segnali
+    componenti, ma dispersi fra strumenti diversi e ciascuno classificato a
+    bassa gravità o come informativo. La correlazione non scopre un fatto
+    nuovo: ne modifica la priorità, rendendo azionabile un insieme di
+    segnalazioni che, isolate, sarebbero state verosimilmente ignorate.
+    \item \textbf{Emergente.} Almeno uno dei fatti che compongono la
+    condizione non figura nell'output di alcuno strumento in isolamento ---
+    tipicamente perché non costituisce di per sé una violazione, ma un
+    elemento estratto dalla specifica o dal modello dell'infrastruttura --- e
+    nella baseline non esiste alcuna segnalazione riconducibile alla stessa
+    situazione di rischio.
+\end{itemize}
+
+La risposta a RQ$_2$ discende direttamente da questa classificazione: essa è
+affermativa se e solo se la classe \emph{emergente} risulta non vuota e le
+condizioni che vi ricadono superano una validazione manuale che ne accerti la
+fondatezza. Un esito in cui tutte le condizioni prodotte risultassero
+ridondanti costituirebbe una risposta negativa; un esito composto in
+prevalenza da condizioni amplificate indicherebbe che il contributo del motore
+riguarda la priorizzazione più che la rilevazione, il che è un risultato
+diverso da quello ipotizzato e va riportato come tale.
+
+\section{Disegno dello studio}
+\label{sec:disegno}
+
+Rispondere a RQ$_{2.1}$ richiede un confronto fra due esecuzioni sullo stesso
+insieme di progetti: una condizione di controllo, costituita dai tre strumenti
+eseguiti separatamente, e una condizione sperimentale, costituita dall'output
+del motore di correlazione. La prima è la \emph{baseline}, e senza di essa la
+domanda di ricerca resta retorica.
+
+\paragraph{Bersagli}
+L'unità di analisi è il progetto: un repository che contenga
+contemporaneamente codice applicativo che implementa un servizio basato su
+API, almeno un template Infrastructure-as-Code e un documento OpenAPI. La
+compresenza dei tre artefatti è un criterio di inclusione vincolante, poiché
+un progetto privo di uno dei layer non permette alcuna correlazione e la sua
+inclusione altererebbe le misure senza aggiungere informazione.
+% TODO: fissare numero, provenienza e criteri di selezione dei progetti,
+% distinguendo eventuali casi sintetici costruiti ad hoc dai progetti reali.
+
+\paragraph{Condizione di controllo}
+I tre strumenti vengono eseguiti sul medesimo commit di ciascun progetto, in
+un ambiente containerizzato che fissa le versioni degli eseguibili e degli
+insiemi di regole. La configurazione è quella predefinita di ciascuno
+strumento, senza soppressioni né regole aggiuntive introdotte per l'occasione:
+qualunque personalizzazione renderebbe la baseline arbitraria e il confronto
+non riproducibile. Gli output vengono normalizzati nel formato
+SARIF~\cite{oasis2020sarif}, che fornisce una rappresentazione comune di
+identificatore della regola, posizione nell'artefatto e livello di gravità, e
+costituisce quindi la base uniforme su cui operare il confronto.
+
+\paragraph{Condizione sperimentale}
+Sugli stessi commit viene eseguito il sistema completo, che alimenta il motore
+di correlazione con i segnali dei tre strumenti e produce l'insieme delle
+condizioni di rischio.
+
+\paragraph{Procedura di confronto}
+Per ciascuna condizione prodotta si ricostruiscono anzitutto i segnali che la
+compongono e li si ricerca nell'output della baseline attraverso chiavi
+deterministiche: percorso del file e intervallo di righe per i segnali di
+codice e di IaC, coppia percorso--metodo per quelli derivati dalla specifica.
+Questo passaggio, puramente meccanico, stabilisce la presenza o l'assenza dei
+fatti componenti e separa quindi la classe \emph{emergente} dalle altre due.
+Il secondo passaggio, necessariamente manuale, verifica se nella baseline
+esista una segnalazione che descriva la stessa situazione di rischio, e
+distingue quindi le condizioni ridondanti da quelle amplificate. Per limitare
+la soggettività di questa fase, i criteri di equivalenza sono fissati prima
+dell'ispezione e il campione è classificato in due passaggi indipendenti,
+riportando i disaccordi e il modo in cui sono stati risolti.
+% TODO: indicare qui se la doppia classificazione è stata effettivamente
+% possibile e, in caso affermativo, riportare la misura di accordo adottata.
+
+\paragraph{Misure}
+Detto $F_{c}$ l'insieme delle condizioni prodotte dal motore su un progetto, e
+detti $R$, $A$ ed $E$ i sottoinsiemi delle condizioni rispettivamente
+ridondanti, amplificate ed emergenti, si riportano il tasso di emergenza
+$|E| / |F_{c}|$, che quantifica la risposta a RQ$_{2}$, e il tasso di
+corrispondenza $|R| / |F_{c}|$, che risponde in forma diretta a
+RQ$_{2.1}$. Sulle sole condizioni emergenti si riporta inoltre la precisione
+accertata per ispezione manuale, poiché una classe emergente numerosa ma
+composta da falsi positivi non costituisce un risultato favorevole. A
+complemento, il rapporto fra la cardinalità dell'output correlato e quella
+dell'unione degli output della baseline documenta l'effetto del sistema sul
+volume complessivo delle segnalazioni presentate all'utente.
+
+\section{Minacce alla validità}
+\label{sec:minacce}
+
+Il disegno appena descritto presenta alcuni limiti che è opportuno dichiarare
+in anticipo.
+
+La minaccia principale riguarda la validità di costrutto e discende dalla
+definizione di \emph{corrispettivo}. Il giudizio di equivalenza semantica fra
+una condizione correlata e una segnalazione della baseline è un giudizio
+umano, e una definizione più permissiva sposterebbe condizioni dalla classe
+emergente a quella ridondante. La fissazione preventiva dei criteri e la
+doppia classificazione mitigano il problema senza eliminarlo.
+
+Sul piano della validità interna, l'esito dipende dalla configurazione della
+baseline: insiemi di regole più estesi di quelli predefiniti ridurrebbero
+verosimilmente la classe emergente. La scelta della configurazione predefinita
+è, da questo punto di vista, conservativa rispetto alla facilità di
+riproduzione, ma resta una scelta, e va riportata come tale.
+
+Sul piano della validità esterna, il numero e la natura dei progetti
+analizzati limitano la generalizzabilità dei risultati. Il vincolo di
+compresenza dei tre artefatti restringe la popolazione dei progetti
+ammissibili e introduce una selezione verso sistemi con un certo grado di
+maturità nelle pratiche di sviluppo, che non sono rappresentativi
+dell'insieme dei servizi basati su API.
+
+Resta infine, sul piano della validità di conclusione, il fatto che le misure
+riportate sono descrittive e su un campione limitato: esse documentano il
+comportamento del sistema sui bersagli considerati e non autorizzano stime
+puntuali sulla popolazione dei progetti reali.
