@@ -28,10 +28,13 @@
 	after skip=14pt
 }
 
+% usage: \RQ{1.2} -> RQ con numero in pedice, da usare nel testo corrente
+\newcommand{\RQ}[1]{RQ$_{#1}$}
+
 % usage: \rqbox{Numero della Research Question}{Domanda}
 \newcommand{\rqbox}[2]{%
 	\begin{rqcallout}
-		{\normalfont\faSearch}\ \textbf{RQ$_{#1}$:} \emph{#2}
+		{\normalfont\faSearch}\ \textbf{\RQ{#1}:} \emph{#2}
 	\end{rqcallout}%
 }
 
@@ -41,7 +44,7 @@
 	\medskip%
 	\noindent\fcolorbox{black}{blue!05}{%
 		\parbox{0.985\linewidth}{% 
-			\textbf{\faHandORight\ Answer to RQ$_{#1}$.} #2%
+			\textbf{\faHandORight\ Answer to \RQ{#1}.} #2%
 		}%
 	}%
 	\medskip%
