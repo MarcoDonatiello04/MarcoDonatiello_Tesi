@@ -12,6 +12,8 @@
   "latex-workshop.latex.recipes": [
     { "name": "latexmk", "tools": ["latexmk"] }
   ],
+  "latex-workshop.latex.recipe.default": "first",
+
 
   // Il file principale e' sempre main.tex, anche premendo cmd+opt+b mentre si
   // sta scrivendo dentro un capitolo.

@@ -1,4 +1,5 @@
-%!TEX root = ../main.tex
+% !TEX root = ../main.tex
+
 \chapter{Metodo di ricerca}
 \label{cap:metodo}
 
@@ -35,29 +36,31 @@ rispetto all'intento del dominio applicativo.
 In questo quadro, il contributo del presente lavoro non consiste nell'introdurre
 una nuova categoria teorica, bensì nell'applicare sistematicamente tale
 distinzione consolidata alle dieci classi dell'OWASP API Security Top 10 (2023),
-verificandone le conseguenze implementative attraverso un'analisi statica
-multi-layer.
+verificandone le conseguenze implementative attraverso un'analisi multi-layer
+degli artefatti di progetto, integrata da evidenza dinamica ove la sola
+ispezione statica non sia sufficiente.
 
 Su questa base si articola la domanda di ricerca principale del lavoro.
 
 \rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023)
-sono riconducibili a vulnerabilità tecniche rilevabili mediante analisi statica
-multi-layer su codice applicativo, definizioni infrastrutturali e specifica
-dell'interfaccia, e quali ricadono nella logica di business richiedendo
-informazioni di dominio non ricostruibili dagli artefatti analizzati?}
+sono riconducibili a vulnerabilità tecniche rilevabili mediante analisi
+statica multi-layer su codice applicativo, definizioni infrastrutturali e
+specifica dell'interfaccia, quali richiedono in aggiunta evidenza dinamica,
+e quali ricadono nella logica di business richiedendo informazioni di
+dominio non ricostruibili dagli artefatti analizzati?}
 
 La domanda si scompone in due interrogativi subordinati, che ne precisano
 rispettivamente la portata costruttiva e quella critica.
 
 \rqbox{1.1}{Per le categorie riconducibili a vulnerabilità tecniche,
-quale combinazione di livelli di analisi è necessaria alla loro copertura, e
-quali di esse risultano accessibili soltanto attraverso la correlazione di
-segnali provenienti da livelli distinti?}
+quale combinazione di livelli di analisi è necessaria alla loro copertura,
+e quali condizioni di rischio emergono soltanto dalla congiunzione di
+segnali che, presi isolatamente, non costituiscono una violazione?}
 
-\rqbox{1.2}{Per le categorie legate alla logica di business, quale
-frazione della proprietà violata resta comunque approssimabile staticamente,
-e quale residuo richiede necessariamente evidenza dinamica o conoscenza del
-dominio?}
+\rqbox{1.2}{Per le categorie la cui proprietà violata non è interamente
+esprimibile sugli artefatti, quale componente resta comunque riconoscibile
+staticamente, quale parte del residuo è accertabile mediante evidenza
+dinamica e quale richiede irriducibilmente conoscenza del dominio?}
 
 L'evidenza a sostegno di queste domande proviene da tre fonti distinte. La
 mappatura per categoria presentata nel capitolo precedente fornisce la base
@@ -66,4 +69,257 @@ moduli di rilevazione e la loro validazione su fixture controllate e su un
 bersaglio realistico ne verificano la traducibilità operativa; l'esclusione
 motivata delle categorie inerenti alla logica di business costituisce essa stessa
 un risultato, in quanto delimita con precisione il perimetro dell'approccio
-anziché lasciarne i limiti impliciti.
+anziché lasciarne i limiti impliciti. La validazione riguarda tanto i moduli
+di analisi statica quanto le componenti dinamiche introdotte per le categorie
+il cui residuo lo richiede.
+
+\section{Impostazione dello studio}
+\label{sec:impostazione}
+
+Le domande formulate nella sezione precedente non ammettono una risposta
+puramente documentale. Stabilire quali categorie siano riconducibili a
+violazioni di natura tecnica richiede un criterio applicato in modo
+sistematico, ma verificare che tale riconduzione regga sul piano operativo
+richiede di costruire gli strumenti di rilevazione corrispondenti e di
+osservarne il comportamento su codice reale. Lo studio assume perciò una
+forma costruttiva: la risposta passa attraverso la realizzazione di un
+artefatto software e la sua applicazione a bersagli definiti.
+
+Da questa impostazione discende una precisazione necessaria sul ruolo del
+sistema descritto nei capitoli seguenti. Esso non costituisce l'oggetto
+della ricerca, bensì lo strumento attraverso cui la classificazione teorica
+viene messa alla prova. Le scelte architetturali e implementative sono
+interamente guidate dall'obiettivo metodologico: rendere operativi e
+verificabili sul campo i riscontri previsti dalla classificazione. Se una
+categoria è stata ricondotta a una violazione strutturale, deve esistere
+una regola che la riconosca; se una categoria è stata esclusa, l'assenza del
+modulo corrispondente non è una lacuna implementativa ma la conseguenza
+attesa dell'analisi.
+
+Coerentemente, si considerano evidenza a sostegno delle domande di ricerca
+tre elementi soltanto: la classificazione delle dieci categorie secondo il
+criterio dichiarato, l'esito verificato dell'esecuzione dei moduli di
+rilevazione su artefatti di prova e su un bersaglio realistico, e la
+documentazione motivata delle categorie non coperte. Non costituiscono
+evidenza le dichiarazioni di copertura non accompagnate da esito di
+esecuzione, né la presenza di regole nel codice non verificate su casi
+concreti.
+
+Il resto del capitolo procede in tre passi. La sezione successiva applica il
+criterio alle dieci categorie e ne produce la classificazione, rispondendo
+alla parte dichiarativa di RQ1. La sezione seguente deriva da tale
+classificazione i requisiti cui uno strumento di rilevazione deve
+soddisfare, senza ancora impegnarsi su una realizzazione particolare. Il
+capitolo si chiude con il disegno della valutazione, ossia i bersagli, la
+costruzione del riferimento di verità e le grandezze osservate.
+
+\section{Applicazione del criterio alle dieci categorie}
+\label{sec:applicazione-criterio}
+
+La classificazione muove dalla distinzione introdotta nella
+Sezione~\ref{sec:research-questions} e la applica a ciascuna delle dieci
+categorie dell'OWASP API Security Top 10 (2023) secondo una procedura
+uniforme. Per ogni categoria si individua anzitutto la proprietà di
+sicurezza la cui violazione la definisce, attenendosi alla formulazione
+ufficiale e alla caratterizzazione emersa dalla rassegna del capitolo
+precedente. Si valuta quindi se tale proprietà sia esprimibile come
+predicato sugli artefatti di progetto, ossia se esista un tratto del codice
+applicativo, delle definizioni infrastrutturali o della specifica
+dell'interfaccia la cui presenza o assenza sia sufficiente a stabilire la
+violazione.
+
+L'applicazione del criterio produce tre esiti distinti. Una categoria è
+detta \emph{tecnica} quando la proprietà violata è interamente esprimibile
+in tali termini: la valutazione del predicato richiede il solo esame degli
+artefatti. È detta \emph{di logica di business} quando la proprietà violata
+è definita per riferimento all'intento applicativo, e nessun esame degli
+artefatti può stabilirne la violazione in assenza di informazioni sul
+comportamento atteso. È detta infine \emph{ibrida} quando la proprietà si
+decompone in una componente strutturale e in un residuo di dominio: in
+questi casi l'analisi statica riconosce una condizione necessaria alla
+violazione, ma non sufficiente a stabilirla.
+
+Il residuo che ne risulta non è omogeneo. In alcuni casi esso è accertabile
+osservando il comportamento del sistema in esecuzione, poiché la proprietà
+mancante si manifesta nella risposta a una sollecitazione mirata; in altri
+richiede una conoscenza dell'intento applicativo che nessuna osservazione
+del sistema, statica o dinamica, può restituire. La distinzione fra i due
+tipi di residuo separa le categorie ibride da quelle di logica di business.
+
+La classe intermedia non rappresenta un'incertezza della classificazione, ma
+una proprietà del materiale classificato. Diverse categorie descrivono
+violazioni di controlli di autorizzazione la cui assenza è strutturalmente
+riconoscibile, mentre la determinazione di quali soggetti debbano accedere a
+quali risorse appartiene al dominio applicativo. Trattare tali categorie
+come interamente tecniche sovrastimerebbe la portata dell'analisi statica;
+trattarle come interamente di logica di business ne trascurerebbe la
+componente effettivamente rilevabile. La loro individuazione costituisce
+perciò l'oggetto proprio di RQ1.2, che interroga la frazione di proprietà
+approssimabile staticamente e il residuo che non lo è.
+
+La Tabella~\ref{tab:classificazione} riporta l'esito dell'applicazione del
+criterio; i paragrafi che seguono si limitano a motivare i casi che
+richiedono una precisazione.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \linespread{1.1}\selectfont
+  \begin{tabularx}{\textwidth}{@{}l l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X@{}}
+    \toprule
+    \textbf{Categoria} & \textbf{Classe} & \textbf{Componente strutturale} & \textbf{Residuo} \\
+    \midrule
+    API7 & tecnica & flusso da ingresso non fidato a chiamata in uscita senza validazione & --- \\
+    API8 & tecnica & difformità da una baseline nota & quale baseline sia corretta per il contesto d'uso \\
+    \addlinespace
+    API1 & ibrida & assenza di controllo di autorizzazione sul percorso verso l'oggetto & chi possa accedere a quale oggetto (dinamico) \\
+    API3 & ibrida & flusso di dati fra richiesta e risposta & quali proprietà siano sensibili (dinamico) \\
+    API5 & ibrida & funzione riservata raggiungibile senza controllo & ripartizione dei privilegi prevista (dinamico) \\
+    API4 & ibrida & assenza di un limite a un dato livello & se il limite sia imposto altrove nel deployment \\
+    API2 & ibrida & gestione dei token e scelte crittografiche & abuso dei flussi di autenticazione (dinamico) \\
+    API10 & ibrida & canale non cifrato, assenza di limiti sulle risorse acquisite & contratto del fornitore \\
+    \addlinespace
+    API6 & logica di business & --- & quali flussi siano sensibili \\
+    \addlinespace
+    API9 & fuori griglia & discrepanza fra contratto e codice & sistemi ignoti all'organizzazione \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{0.6em}
+  \caption{Esito dell'applicazione del criterio alle dieci categorie
+    dell'OWASP API Security Top 10 (2023). Il residuo è marcato come
+    \emph{dinamico} quando è accertabile sollecitando il sistema in
+    esecuzione.}
+  \label{tab:classificazione}
+\end{table}
+
+Fra le categorie tecniche, API7 soddisfa il criterio senza riserve: il
+difetto è nella mancata validazione dell'indirizzo, non nell'uso che
+l'applicazione fa della risorsa recuperata. API8 richiede invece una
+precisazione: il confronto con la baseline è meccanico, ma la baseline
+stessa può dipendere dall'uso previsto del sistema. Una politica di
+condivisione fra origini che ammetta qualunque chiamante è un difetto per
+un'interfaccia a client autenticati e una scelta legittima per
+un'interfaccia pubblica di sola lettura. La componente di dominio non
+riguarda quindi la rilevazione della configurazione, ma la determinazione
+di quale configurazione sia corretta.
+
+Le tre categorie di autorizzazione (API1, API3, API5) condividono la stessa
+struttura a granularità diversa --- oggetti, proprietà, funzioni --- ed è
+questa condivisione a rendere la classe ibrida un tratto del materiale e
+non un artificio: l'assenza del controllo è riconoscibile sugli artefatti,
+mentre la politica che il controllo dovrebbe applicare risiede nel modello
+di autorizzazione e si accerta sollecitando l'interfaccia con identità
+distinte. Le altre tre ibride hanno residui di natura diversa. Per API4 il
+residuo non riguarda l'intento applicativo ma il contesto di deployment,
+ed è colmabile estendendo l'analisi alle definizioni infrastrutturali; per
+API2 la linea di separazione è quella già individuata dalla rassegna, fra
+proprietà deterministiche dei token e abusi dei flussi osservabili solo in
+esecuzione; per API10 le cinque condizioni che la compongono si
+distribuiscono fra le due componenti.
+
+API6 è l'unica categoria priva di componente strutturale: due applicazioni
+sintatticamente identiche possono differire quanto alla presenza della
+vulnerabilità a seconda del modello di business che le sostiene, e il
+residuo non è accertabile nemmeno per via dinamica, poiché l'osservazione
+restituisce ciò che il sistema fa, non ciò che dovrebbe consentire.
+
+API9, infine, eccede la griglia perché il criterio non le si applica: le
+altre categorie descrivono la violazione di una proprietà di un sistema
+noto, API9 l'esistenza di sistemi che l'organizzazione ignora di
+possedere. Il confronto fra ciò che il contratto dichiara e ciò che il
+codice realizza ne individua una parte, ma quanto sfugge a entrambe le
+rappresentazioni resta fuori portata per costruzione.
+
+L'esito è fortemente asimmetrico: due categorie tecniche, sei ibride con
+residui di entità variabile, una di logica di business e una fuori
+classificazione. Questo costituisce di per sé una risposta alla parte
+dichiarativa di RQ1, e ridimensiona l'aspettativa che l'analisi degli
+artefatti di progetto possa coprire in modo uniforme il perimetro
+descritto dall'OWASP API Security Top 10.
+
+\section{Requisiti derivati per lo strumento di rilevazione}
+\label{sec:requisiti}
+
+La classificazione appena prodotta non descrive uno strumento, ma vincola
+ciò che uno strumento adeguato deve saper fare. I requisiti che seguono
+sono formulati in termini di capacità richieste, indipendentemente dalle
+tecnologie che potranno realizzarle; la loro traduzione in un'architettura
+concreta è oggetto del capitolo successivo.
+
+Il primo requisito riguarda l'eterogeneità degli artefatti. Le proprietà
+individuate dalla classificazione non risiedono tutte nello stesso luogo:
+alcune si manifestano nel codice applicativo, altre nelle definizioni
+infrastrutturali, altre ancora nella specifica dell'interfaccia. Uno
+strumento che esamini un solo tipo di artefatto è quindi strutturalmente
+incapace di coprire il perimetro, non per limiti di implementazione ma per
+la natura delle proprietà in gioco. Ne discende la necessità di un'analisi
+articolata su livelli distinti, ciascuno dotato di una rappresentazione
+adeguata al tipo di artefatto che esamina.
+
+Il secondo requisito riguarda la relazione fra i livelli. Alcune delle
+condizioni emerse dalla classificazione non sono osservabili in alcun
+singolo artefatto, ma nella discrepanza fra due di essi. Un percorso
+presente nel codice e assente dal contratto non costituisce una violazione
+in nessuno dei due luoghi presi separatamente, eppure la loro
+divergenza segnala una superficie esposta e non governata. Analogamente,
+l'assenza di un limite nel codice applicativo acquista significato diverso
+a seconda che le definizioni infrastrutturali ne prevedano uno altrove.
+Lo strumento deve dunque disporre di un meccanismo che metta in relazione
+segnali provenienti da livelli diversi e ne derivi giudizi che nessun
+livello esprime autonomamente. Questo requisito risponde direttamente a
+RQ1.1.
+
+Il terzo requisito riguarda il residuo delle categorie ibride. Per quelle
+in cui esso è accertabile osservando il comportamento del sistema in
+esecuzione, lo strumento deve poter sollecitare l'interfaccia e valutarne
+le risposte, poiché la componente strutturale da sola non consente di
+stabilire la violazione ma soltanto la sua possibilità. L'integrazione di
+evidenza dinamica non costituisce quindi un'estensione opzionale, bensì
+la conseguenza diretta della classificazione: senza di essa le categorie
+ibride resterebbero indecise.
+
+Il quarto requisito riguarda la tracciabilità. Poiché lo strumento serve a
+verificare una classificazione, ogni segnalazione da esso prodotta deve
+essere riconducibile alla categoria di cui costituisce evidenza e al
+livello di analisi che l'ha generata. Una segnalazione priva di tale
+riconduzione può indicare un difetto reale, ma non contribuisce a
+rispondere alle domande di ricerca, poiché non è imputabile ad alcuna
+delle classi individuate.
+
+\section{Disegno della valutazione}
+\label{sec:disegno-valutazione}
+
+La valutazione ha due scopi: controllare che ogni modulo di rilevazione
+riconosca davvero la condizione per cui è stato scritto, e osservare come
+si comporta lo strumento nel suo insieme su codice che non è stato scritto
+per essere analizzato. Al primo scopo servono coppie di artefatti di prova,
+ciascuna formata da una versione che contiene la condizione da rilevare e
+da una che non la contiene: il modulo deve segnalare la prima e tacere
+sulla seconda. Poiché artefatti e regole hanno lo stesso autore, questa
+prova dice solo che l'implementazione fa ciò che si intendeva farle fare,
+non che funzioni su codice reale. Al secondo scopo serve OWASP crAPI,
+un'applicazione volutamente vulnerabile usata come riferimento in
+letteratura e qui fissata a una revisione precisa per rendere i risultati
+riproducibili. Non essendo scritta dall'autore, riduce la circolarità della
+prima prova; resta però un bersaglio didattico, costruito perché le sue
+vulnerabilità siano riconoscibili, e quindi i risultati non si possono
+estendere senza cautela ad applicazioni reali. Per gli artefatti di prova
+il riferimento di verità è noto per costruzione; per crAPI è stato
+ricostruito a mano a partire dalle vulnerabilità documentate dal progetto,
+ed è riportato per esteso così che i risultati possano essere giudicati
+rispetto a ciò che si è effettivamente assunto come vero. Due segnalazioni
+si considerano equivalenti quando riguardano la stessa categoria OWASP e lo
+stesso punto di esposizione dell'interfaccia, identificato da metodo e
+percorso normalizzato, a prescindere dal livello di analisi che le ha
+prodotte; la convenzione è stata fissata prima di osservare i risultati,
+per non scegliere a posteriori la granularità più conveniente. Per ogni
+categoria si registra se i moduli segnalano gli artefatti che contengono la
+condizione e non quelli che ne sono privi; le categorie senza alcuna
+segnalazione sono distinte fra quelle in cui ciò discende dalla
+classificazione e quelle in cui indica una copertura mancante, e la sola
+presenza di una regola nel codice, senza l'esito della sua esecuzione, non
+conta come copertura. Va infine detto che la classificazione di questo
+capitolo è stata formalizzata quando parte dei moduli era già stata
+realizzata: il criterio deriva dalla rassegna della letteratura e non dalle
+capacità dello strumento, ma l'ordine reale del lavoro non coincide con
+quello dell'esposizione, e i risultati vanno letti tenendone conto.

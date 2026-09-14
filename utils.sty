@@ -13,16 +13,28 @@
 	\vspace{5pt} %
 }%
 
+% Definizione stile box per Research Questions
+\newtcolorbox{rqcallout}{
+	sharp corners,
+	boxrule=0.5pt,
+	leftrule=3.5pt,
+	colframe=blue!50!black,
+	colback=blue!2!white,
+	top=8pt,
+	bottom=8pt,
+	left=10pt,
+	right=10pt,
+	before skip=14pt,
+	after skip=14pt
+}
+
 % usage: \rqbox{Numero della Research Question}{Domanda}
 \newcommand{\rqbox}[2]{%
-	\medskip%
-	\noindent\fcolorbox{black}{blue!05}{%
-		\parbox{0.985\linewidth}{% 
-			\textbf{\faSearch\ RQ$_{#1}$.} \emph{#2} %
-		}%
-	}%
-	\medskip%
-}%
+	\begin{rqcallout}
+		{\normalfont\faSearch}\ \textbf{RQ$_{#1}$:} \emph{#2}
+	\end{rqcallout}%
+}
+
 
 % usage: \rqanswer{Numero della Research Question}{Risposta}
 \newcommand{\rqanswer}[2]{%
