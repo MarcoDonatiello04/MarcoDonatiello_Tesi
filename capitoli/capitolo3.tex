@@ -1,326 +1,803 @@
 %!TEX root = ../main.tex
-\chapter{Domande di ricerca e disegno dello studio}
-\label{cap:rq}
+\chapter{Un framework ibrido per la rilevazione dei rischi di sicurezza delle API cloud}
+\label{cap:metodo}
 
 %\begin{citazione}
-%In questo capitolo si definiscono l'obiettivo del lavoro, le domande di
-%ricerca che ne derivano e il disegno empirico adottato per rispondervi.
+%In questo capitolo si definiscono le domande di ricerca, si descrive
+%l'architettura del framework realizzato e si fissano i target e le metriche
+%con cui esso viene valutato.
 %\end{citazione}
 
 Il capitolo precedente ha delimitato il perimetro del problema: le
 misconfigurazioni dichiarate negli artefatti di progetto e i rischi di
 sicurezza delle API descritti dalla classificazione OWASP. Questo capitolo
-compie il passaggio dal problema all'indagine, esplicitando che cosa il lavoro
-si propone di verificare, in che forma la verifica è misurabile e quali dati
-servono per condurla.
+compie il passaggio dal problema alla soluzione e alla sua verifica. Presenta
+il framework realizzato --- una pipeline che integra l'analisi statica del
+codice, dell'infrastruttura come codice e della specifica OpenAPI con la
+verifica dinamica del servizio in esecuzione --- e definisce in che modo la
+sua efficacia viene misurata. La Sezione~\ref{sec:rq} fissa l'obiettivo del
+lavoro e le domande di ricerca; la Sezione~\ref{sec:architettura} descrive
+l'architettura della pipeline e il funzionamento dei singoli moduli; la
+Sezione~\ref{sec:target} presenta i target su cui il framework viene
+validato e il modo in cui sono stati costruiti; la Sezione~\ref{sec:metriche}
+definisce le metriche adottate; la Sezione~\ref{sec:minacce} dichiara infine
+le minacce alla validità del disegno sperimentale.
 
-\section{Obiettivo del lavoro}
-\label{sec:goal}
+\section{Obiettivo e domande di ricerca}
+\label{sec:rq}
 
-\goal{Valutare se l'analisi statica di un'applicazione basata su API tragga
-un beneficio misurabile dalla \emph{correlazione} dei segnali prodotti su
-layer eterogenei --- codice applicativo, definizione dell'infrastruttura come
-codice e specifica OpenAPI --- rispetto all'esecuzione degli stessi strumenti
-in isolamento.}
+\goal{Progettare e valutare un framework che integri l'analisi statica degli
+artefatti di un progetto basato su API --- codice sorgente, template
+Infrastructure-as-Code e specifica OpenAPI --- con la verifica dinamica del
+servizio in esecuzione, allo scopo di rilevare le condizioni di rischio
+descritte dalla OWASP API Security Top 10 e di attribuire a ciascuna un
+punteggio di rischio che tenga conto dell'evidenza empirica raccolta.}
 
-L'obiettivo si articola lungo due assi distinti, che danno luogo ad altrettante
-domande di ricerca. Il primo riguarda la capacità del sistema di riconoscere
-correttamente le singole condizioni di rischio all'interno di ciascun layer;
-il secondo, oggetto di questo capitolo, riguarda il valore aggiunto della
-correlazione fra layer.
-% TODO: inserire qui il rimando a RQ_1 una volta fissata la sua formulazione
-% definitiva (asse 1 -- accuratezza del riconoscimento per singolo layer).
-
-La distinzione non è puramente espositiva. Gli strumenti che alimentano il
-sistema esistono già, sono maturi e sono ampiamente adottati: Semgrep per
-l'analisi del codice sorgente~\cite{semgrep2026docs}, Checkov per i template
+Gli strumenti di analisi che alimentano il framework esistono già, sono
+maturi e ampiamente adottati: Semgrep per l'analisi del codice
+sorgente~\cite{semgrep2026docs}, Checkov per i template
 Infrastructure-as-Code~\cite{checkov2026docs}, Spectral per la validazione
-delle specifiche OpenAPI~\cite{spectral2026docs}. Nessuno dei tre costituisce
-un contributo originale di questo lavoro. L'elemento che non esiste come
-componente autonomo, e che il sistema introduce, è il motore di correlazione:
-la logica che mette in relazione i segnali emessi dai tre strumenti su
-artefatti diversi dello stesso progetto e ne deriva condizioni di rischio che
-nessuno dei tre, da solo, è in grado di formulare. È su questo componente che
-si concentra la valutazione empirica.
+delle specifiche OpenAPI~\cite{spectral2026docs}, OWASP ZAP per le verifiche
+dinamiche~\cite{zap2026docs}. Nessuno di essi costituisce un contributo
+originale di questo lavoro. Ciò che il framework introduce, e su cui si
+concentra la valutazione, sono tre elementi che non esistono come componenti
+autonomi: un insieme di rilevatori specifici per le categorie della OWASP API
+Security Top 10, ciascuno organizzato su più livelli di analisi (albero
+sintattico del codice, file di configurazione, contratto OpenAPI); una fase
+dinamica che verifica sul servizio in esecuzione le condizioni di rischio
+candidate, usando identità multiple e uno stato applicativo noto; un motore
+di correlazione che unisce le segnalazioni statiche e quelle dinamiche e ne
+deriva un punteggio di rischio.
 
-\section{Il limite dell'analisi per singolo layer}
-\label{sec:limite_layer}
+L'obiettivo si articola lungo due assi, che danno luogo ad altrettante
+domande di ricerca. Il primo riguarda la capacità del framework di
+riconoscere correttamente le vulnerabilità, ed è verificabile là dove
+l'insieme delle vulnerabilità presenti è noto per costruzione. Il secondo
+riguarda la tenuta delle regole di rilevazione quando si abbandona
+l'ambiente in cui sono state sviluppate.
 
-Ogni analizzatore statico opera entro un dominio delimitato e dispone di un
-oracolo\footnote{\emph{Oracolo}: il criterio che permette di stabilire se
-l'esito osservato di un'analisi sia corretto o meno.} definito su quel
-dominio soltanto. Semgrep ragiona su strutture sintattiche del codice
-sorgente e, nelle configurazioni più avanzate, su flussi di dati interni alla
-singola unità di compilazione; ignora però come e se quel codice sia
-raggiungibile dall'esterno. Checkov valuta le risorse dichiarate nei
-template infrastrutturali rispetto a un catalogo di politiche, ma non ha
-alcuna nozione delle funzioni applicative che quelle risorse ospitano.
-Spectral verifica la conformità di un documento OpenAPI~\cite{openapi2021spec}
-a un insieme di regole di stile e completezza, senza poter constatare se la
-specifica corrisponda al comportamento effettivamente implementato.
+\rqbox{1}{In che misura l'integrazione di analisi statica e verifica dinamica
+consente al framework di rilevare correttamente le vulnerabilità delle
+categorie della OWASP API Security Top 10 considerate?}
 
-Questa specializzazione è ciò che rende ciascuno strumento efficace nel proprio
-ambito, ed è anche ciò che ne definisce il punto cieco. Il fenomeno è noto in
-letteratura: già i primi confronti sistematici fra analizzatori statici
-rilevavano una sovrapposizione modesta fra gli insiemi di difetti segnalati da
-strumenti diversi applicati allo stesso programma, a indicare che ciascuno
-copre una porzione propria dello spazio dei difetti~\cite{rutar2004comparison}.
-Il caso qui in esame aggiunge una difficoltà ulteriore: gli strumenti non
-analizzano lo stesso artefatto con criteri diversi, ma artefatti diversi con
-criteri incommensurabili. Il loro output, di conseguenza, non è nemmeno
-direttamente confrontabile.
+La formulazione richiede due precisazioni. \emph{Correttamente} significa che
+una vulnerabilità presente viene segnalata e che una vulnerabilità assente
+non lo è: la domanda riguarda tanto la sensibilità quanto la specificità dei
+rilevatori, perché un rilevatore che segnala tutto sarebbe banalmente
+completo e del tutto inutile~\cite{johnson2013why}. \emph{Considerate}
+delimita la domanda alle categorie per cui il framework implementa almeno un
+rilevatore; l'elenco è fissato nella Sezione~\ref{sec:catalogo}, e la
+categoria API6:2023 ne resta esclusa. La risposta a RQ$_1$ si ottiene su
+\emph{fixture}\footnote{\emph{Fixture}: applicazione o insieme di file
+costruiti appositamente per collaudare uno strumento, in cui ogni
+caratteristica rilevante è nota in anticipo.} sintetiche, in cui la verità di
+riferimento è completa e ogni segnalazione può essere classificata senza
+ambiguità come corretta o errata. Per le categorie che dispongono anche di
+una componente dinamica (API1, API2 e API3), RQ$_1$ comprende la verifica che
+il test a runtime confermi la condizione ipotizzata staticamente, poiché è
+proprio in questa conferma che risiede il valore dell'integrazione.
 
-\subsection{Uno scenario esemplificativo}
-\label{sec:scenario}
+\rqbox{2}{Come variano i tassi di falsi positivi e falsi negativi delle regole
+di rilevazione quando vengono applicate a un benchmark applicativo reale
+rispetto alle fixture sintetiche su cui sono state sviluppate?}
 
-Si consideri un servizio che espone la risorsa \texttt{/api/v1/exports/\{id\}}
-per il recupero di un report generato in precedenza. La specifica OpenAPI
-dichiara l'operazione senza alcun requisito di sicurezza associato:
+RQ$_2$ nasce da un limite intrinseco della risposta a RQ$_1$. Le fixture
+sintetiche sono state scritte dallo stesso autore delle regole, nello stesso
+linguaggio e con lo stesso framework applicativo; un risultato favorevole su
+di esse dimostra che le regole riconoscono i pattern che sono state
+progettate per riconoscere, ma non che quei pattern coincidano con il modo in
+cui le vulnerabilità si manifestano in un sistema scritto da altri. Il
+benchmark applicativo reale --- OWASP crAPI, descritto nella
+Sezione~\ref{sec:crapi} --- è indipendente dal framework, adotta uno stack
+diverso e documenta le proprie vulnerabilità in modo pubblico. Il confronto
+fra i due contesti misura quindi la distanza fra ciò che le regole sanno
+riconoscere e ciò che dovrebbero riconoscere. RQ$_2$ richiede inoltre di
+distinguere i falsi negativi imputabili alla regola, che non ha riconosciuto
+un pattern presente, da quelli imputabili all'esecuzione, in cui il test non
+è stato portato a termine per ragioni ambientali: le due cause hanno rimedi
+diversi e vanno riportate separatamente.
 
-\begin{verbatim}
-paths:
-  /api/v1/exports/{id}:
-    get:
-      operationId: getExport
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "200": { description: OK }
-\end{verbatim}
+\section{Architettura della pipeline}
+\label{sec:architettura}
 
-Il template Terraform che descrive l'infrastruttura rende il servizio
-raggiungibile dalla rete pubblica:
+Il framework è organizzato come una pipeline in quattro fasi logiche, che la
+Figura~\ref{fig:architettura} rappresenta insieme agli artefatti in ingresso
+e ai prodotti in uscita. La prima fase esegue l'analisi statica sugli
+artefatti del progetto; la seconda prepara il servizio in esecuzione portandolo
+in uno stato noto; la terza lo sollecita con richieste costruite per
+verificare le condizioni di rischio candidate; la quarta correla le
+segnalazioni prodotte dalle fasi precedenti e calcola il punteggio di rischio.
+I paragrafi che seguono descrivono ciascuna fase; prima, però, occorre
+introdurre il modello dei dati su cui tutte operano.
 
-\begin{verbatim}
-resource "aws_security_group_rule" "api_ingress" {
-  type        = "ingress"
-  from_port   = 443
-  to_port     = 443
-  protocol    = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
-}
-\end{verbatim}
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\footnotesize,
+  node distance=4mm and 7mm,
+  box/.style={draw, rounded corners=2pt, align=center, minimum height=11mm,
+              inner sep=3pt, text width=33mm},
+  art/.style={box, fill=gray10, text width=24mm},
+  tool/.style={box, fill=blue!5},
+  phase/.style={draw, rounded corners=3pt, inner sep=5pt, dashed},
+  lab/.style={font=\sffamily\scriptsize\bfseries},
+  arr/.style={-{Latex[length=2mm]}, thick},
+  bus/.style={draw, fill=gray15, minimum height=7mm, align=center,
+              font=\sffamily\scriptsize}
+]
+% --- artefatti in ingresso ---------------------------------------------
+\node[art] (code) {Codice sorgente\\(Python, JS, Java)};
+\node[art, below=of code] (iac) {Template IaC\\(Terraform)};
+\node[art, below=of iac] (oas) {Specifica\\OpenAPI};
+\node[art, below=of oas] (run) {Servizio in\\esecuzione};
+% --- fase 1: analisi statica ---------------------------------------------
+\node[tool, right=of code] (semgrep) {Semgrep\\inventario endpoint\\e autenticazione};
+\node[tool, below=of semgrep] (checkov) {Checkov\\misconfigurazioni IaC};
+\node[tool, below=of checkov] (spectral) {Spectral\\ruleset OWASP};
+\node[tool, below=of spectral] (core) {Moduli Core\\regole AST, Config,\\OpenAPI};
+% --- fasi 2-3: seeding e verifica dinamica ------------------------------
+\node[tool, right=of semgrep] (seed) {Identità e seeding\\(Keycloak, stato noto)};
+\node[tool, below=of seed] (zap) {Scansione differenziale\\(ZAP: BOLA)};
+\node[tool, below=of zap] (dyn) {Tester dinamici\\API2, API3};
+\node[tool, below=of dyn] (mitm) {Cattura traffico\\(mitmproxy),\\Shadow API};
+% --- fase 4: correlazione ---------------------------------------------
+\node[tool, text width=34mm, minimum height=24mm]
+  at ($(zap.east)!0.5!(dyn.east)$) [anchor=west, xshift=7mm] (corr)
+  {Motore di correlazione\\[3pt] chiave: endpoint\\normalizzato\\ conferma a runtime\\ punteggio di rischio};
+% --- uscite -------------------------------------------------------------
+\node[art, right=of corr] (out) {Report JSON\\Dashboard\\Remediation};
+% --- cornici di fase ----------------------------------------------------
+\node[phase, fit=(semgrep)(core), label={[lab]above:Fase 1 --- Analisi statica}] (f1) {};
+\node[phase, fit=(seed)(mitm), label={[lab, anchor=south west]north west:Fasi 2--3 --- Seeding e verifica dinamica}] (f23) {};
+\node[phase, fit=(corr), label={[lab]above:Fase 4 --- Correlazione}] (f4) {};
+% --- event bus, sotto la cornice piu' bassa ------------------------------
+\path let \p1=(f1.south), \p2=(f23.south), \n1={min(\y1,\y2)-9mm} in
+  coordinate (busy) at (0,\n1);
+\coordinate (busx) at ($(f1.south)!0.5!(f4.south)$);
+\node[bus, text width=108mm, anchor=north] at (busx |- busy) (busnode)
+  {Event Bus --- \texttt{STATIC\_SCAN\_COMPLETED} $\cdot$ \texttt{TRAFFIC\_CAPTURED} $\cdot$ \texttt{FINDING\_DETECTED}};
+% --- frecce: artefatti -> strumenti ---------------------------------------
+\draw[arr] (code) -- (semgrep);
+\draw[arr] (code.east) -- ++(3.5mm,0) |- (core.west);
+\draw[arr] (iac) -- (checkov);
+\draw[arr] (oas) -- (spectral);
+\draw[arr] (oas.east) -- ++(3.5mm,0) |- (core.west);
+\draw[arr] (run.east) -- ++(3.5mm,0) |- (mitm.west);
+% --- frecce: statica -> dinamica ---------------------------------------
+\draw[arr] (semgrep) -- (seed);
+\draw[arr] (semgrep.east) -- ++(3mm,0) |- (zap.west);
+\draw[arr] (semgrep.east) -- ++(3mm,0) |- (mitm.west);
+\draw[arr, dashed] (checkov.east) -- ++(4.5mm,0) |- (seed.west);
+% --- frecce: bus --------------------------------------------------------
+\draw[arr] (f1.south) -- (f1.south |- busnode.north);
+\draw[arr] (f23.south) -- (f23.south |- busnode.north);
+\draw[arr] (f4.south |- busnode.north) -- (f4.south);
+% --- uscita -------------------------------------------------------------
+\draw[arr] (corr) -- (out);
+\end{tikzpicture}}
+\caption{Architettura della pipeline: artefatti in ingresso, fasi di
+analisi, motore di correlazione e prodotti in uscita. Le frecce piene indicano
+il flusso dei dati; la freccia tratteggiata indica l'indirizzo del servizio
+ricavato dal provisioning dell'infrastruttura. Le fasi comunicano
+esclusivamente tramite l'event bus.}
+\label{fig:architettura}
+\end{figure}
 
-Il gestore dell'operazione, infine, deriva la risorsa direttamente
-dall'identificatore fornito dal client, senza confrontarlo con l'identità del
-chiamante:
+La scelta di far comunicare le fasi attraverso un \emph{event
+bus}\footnote{\emph{Event bus}: componente che riceve eventi dai produttori e
+li recapita ai consumatori che vi si sono iscritti, senza che gli uni
+conoscano gli altri.} in memoria, anziché tramite chiamate dirette, discende
+da un vincolo di estensibilità. Ogni strumento esterno è incapsulato in un
+\emph{adapter} che implementa un'interfaccia comune (\texttt{IScanner}) e
+traduce l'output grezzo dello strumento nel modello di dominio; ogni
+rilevatore dinamico implementa a sua volta un'interfaccia comune
+(\texttt{IDetector}) e dichiara gli eventi a cui intende reagire. Il motore
+di correlazione, infine, non conosce né gli uni né gli altri: consuma le
+segnalazioni che transitano sul bus. Aggiungere un nuovo scanner o un nuovo
+rilevatore non richiede quindi di modificare l'orchestratore, ed è questa la
+proprietà che ha permesso di far crescere il catalogo delle regole per
+categoria senza intervenire sul nucleo del sistema.
 
-\begin{verbatim}
-@app.get("/api/v1/exports/{id}")
-def get_export(id: str):
-    return db.exports.find_one({"_id": id})
-\end{verbatim}
+\subsection{Il modello unificato delle segnalazioni}
+\label{sec:finding}
 
-Preso singolarmente, nessuno dei tre frammenti costituisce un difetto
-inequivocabile. Un'operazione priva di requisito di sicurezza è del tutto
-legittima in un'API che espone deliberatamente risorse pubbliche, ed è per
-questo che Spectral la segnala, quando lo fa, come avvertimento di
-completezza della specifica. Una regola di ingresso aperta su
-\texttt{0.0.0.0/0} sulla porta 443 è la configurazione attesa per qualunque
-servizio destinato a essere raggiunto da Internet: Checkov la rileva, ma si
-tratta di una delle segnalazioni più frequentemente soppresse proprio perché,
-nella maggior parte dei casi, descrive una scelta intenzionale. Il gestore,
-dal canto suo, non presenta alcun flusso da sorgente a \emph{sink}
-pericoloso, e non attiva quindi le regole di iniezione; l'assenza di un
-controllo di autorizzazione a livello di oggetto è, per un analizzatore
-sintattico, l'assenza di qualcosa che non è dichiarato da nessuna parte, e
-come tale difficilmente riconoscibile con precisione accettabile.
-
-La condizione di rischio, però, esiste, ed è quella descritta nel capitolo
-precedente come Broken Object Level Authorization~\cite{owasp2023api1}: un
-endpoint dichiarato non autenticato, reso raggiungibile dalla rete pubblica
-dalla configurazione infrastrutturale, il cui gestore dereferenzia un
-identificatore controllato dal client senza verificarne la proprietà. La
-condizione non risiede in alcuno dei tre artefatti: risiede nella loro
-congiunzione. È esattamente il tipo di rischio che l'esecuzione separata dei
-tre strumenti non è in grado di formulare, non per un limite implementativo
-delle rispettive regole, ma perché la proposizione da verificare menziona
-entità che appartengono a domini diversi.
-
-Questo scenario chiarisce anche perché la questione non sia risolvibile
-semplicemente irrobustendo le regole dei singoli strumenti. Rendere più
-aggressiva la regola di Checkov sull'esposizione pubblica significherebbe
-segnalare ogni servizio destinato a Internet; rendere bloccante
-l'avvertimento di Spectral significherebbe segnalare ogni endpoint pubblico
-per progetto. In entrambi i casi il risultato sarebbe un aumento del rumore,
-con l'effetto ben documentato di indurre gli sviluppatori a disattivare o
-ignorare lo strumento~\cite{johnson2013why}. La correlazione agisce nella
-direzione opposta: è la coesistenza dei tre segnali a rendere l'insieme
-significativo, e sono i due terzi delle occorrenze in cui la coesistenza non
-si verifica a restare, correttamente, silenziose.
-
-\section{La domanda di ricerca}
-\label{sec:rq2}
-
-Da questa premessa discende la domanda che il presente lavoro intende
-verificare.
-
-\rqbox{2}{La correlazione di segnali provenienti da layer eterogenei ---
-codice applicativo, Infrastructure-as-Code e specifica OpenAPI --- consente di
-identificare condizioni di rischio non rilevabili da alcuno dei layer preso
-singolarmente?}
-
-La formulazione richiede due precisazioni, senza le quali la domanda
-rischierebbe di ammettere solo risposte affermative e di risultare, di
-conseguenza, priva di contenuto empirico.
-
-La prima riguarda il significato di \emph{condizione di rischio}. Con questa
-espressione si intende una proposizione verificabile su un progetto, che
-descrive una situazione riconducibile a una delle categorie di rischio
-delimitate nel capitolo precedente e formulata in termini di più artefatti
-distinti. Non coincide con la singola segnalazione di uno strumento, che è
-invece un \emph{segnale}: un fatto osservato su un unico artefatto. Il motore
-di correlazione consuma segnali e produce condizioni; la distinzione fra i due
-livelli è la premessa perché il confronto con la baseline abbia senso.
-
-La seconda riguarda l'espressione \emph{non rilevabile}. In senso stretto,
-ogni condizione prodotta dal motore è composta da segnali che gli strumenti
-hanno effettivamente emesso: se il criterio di confronto fosse la presenza di
-quei segnali nell'output della baseline, la risposta sarebbe negativa per
-costruzione e la domanda perderebbe interesse. Il criterio adottato è quindi
-un altro, ed è di natura semantica: una condizione si considera già rilevabile
-dai singoli strumenti quando nell'output della baseline esiste una
-segnalazione che descrive la stessa situazione di rischio sullo stesso
-bersaglio, con una gravità comparabile e con un contenuto informativo
-sufficiente a intraprendere l'azione correttiva. La presenza dei soli segnali
-componenti, dispersi fra strumenti diversi e ciascuno classificato come
-informativo, non soddisfa questo criterio.
-
-\section{Sotto-domanda operativa}
-\label{sec:rq21}
-
-Per rendere la verifica misurabile, RQ$_2$ si declina in una sotto-domanda che
-ne costituisce la formulazione quantitativa.
-
-\rqbox{2.1}{Quante delle condizioni di rischio prodotte dal motore di
-correlazione trovano un corrispettivo nell'output dei singoli strumenti
-eseguiti in isolamento sullo stesso bersaglio?}
-
-Il termine \emph{corrispettivo} è impiegato nel senso semantico appena
-definito. Ogni condizione prodotta dal motore viene classificata, rispetto
-alla baseline, in una fra tre categorie mutuamente esclusive.
+Ogni strumento produce output in un formato proprio: Checkov elenca controlli
+superati e falliti per risorsa, Semgrep riporta corrispondenze di pattern con
+posizione nel file, Spectral emette violazioni con percorso JSON nel
+documento, ZAP restituisce avvisi per URL. Perché la correlazione sia
+possibile, tutti vengono ricondotti a un'unica entità di dominio, il
+\texttt{Finding}, i cui campi principali sono riportati di seguito.
 
 \begin{itemize}
-    \item \textbf{Ridondante.} Nella baseline esiste una segnalazione
-    equivalente per bersaglio, categoria di rischio e gravità. La correlazione
-    non aggiunge nulla che la sola esecuzione separata non avrebbe già
-    prodotto.
-    \item \textbf{Amplificata.} La baseline contiene tutti i segnali
-    componenti, ma dispersi fra strumenti diversi e ciascuno classificato a
-    bassa gravità o come informativo. La correlazione non scopre un fatto
-    nuovo: ne modifica la priorità, rendendo azionabile un insieme di
-    segnalazioni che, isolate, sarebbero state verosimilmente ignorate.
-    \item \textbf{Emergente.} Almeno uno dei fatti che compongono la
-    condizione non figura nell'output di alcuno strumento in isolamento ---
-    tipicamente perché non costituisce di per sé una violazione, ma un
-    elemento estratto dalla specifica o dal modello dell'infrastruttura --- e
-    nella baseline non esiste alcuna segnalazione riconducibile alla stessa
-    situazione di rischio.
+    \item \textbf{Identità e classificazione.} Un identificatore univoco,
+    la sorgente che ha prodotto la segnalazione --- uno dei tre adapter
+    statici, la scansione ZAP, il validatore a runtime o il rilevatore di
+    Shadow API --- la categoria di rischio, la regola che si è attivata e,
+    ove disponibili, la categoria OWASP API e l'identificatore CWE
+    corrispondenti.
+    \item \textbf{Gravità e confidenza.} La gravità su cinque livelli
+    (\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW},
+    \texttt{INFO}) e la confidenza, un valore fra 0 e 1 che esprime quanto la
+    segnalazione sia da ritenersi fondata.
+    \item \textbf{Localizzazione.} Il file e l'intervallo di righe per le
+    segnalazioni sul codice o sui template; l'identificatore della risorsa per
+    quelle infrastrutturali; l'\emph{endpoint} --- coppia metodo e percorso
+    --- per quelle che riguardano un'operazione dell'API, con l'indicazione
+    di se l'operazione richieda autenticazione.
+    \item \textbf{Stato di convalida ed evidenza.} Lo stato di convalida,
+    che distingue una segnalazione non ancora verificata
+    (\texttt{NOT\_VALIDATED}) da una confermata a runtime
+    (\texttt{CONFIRMED}), smentita (\texttt{FALSE\_POSITIVE}) o confermata
+    solo in parte, e, quando una verifica è stata eseguita, l'evidenza
+    raccolta: URL sollecitato, codice HTTP ottenuto, frammento della
+    risposta, accessibilità senza autenticazione.
+    \item \textbf{Contesto di rischio.} Le proprietà dell'ambiente che
+    influenzano la gravità effettiva della condizione: esposizione a
+    Internet, presenza di dati sensibili, natura pubblica della risorsa.
+    \item \textbf{Chiave di correlazione.} La stringa che identifica il
+    bersaglio della segnalazione in modo indipendente dallo strumento che
+    l'ha prodotta.
 \end{itemize}
 
-La risposta a RQ$_2$ discende direttamente da questa classificazione: essa è
-affermativa se e solo se la classe \emph{emergente} risulta non vuota e le
-condizioni che vi ricadono superano una validazione manuale che ne accerti la
-fondatezza. Un esito in cui tutte le condizioni prodotte risultassero
-ridondanti costituirebbe una risposta negativa; un esito composto in
-prevalenza da condizioni amplificate indicherebbe che il contributo del motore
-riguarda la priorizzazione più che la rilevazione, il che è un risultato
-diverso da quello ipotizzato e va riportato come tale.
+L'ultimo campo è quello su cui poggia l'intera correlazione e merita una
+spiegazione. Uno stesso endpoint può comparire nel codice come
+\texttt{/api/orders/<int:id>}, nella specifica OpenAPI come
+\texttt{/api/orders/\{id\}} e nel traffico osservato come
+\texttt{/api/orders/100}; se le tre forme non venissero ricondotte a una sola,
+nessuna segnalazione statica troverebbe mai il proprio riscontro dinamico.
+Il componente \texttt{APIEndpointNormalizer} risolve il problema riscrivendo
+ogni percorso in una forma canonica: elimina la query string e lo slash
+finale, rimuove il prefisso aggiunto dall'API Gateway emulato, e sostituisce
+con il segnaposto \texttt{\{id\}} ogni segmento che sia un identificatore
+numerico, un UUID, o un parametro di rotta espresso nella sintassi di uno dei
+framework supportati. La chiave di correlazione di una segnalazione su un
+endpoint è quindi \texttt{api:GET:/api/orders/\{id\}}; per le risorse
+infrastrutturali è \texttt{resource:} seguito dall'identificatore della
+risorsa; in assenza di entrambi si ripiega su file e riga.
 
-\section{Disegno dello studio}
-\label{sec:disegno}
+\subsection{Fase 1 --- Analisi statica}
+\label{sec:fase1}
 
-Rispondere a RQ$_{2.1}$ richiede un confronto fra due esecuzioni sullo stesso
-insieme di progetti: una condizione di controllo, costituita dai tre strumenti
-eseguiti separatamente, e una condizione sperimentale, costituita dall'output
-del motore di correlazione. La prima è la \emph{baseline}, e senza di essa la
-domanda di ricerca resta retorica.
+La prima fase opera sui soli artefatti del progetto, senza che il servizio
+sia in esecuzione, e produce due cose: un insieme di segnalazioni candidate
+e un inventario degli endpoint esposti, che le fasi successive useranno come
+mappa del bersaglio. Vi contribuiscono tre adapter verso strumenti esterni
+e i moduli Core sviluppati per questo lavoro.
 
-\paragraph{Bersagli}
-L'unità di analisi è il progetto: un repository che contenga
-contemporaneamente codice applicativo che implementa un servizio basato su
-API, almeno un template Infrastructure-as-Code e un documento OpenAPI. La
-compresenza dei tre artefatti è un criterio di inclusione vincolante, poiché
-un progetto privo di uno dei layer non permette alcuna correlazione e la sua
-inclusione altererebbe le misure senza aggiungere informazione.
-% TODO: fissare numero, provenienza e criteri di selezione dei progetti,
-% distinguendo eventuali casi sintetici costruiti ad hoc dai progetti reali.
+\paragraph{Semgrep: inventario degli endpoint}
+L'adapter Semgrep non è impiegato, come d'abitudine, per cercare pattern di
+codice pericoloso, ma per costruire l'inventario delle rotte. Un insieme di
+regole dedicato riconosce le dichiarazioni di rotta dei framework supportati
+--- i decoratori di Flask e FastAPI, le chiamate \texttt{app.get} e
+\texttt{router.post} di Express, le annotazioni \texttt{@GetMapping} e
+affini di Spring --- e distingue le rotte protette da un decoratore o da un
+middleware di autenticazione da quelle prive di protezione. Il risultato è,
+per ogni endpoint, la coppia metodo e percorso, il file e la riga in cui è
+dichiarato e un indicatore dello stato di autenticazione. Un endpoint privo
+di protezione genera una segnalazione di gravità \texttt{MEDIUM}: non è di per
+sé una vulnerabilità, ma è la condizione preliminare di tutte quelle che la
+fase dinamica proverà a verificare, e proprio per questo la sua gravità resta
+intermedia finché una verifica non la confermi.
 
-\paragraph{Condizione di controllo}
-I tre strumenti vengono eseguiti sul medesimo commit di ciascun progetto, in
-un ambiente containerizzato che fissa le versioni degli eseguibili e degli
-insiemi di regole. La configurazione è quella predefinita di ciascuno
-strumento, senza soppressioni né regole aggiuntive introdotte per l'occasione:
-qualunque personalizzazione renderebbe la baseline arbitraria e il confronto
-non riproducibile. Gli output vengono normalizzati nel formato
-SARIF~\cite{oasis2020sarif}, che fornisce una rappresentazione comune di
-identificatore della regola, posizione nell'artefatto e livello di gravità, e
-costituisce quindi la base uniforme su cui operare il confronto.
+\paragraph{Checkov: misconfigurazioni infrastrutturali}
+L'adapter Checkov analizza i template Terraform del progetto rispetto al
+catalogo di politiche dello strumento e converte ogni controllo fallito in
+una segnalazione con la risorsa come bersaglio: uno storage accessibile
+pubblicamente, un ruolo con privilegi eccessivi, la registrazione degli
+accessi disattivata. Nell'ambiente di riferimento la stessa configurazione
+Terraform viene anche effettivamente applicata su
+LocalStack~\cite{localstack2026docs}, un emulatore locale dei servizi AWS, e
+lo script di provisioning scrive l'indirizzo dell'API Gateway così creato in
+un file di ambiente che la fase dinamica legge per sapere dove inviare le
+richieste. È l'unico punto in cui l'analisi infrastrutturale alimenta
+direttamente quella dinamica, ed è rappresentato dalla freccia tratteggiata
+della Figura~\ref{fig:architettura}.
 
-\paragraph{Condizione sperimentale}
-Sugli stessi commit viene eseguito il sistema completo, che alimenta il motore
-di correlazione con i segnali dei tre strumenti e produce l'insieme delle
-condizioni di rischio.
+\paragraph{Spectral: conformità del contratto OpenAPI}
+L'adapter Spectral valuta la specifica OpenAPI~\cite{openapi2021spec} con un
+insieme di regole scritto per questo lavoro sulla base della OWASP API
+Security Top 10: la presenza di almeno uno schema di sicurezza dichiarato,
+l'obbligo per ogni operazione di dichiarare il proprio requisito di
+sicurezza, la presenza di una descrizione per ogni operazione a sostegno
+dell'inventario. Ogni violazione diventa una segnalazione la cui chiave di
+correlazione è l'endpoint interessato, così che un'operazione dichiarata
+senza requisito di sicurezza nella specifica possa incontrare, nella fase di
+correlazione, la rotta non protetta rilevata da Semgrep nel codice.
 
-\paragraph{Procedura di confronto}
-Per ciascuna condizione prodotta si ricostruiscono anzitutto i segnali che la
-compongono e li si ricerca nell'output della baseline attraverso chiavi
-deterministiche: percorso del file e intervallo di righe per i segnali di
-codice e di IaC, coppia percorso--metodo per quelli derivati dalla specifica.
-Questo passaggio, puramente meccanico, stabilisce la presenza o l'assenza dei
-fatti componenti e separa quindi la classe \emph{emergente} dalle altre due.
-Il secondo passaggio, necessariamente manuale, verifica se nella baseline
-esista una segnalazione che descriva la stessa situazione di rischio, e
-distingue quindi le condizioni ridondanti da quelle amplificate. Per limitare
-la soggettività di questa fase, i criteri di equivalenza sono fissati prima
-dell'ispezione e il campione è classificato in due passaggi indipendenti,
-riportando i disaccordi e il modo in cui sono stati risolti.
-% TODO: indicare qui se la doppia classificazione è stata effettivamente
-% possibile e, in caso affermativo, riportare la misura di accordo adottata.
+\paragraph{Moduli Core: rilevatori per categoria}
+Gli strumenti esterni coprono rispettivamente l'inventario, l'infrastruttura
+e il contratto. Le condizioni di rischio specifiche delle singole categorie
+OWASP --- un limite di paginazione assente, una funzione amministrativa
+raggiungibile senza controllo di ruolo, un URL fornito dal client passato
+senza validazione a una libreria HTTP --- richiedono regole che nessuno dei
+tre strumenti offre nella forma necessaria. Per ciascuna categoria coperta il
+framework contiene quindi un modulo autonomo, che raccoglie le proprie
+regole, le proprie fixture e i propri test. Le regole sono organizzate su
+tre livelli, corrispondenti a tre tipi di artefatto.
 
-\paragraph{Misure}
-Detto $F_{c}$ l'insieme delle condizioni prodotte dal motore su un progetto, e
-detti $R$, $A$ ed $E$ i sottoinsiemi delle condizioni rispettivamente
-ridondanti, amplificate ed emergenti, si riportano il tasso di emergenza
-$|E| / |F_{c}|$, che quantifica la risposta a RQ$_{2}$, e il tasso di
-corrispondenza $|R| / |F_{c}|$, che risponde in forma diretta a
-RQ$_{2.1}$. Sulle sole condizioni emergenti si riporta inoltre la precisione
-accertata per ispezione manuale, poiché una classe emergente numerosa ma
-composta da falsi positivi non costituisce un risultato favorevole. A
-complemento, il rapporto fra la cardinalità dell'output correlato e quella
-dell'unione degli output della baseline documenta l'effetto del sistema sul
-volume complessivo delle segnalazioni presentate all'utente.
+\begin{itemize}
+    \item \textbf{Livello 1 --- albero sintattico.} Le regole percorrono
+    l'AST\footnote{AST (\emph{Abstract Syntax Tree}): rappresentazione ad
+    albero della struttura sintattica di un programma, in cui ogni nodo
+    corrisponde a un costrutto del linguaggio.} dei sorgenti, costruito con
+    tree-sitter~\cite{treesitter2026docs} per Python e JavaScript, alla
+    ricerca di costrutti che denotano l'assenza di una protezione: un ciclo
+    il cui limite proviene da un parametro della richiesta, una chiamata HTTP
+    senza timeout, una decodifica manuale del payload di un token che ne
+    aggira la verifica della firma. Il modulo SSRF impiega, per lo stesso
+    livello, regole Semgrep dedicate.
+    \item \textbf{Livello 2 --- file di configurazione.} Le regole esaminano
+    i file che governano il comportamento del servizio a prescindere dal
+    codice: l'assenza di limiti di memoria in \texttt{docker-compose.yml},
+    di un limite alla dimensione del corpo delle richieste in
+    \texttt{nginx.conf}, di un timeout esplicito nella configurazione di
+    gunicorn.
+    \item \textbf{Livello 3 --- specifica OpenAPI.} Le regole verificano che
+    il contratto dichiari i vincoli che la condizione di rischio richiede: un
+    valore massimo per i parametri numerici di paginazione, una lunghezza
+    massima per i campi di caricamento, un requisito di sicurezza per le
+    operazioni costose o amministrative, uno schema che escluda URL
+    arbitrari nei parametri.
+\end{itemize}
+
+Ogni regola ha un identificatore, un CWE di riferimento, una gravità, e
+produce una segnalazione che riporta l'evidenza --- il frammento di codice o
+di configurazione, la posizione --- e la misura correttiva suggerita. Quando
+livelli diversi segnalano lo stesso endpoint, il modulo conserva una sola
+segnalazione, scelta secondo un ordine di priorità fra le regole e, a parità
+di priorità, preferendo quella che dispone di una riga concreta nel codice
+rispetto a quella derivata dalla specifica. Il catalogo completo delle regole
+è riportato nella Sezione~\ref{sec:catalogo}.
+
+\subsection{Fase 2 --- Seeding deterministico dello stato}
+\label{sec:fase2}
+
+Le vulnerabilità di autorizzazione non si osservano su un servizio vuoto.
+Per constatare che l'utente $B$ riesce a leggere una risorsa dell'utente $A$
+occorre che $A$ e $B$ esistano, che $A$ possieda una risorsa dall'identificatore
+noto e che $B$ disponga di credenziali valide. Nelle pipeline di analisi
+dinamica tradizionali questo stato o manca, e il test produce falsi
+negativi perché non trova nulla da violare, oppure viene costruito durante la
+scansione stessa, e il test produce esiti non riproducibili perché lo stato
+cambia tra un'esecuzione e l'altra.
+
+La seconda fase risolve il problema separando la preparazione dello stato
+dalla sua sollecitazione. Un server di identità
+Keycloak~\cite{keycloak2026docs} ospita un realm di test con due utenti dai
+ruoli noti, \texttt{user\_a} nel ruolo di vittima e \texttt{user\_b} in
+quello di attaccante, e il componente \texttt{IdentityManager} ottiene per
+ciascuno un token JWT valido. Il componente \texttt{DatabaseSeeder} crea poi,
+attraverso l'API stessa, un insieme di risorse assegnate a \texttt{user\_a}
+con identificatori noti, e ne conserva uno snapshot; tra uno scenario di
+attacco e il successivo lo stato viene riportato allo snapshot, così che
+l'esito di ogni scenario non dipenda da quelli che lo hanno preceduto. È per
+questa ragione che le scansioni comprensive della fase dinamica completa
+richiedono un tempo di esecuzione superiore di due ordini di grandezza a
+quelle statiche: la riproducibilità ha un costo, ed è un costo che si è
+scelto di pagare.
+
+\subsection{Fase 3 --- Verifica dinamica}
+\label{sec:fase3}
+
+La terza fase sollecita il servizio con richieste costruite a partire
+dall'inventario e dallo stato preparato, e produce segnalazioni corredate di
+evidenza empirica. Quattro componenti vi concorrono.
+
+\paragraph{Scansione differenziale per BOLA}
+Per ogni endpoint dell'inventario che riferisce un oggetto tramite un
+parametro di percorso, il motore di discovery individua l'identificatore
+dell'oggetto e ne inferisce il proprietario dallo stato seminato. Il
+generatore di attacchi costruisce quindi tre richieste alla stessa risorsa di
+\texttt{user\_a}: con il token di \texttt{user\_a}, con il token di
+\texttt{user\_b} e senza alcun token. Le richieste transitano dal proxy di
+OWASP ZAP, che ne registra la traccia, e un motore di asserzione confronta le
+risposte: se la richiesta di \texttt{user\_b} ottiene lo stesso contenuto di
+quella di \texttt{user\_a}, la condizione di BOLA è confermata. Una matrice
+dei privilegi con la gerarchia \emph{admin}, \emph{manager}, \emph{user}
+classifica infine la violazione come orizzontale, fra pari, o verticale, da un
+ruolo inferiore verso una risorsa di un ruolo superiore, e ne determina la
+gravità.
+
+\paragraph{Batteria di test per Broken Authentication}
+Il modulo API2 esegue una sequenza di ventidue test dinamici, numerati da T01
+a T22, che coprono la manipolazione e la scadenza dei token, la confusione
+fra algoritmi di firma, l'iniezione di chiavi tramite intestazioni JWKS, il
+riuso dei token dopo il logout, la fissazione di sessione, l'assenza di rate
+limiting sul login e il suo aggiramento tramite intestazioni contraffatte,
+l'enumerazione degli utenti dai messaggi di errore, la robustezza dei flussi
+di reset della password e dell'autenticazione a più fattori. Ogni test
+termina con uno fra quattro esiti: \texttt{PASS} se il servizio ha resistito,
+\texttt{FAIL} se ha ceduto, \texttt{SKIPPED} se il test non è applicabile al
+servizio, \texttt{INCONCLUSIVE} se non è stato possibile portarlo a termine,
+tipicamente perché una fase preliminare --- l'acquisizione di un token di
+sessione --- non è riuscita. La distinzione fra gli ultimi due esiti è
+essenziale per RQ$_2$. La batteria è preceduta da una fase di
+\emph{authentication intelligence} che deriva, dal codice, dalla specifica
+e da un campione di traffico, l'endpoint di login, i claim del token, i
+ruoli e i middleware in uso, e adatta di conseguenza la costruzione delle
+richieste.
+
+\paragraph{Verifica delle proprietà per BOPLA}
+Il modulo API3 ricostruisce dalla specifica e dal codice l'inventario delle
+proprietà di ciascun oggetto, ne inferisce il livello di autorizzazione
+atteso e verifica dinamicamente, con la stessa matrice di identità, se una
+proprietà che dovrebbe essere riservata sia leggibile o scrivibile da chi non
+ne ha titolo.
+
+\paragraph{Cattura del traffico e Shadow API}
+Un addon per mitmproxy~\cite{mitmproxy2026docs} intercetta il traffico reale
+diretto al servizio durante le fasi precedenti e lo pubblica sull'event bus.
+Il rilevatore di \emph{Shadow API} lo confronta con l'inventario statico: ogni
+endpoint osservato a runtime e assente dall'inventario è un'operazione
+esposta ma non dichiarata nel codice analizzato, cioè un'istanza del rischio
+API9:2023, e viene segnalata con il contesto di esposizione a Internet.
+
+\subsection{Fase 4 --- Correlazione e punteggio di rischio}
+\label{sec:fase4}
+
+L'ultima fase riceve due insiemi di segnalazioni --- quelle statiche, prodotte
+dalla prima fase, e quelle dinamiche, prodotte dalla terza --- e li fonde in
+un inventario unico. Il procedimento è deterministico.
+
+\begin{enumerate}
+    \item Le segnalazioni statiche vengono indicizzate per chiave di
+    correlazione. Quando due segnalazioni statiche condividono la chiave, si
+    conserva la prima e vi si fondono le informazioni della seconda: la
+    gravità risultante è la maggiore delle due, i tag e i riferimenti sono
+    uniti, l'identificatore della seconda è aggiunto all'elenco delle
+    segnalazioni collegate.
+    \item Per ogni segnalazione dinamica si cerca la chiave nell'indice. Se
+    esiste, la segnalazione statica corrispondente passa allo stato
+    \texttt{CONFIRMED}, acquisisce l'evidenza raccolta a runtime, vede la
+    propria confidenza portata a 1 e la propria gravità elevata di un livello
+    --- da \texttt{HIGH} a \texttt{CRITICAL}, da qualunque livello inferiore a
+    \texttt{HIGH}. Se non esiste, la segnalazione dinamica entra
+    nell'inventario come nuova voce, già \texttt{CONFIRMED} dall'evidenza che
+    la accompagna, con confidenza 0{,}9.
+    \item A ogni voce dell'inventario si assegna il punteggio di rischio.
+\end{enumerate}
+
+Il punteggio di rischio $R$ di una segnalazione è definito come
+\begin{equation}
+    R = \min\bigl(10,\; 0{,}6 \cdot S \;+\; 0{,}2 \cdot 10\,c \;+\; 0{,}2 \cdot K\bigr),
+    \label{eq:risk}
+\end{equation}
+dove $S$ è il punteggio associato alla gravità (9 per \texttt{CRITICAL}, 7
+per \texttt{HIGH}, 4{,}5 per \texttt{MEDIUM}, 2 per \texttt{LOW}, 0 per
+\texttt{INFO}), $c \in [0, 1]$ è la confidenza e $K$ è il contributo del
+contesto, somma di 4 punti se la risorsa è esposta a Internet, 4 se gestisce
+dati sensibili e 2 se è pubblica; in assenza di informazioni di contesto,
+$K$ vale 6 per le segnalazioni di autenticazione e autorizzazione e 3 per le
+altre. Il peso preponderante della gravità intrinseca riflette il fatto che
+essa resta il fattore più informativo; i due termini rimanenti sono ciò che
+distingue una condizione ipotizzata da una verificata e una risorsa isolata
+da una raggiungibile. A titolo di esempio, una rotta non protetta rilevata da
+Semgrep con gravità \texttt{MEDIUM}, confidenza 0{,}6 e nessun contesto
+ottiene $R = 2{,}7 + 1{,}2 + 1{,}2 = 5{,}1$; la stessa rotta, una volta che la
+scansione differenziale abbia confermato l'accesso di \texttt{user\_b} alla
+risorsa di \texttt{user\_a}, passa a \texttt{HIGH} con confidenza 1 e ottiene
+$R = 4{,}2 + 2{,}0 + 1{,}2 = 7{,}4$.
+
+La scelta di un modello di punteggio proprio, anziché del CVSS, discende
+dalla natura degli input: i vettori CVSS presuppongono una valutazione
+qualitativa per metrica che nessuno degli strumenti integrati fornisce, e
+non offrono un modo naturale per rappresentare il passaggio da ipotesi a
+conferma empirica, che è invece l'informazione centrale prodotta dal
+framework. Il costo di questa scelta è la non confrontabilità diretta del
+punteggio con quelli di altri strumenti, e va tenuto presente nella lettura
+dei risultati.
+
+\subsection{Presentazione dei risultati}
+\label{sec:presentazione}
+
+L'inventario correlato viene serializzato in un report JSON e in un
+inventario delle API, e reso esplorabile da una dashboard web che espone le
+segnalazioni per categoria e gravità, l'inventario degli endpoint con le
+Shadow API individuate e le misconfigurazioni infrastrutturali. A ciascuna
+segnalazione la dashboard associa una raccomandazione correttiva, estratta
+da una base di conoscenza locale o, quando è disponibile un modello
+linguistico in esecuzione locale, generata a partire dal contesto della
+segnalazione. Questo strato non è oggetto della valutazione empirica e non
+viene ulteriormente descritto.
+
+\section{Target di validazione e costruzione dei dati}
+\label{sec:target}
+
+Rispondere alle domande di ricerca richiede bersagli su cui l'insieme delle
+vulnerabilità presenti sia noto, o almeno documentato, e che siano
+sufficientemente diversi fra loro da rendere significativo il confronto
+richiesto da RQ$_2$. Il framework viene validato su tre famiglie di target,
+riassunte nella Tabella~\ref{tab:target}.
+
+\begin{table}[htbp]
+\centering
+\caption{Target di validazione impiegati nello studio.}
+\label{tab:target}
+\small\renewcommand{\baselinestretch}{1.1}\selectfont
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily\raggedright\arraybackslash}p{3.9cm} >{\rmfamily}p{1.9cm} X >{\rmfamily}p{1.9cm}@{}}
+\toprule
+\normalfont\textbf{Target} & \textbf{Categorie} & \textbf{Natura e verità di riferimento} & \textbf{Fase} \\
+\midrule
+broken\_\allowbreak authentication & API2 & Coppia Flask vulnerabile/sicura; 5 vulnerabilità sfruttabili documentate in una chiave sigillata & statica e dinamica \\
+broken\_\allowbreak function\_\allowbreak level\_\allowbreak authorization & API5 & Coppia Flask vulnerabile/sicura; una vulnerabilità per regola & statica \\
+security\_\allowbreak misconfiguration & API8 & Coppia Flask vulnerabile/sicura; una vulnerabilità per regola & statica \\
+unrestricted\_\allowbreak resource\_\allowbreak consumption & API4 & Coppia vulnerabile/sicura con codice, configurazione e specifica; una vulnerabilità per regola & statica \\
+api7\_ssrf/\allowbreak fixtures & API7 & Coppia vulnerabile/sicura in Python ed Express; una vulnerabilità per regola & statica \\
+api10\_unsafe\_\allowbreak consumption/\allowbreak fixtures & API10 & Coppia vulnerabile/sicura; una vulnerabilità per regola & statica \\
+bola & API1 & Microservizio Flask con specifica OpenAPI, stato seminato con risorse di proprietà nota & dinamica \\
+repo\_target & API1, API8, API9 & Repository cooperante: applicazione, specifica OpenAPI e template Terraform & end-to-end \\
+\normalfont OWASP crAPI & API1--API5, API7 e altre & Benchmark reale a microservizi, vulnerabilità documentate pubblicamente & RQ$_2$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Fixture sintetiche a coppie}
+\label{sec:fixture}
+
+Per ciascuna categoria dotata di rilevatori statici il framework contiene
+una coppia di applicazioni, \texttt{vulnerable\_app} e \texttt{secure\_app},
+identiche nella struttura, nelle dipendenze e negli endpoint esposti. La
+prima incorpora deliberatamente le vulnerabilità che le regole della
+categoria devono riconoscere, di norma una per regola; la seconda le corregge
+tutte. La coppia è la forma minima di verità di riferimento che permette di
+misurare insieme sensibilità e specificità: la fixture vulnerabile fornisce
+i positivi attesi, quella sicura i negativi attesi.
+
+La costruzione delle coppie ha seguito tre criteri. Il primo è la
+sfruttabilità: ogni vulnerabilità inserita nella fixture vulnerabile deve
+essere effettivamente sfruttabile, e lo si è verificato manualmente prima di
+includerla. Il criterio non è formale. Durante la costruzione della fixture
+per API2 si era inizialmente inserita l'accettazione dell'algoritmo
+\texttt{none} nella verifica dei token; la vulnerabilità è stata poi rimossa
+perché la libreria impiegata la neutralizza a livello di implementazione
+anche quando il codice applicativo la ammette, e una regola che l'avesse
+segnalata avrebbe prodotto un vero positivo su un difetto inerte. È stata
+sostituita dalla mancata verifica del claim \texttt{aud}, confermata
+sfruttabile. Il secondo criterio è l'idiomaticità della correzione: la
+fixture sicura deve implementare la protezione nel modo in cui uno
+sviluppatore la implementerebbe, non nel modo più comodo per la regola. Un
+segreto letto da una variabile d'ambiente non deve essere scambiato per un
+segreto cablato nel codice; una chiamata HTTP verso un URL validato con una
+lista di destinazioni ammesse e con il seguimento dei redirect disattivato
+non deve essere segnalata come SSRF. È su queste distinzioni che la
+specificità delle regole viene messa alla prova. Il terzo criterio è la
+cecità dell'esecuzione: per la categoria API2, l'unica in cui la fixture
+viene anche eseguita e sollecitata dinamicamente, l'elenco delle
+vulnerabilità è conservato in un documento che né lo script di validazione
+né lo scanner leggono; il confronto con l'esito avviene a posteriori, e lo
+script registra nei propri metadati di non aver avuto accesso alla chiave.
+
+\subsection{Il repository cooperante}
+\label{sec:repo_target}
+
+Le fixture a coppie sono, per costruzione, limitate a una categoria. Il
+target \texttt{repo\_target} serve allo scopo opposto: è l'unico bersaglio
+che contenga contemporaneamente codice applicativo, specifica OpenAPI e
+template Terraform, e che sia eseguibile insieme all'infrastruttura emulata.
+Vi si esercita la pipeline nella sua interezza --- inventario, analisi
+infrastrutturale, conformità del contratto, seeding, scansione differenziale,
+correlazione --- ed è quindi il target su cui si osserva il comportamento del
+motore di correlazione descritto nella Sezione~\ref{sec:fase4}. Il
+repository è detto \emph{cooperante} perché espone, oltre all'applicazione,
+un contratto minimo che il framework richiede per la fase dinamica:
+l'indirizzo del server di identità, le credenziali di test e un punto di
+ingresso per il seeding dello stato. Questo vincolo è il principale limite
+di generalità dell'approccio, ed è dichiarato come tale.
+
+\subsection{Benchmark reale: OWASP crAPI}
+\label{sec:crapi}
+
+OWASP crAPI~\cite{owasp2026crapi} è un'applicazione deliberatamente
+vulnerabile, mantenuta dalla stessa fondazione che cura la classificazione
+dei rischi, costruita come un sistema a microservizi con servizi scritti in
+Java, Python e Go, e corredata di una specifica OpenAPI e di un elenco
+pubblico di sfide, ciascuna corrispondente a una vulnerabilità: accesso ai
+veicoli e ai rapporti di altri utenti (BOLA), reset della password di un
+altro utente, esposizione eccessiva di dati e assegnazione di massa di
+proprietà (BOPLA), assenza di rate limiting, cancellazione di risorse altrui
+tramite funzioni non autorizzate (BFLA), SSRF, accesso non autenticato,
+contraffazione dei token JWT. Le sfide relative a iniezioni SQL e NoSQL e al
+chatbot esulano dalle categorie coperte dal framework e non concorrono alla
+valutazione.
+
+crAPI soddisfa le tre proprietà che RQ$_2$ richiede al benchmark: è stato
+scritto da terzi, senza alcuna relazione con le regole del framework; adotta
+uno stack --- Spring per il servizio di identità, in particolare --- diverso
+da quello delle fixture; e documenta le proprie vulnerabilità in modo
+pubblico e stabile, così che la verità di riferimento non dipenda da un
+giudizio dell'autore. Il sistema viene eseguito localmente tramite la
+composizione di container fornita dal progetto e raggiunto attraverso il suo
+gateway.
+
+\subsection{Catalogo delle regole e classi di vulnerabilità}
+\label{sec:catalogo}
+
+La Tabella~\ref{tab:catalogo} riporta, per ciascuna categoria della OWASP API
+Security Top 10 coperta dal framework, il modulo che la implementa, le
+regole statiche con i CWE\footnote{CWE (\emph{Common Weakness
+Enumeration}): catalogo pubblico delle classi di debolezza del software,
+mantenuto da MITRE, che assegna a ciascuna un identificatore numerico
+stabile.} di riferimento, i livelli di analisi su cui operano e la componente
+dinamica eventualmente presente.
+
+\begin{table}[htbp]
+\centering
+\caption{Catalogo dei rilevatori per categoria OWASP API Security Top 10.}
+\label{tab:catalogo}
+\footnotesize\renewcommand{\baselinestretch}{1.1}\selectfont
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.4cm} >{\hsize=1.35\hsize\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{1.9cm} >{\hsize=0.65\hsize\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Categoria} & \textbf{Regole statiche (CWE)} & \textbf{Livelli} & \textbf{Verifica dinamica} \\
+\midrule
+API1 BOLA & inventario delle rotte con parametro di oggetto (da Semgrep) & inventario & scansione differenziale con tre identità; matrice dei privilegi \\
+API2 Broken Authentication & S01 --- decodifica del token senza verifica della firma (CWE-347) & AST & 22 test T01--T22 in 8 categorie \\
+API3 BOPLA & inventario delle proprietà da specifica e codice & OpenAPI, AST & lettura e scrittura di proprietà riservate con identità diverse \\
+API4 Unrestricted Resource Consumption & RC-001--RC-012: paginazione, cicli, dimensione dei caricamenti, timeout, throttling, limiti di risorse (CWE-400, 770, 799) & AST, Config, OpenAPI & --- \\
+API5 BFLA & BF-001--BF-006: controllo di ruolo assente su endpoint privilegiati, autenticazione senza autorizzazione, override del metodo HTTP, percorsi amministrativi esposti, negazione predefinita assente, funzioni amministrative ombra (CWE-276, 284, 285, 650, 862) & AST, Config, OpenAPI & --- \\
+API7 SSRF & SS-001--SS-006: URL da input verso librerie HTTP, seguimento dei redirect, accesso ai metadati cloud, parametri URL non vincolati (CWE-918) & AST (Semgrep), OpenAPI & --- \\
+API8 Security Misconfiguration & SC-001--SC-005: CORS permissivo, debug attivo, gestori di errore verbosi, header di sicurezza assenti, segreti cablati (CWE-942, 94, 209, 693, 798); politiche Checkov sui template Terraform & AST, Config, IaC & --- \\
+API9 Improper Inventory & operazioni prive di descrizione nella specifica (Spectral) & OpenAPI & Shadow API: traffico osservato contro inventario statico \\
+API10 Unsafe Consumption & UC-001--UC-003: dati esterni non validati, HTTP in luogo di HTTPS, seguimento cieco dei redirect (CWE-20, 319, 601) & AST & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Due precisazioni completano il quadro. La categoria API6:2023, relativa
+all'abuso dei flussi di business, non è coperta: la sua rilevazione richiede
+una nozione di intento della singola operazione che nessuno degli artefatti
+analizzati esprime, e la si è esclusa dal perimetro anziché coprirla con
+regole di scarsa precisione. La categoria API2, all'opposto, è quella in cui
+la componente dinamica prevale nettamente su quella statica: una sola regola
+sull'AST contro ventidue test a runtime, perché la maggior parte delle
+debolezze di autenticazione --- un token scaduto accettato, un limite di
+tentativi assente --- non lascia nel codice una traccia riconoscibile con
+precisione accettabile, e si manifesta soltanto nel comportamento del
+servizio.
+
+\section{Metriche di valutazione}
+\label{sec:metriche}
+
+Le metriche adottate sono quelle canoniche della valutazione dei
+classificatori binari, ma la loro applicazione a uno strumento di analisi
+richiede di fissare con precisione che cosa costituisca un'istanza da
+classificare. Senza questa definizione, il conteggio dei negativi --- e
+quindi il tasso di falsi positivi --- resta arbitrario.
+
+\subsection{Unità di valutazione}
+\label{sec:unita}
+
+Sulle fixture sintetiche l'unità di valutazione è la coppia $(r, f)$ formata
+da una regola $r$ e da una fixture $f$. La coppia è un'istanza positiva se
+$f$ è la fixture vulnerabile della categoria di $r$ e contiene la
+vulnerabilità che $r$ deve riconoscere; è un'istanza negativa se $f$ è la
+fixture sicura corrispondente. Una regola che si attiva su un'istanza
+positiva produce un vero positivo (TP); una che non si attiva, un falso
+negativo (FN); una che si attiva su un'istanza negativa, un falso positivo
+(FP); una che resta silente su un'istanza negativa, un vero negativo (TN).
+Per i test dinamici della categoria API2 la regola è sostituita dal test, e
+l'attivazione dall'esito \texttt{FAIL}; gli esiti \texttt{INCONCLUSIVE}
+vengono contati a parte, come descritto più avanti.
+% TODO: gli script validate_ground_truth.py contano attualmente un solo TN
+% per ogni fixture sicura priva di segnalazioni, anziché uno per regola.
+% Allineare gli script a questa definizione prima di riportare i risultati.
+
+Sul benchmark reale l'unità positiva è la vulnerabilità documentata che
+ricade in una categoria coperta; una segnalazione del framework che vi
+corrisponde, per endpoint e per categoria, è un vero positivo, e una
+vulnerabilità documentata priva di segnalazione corrispondente è un falso
+negativo. Le segnalazioni che non corrispondono ad alcuna vulnerabilità
+documentata vengono ispezionate manualmente e classificate come veri
+positivi non documentati oppure come falsi positivi. Su crAPI non esiste un
+insieme finito di negativi attesi, e il tasso di falsi positivi non è
+pertanto definito; al suo posto si riporta la precisione.
+
+\subsection{Metriche di accuratezza}
+\label{sec:accuratezza}
+
+Sulla base dei conteggi appena definiti si calcolano, per ciascuna
+categoria e in aggregato:
+\begin{align}
+    \mathrm{TPR} &= \frac{\mathrm{TP}}{\mathrm{TP} + \mathrm{FN}}, &
+    \mathrm{FPR} &= \frac{\mathrm{FP}}{\mathrm{FP} + \mathrm{TN}}, &
+    \mathrm{Prec} &= \frac{\mathrm{TP}}{\mathrm{TP} + \mathrm{FP}}.
+    \label{eq:metriche}
+\end{align}
+Il tasso di veri positivi (TPR) misura la sensibilità del rilevatore e
+risponde alla prima metà di RQ$_1$; il tasso di falsi positivi (FPR) ne
+misura la specificità e risponde alla seconda. L'aggregazione fra categorie
+è calcolata sommando i conteggi, non mediando i tassi, così che le categorie
+con più regole pesino in proporzione. I criteri di accettazione fissati in
+fase di sviluppo per ciascun modulo --- TPR non inferiore all'80\% e FPR
+nullo sulla coppia di fixture --- vengono riportati accanto ai valori
+misurati, ma non sostituiscono la misura.
+
+Per RQ$_2$ si riportano, per ciascuna categoria presente in entrambi i
+contesti, il TPR sulle fixture e il TPR su crAPI, e la loro differenza; la
+precisione su crAPI viene affiancata al FPR sulle fixture come indicatore,
+non omogeneo ma informativo, della specificità. I falsi negativi su crAPI
+sono inoltre scomposti in due classi: quelli in cui il test o la regola sono
+stati eseguiti e non hanno riconosciuto la vulnerabilità, e quelli in cui il
+test non è stato portato a termine. Per i secondi si riporta il \emph{tasso
+di inconclusività}, cioè la frazione dei test dinamici terminati con esito
+\texttt{INCONCLUSIVE} sul totale dei test eseguiti, che misura la
+dipendenza del framework dalle condizioni ambientali indipendentemente dalla
+qualità delle sue regole.
+
+\subsection{Effetto della correlazione}
+\label{sec:metriche_correlazione}
+
+Il contributo del motore di correlazione si misura sul repository
+cooperante, l'unico target in cui le fasi statica e dinamica operano
+sullo stesso bersaglio. Detto $C_s$ l'insieme delle segnalazioni statiche
+che riguardano un endpoint sottoposto a verifica dinamica, e $C_s^{+}
+\subseteq C_s$ il sottoinsieme di quelle che al termine della pipeline
+risultano \texttt{CONFIRMED}, il \emph{tasso di conferma} $|C_s^{+}| /
+|C_s|$ indica quale frazione delle ipotesi statiche ha trovato riscontro
+empirico. Si riporta inoltre la distribuzione del punteggio di rischio
+$R$ prima e dopo la correlazione, per documentare in che misura la conferma
+sposti le segnalazioni verso la parte alta della scala, e il numero di voci
+dell'inventario finale in rapporto alla somma delle segnalazioni prodotte
+dai singoli strumenti, che misura l'effetto della fusione sul volume di
+segnalazioni presentate all'utente.
+
+\subsection{Metriche di efficienza e copertura}
+\label{sec:efficienza}
+
+A complemento dell'accuratezza si riportano due misure secondarie. La prima
+è il tempo di esecuzione per modulo, misurato come tempo di parete su un
+unico calcolatore e distinto fra fase statica e fase dinamica, poiché le due
+differiscono di ordini di grandezza e la seconda è dominata dal tempo di rete
+e dal ripristino dello stato fra gli scenari. La seconda è la
+\emph{copertura effettiva} del catalogo delle regole: una regola si considera
+coperta soltanto se esiste un test automatico che ne verifichi sia il vero
+positivo sulla fixture vulnerabile sia il vero negativo su quella sicura. La
+misura non ammette autocertificazioni: una regola implementata ma priva di
+uno dei due test è conteggiata come non coperta, e le regole non applicabili
+alle fixture disponibili --- è il caso del controllo sul batching GraphQL,
+in assenza di fixture GraphQL --- sono riportate separatamente.
 
 \section{Minacce alla validità}
 \label{sec:minacce}
 
-Il disegno appena descritto presenta alcuni limiti che è opportuno dichiarare
-in anticipo.
+Il disegno appena descritto presenta limiti che è opportuno dichiarare in
+anticipo, seguendo la classificazione consueta negli studi empirici di
+ingegneria del software~\cite{wohlin2012experimentation}.
 
-La minaccia principale riguarda la validità di costrutto e discende dalla
-definizione di \emph{corrispettivo}. Il giudizio di equivalenza semantica fra
-una condizione correlata e una segnalazione della baseline è un giudizio
-umano, e una definizione più permissiva sposterebbe condizioni dalla classe
-emergente a quella ridondante. La fissazione preventiva dei criteri e la
-doppia classificazione mitigano il problema senza eliminarlo.
+Sul piano della validità di costrutto, la minaccia principale riguarda la
+verità di riferimento delle fixture, che è stata definita dallo stesso autore
+delle regole. La definizione dell'unità di valutazione come coppia regola e
+fixture mitiga l'arbitrarietà del conteggio, e i criteri di sfruttabilità e
+idiomaticità impongono che i positivi siano reali e i negativi non banali;
+ma restano fixture piccole, costruite intorno alle regole, e un TPR elevato
+su di esse ha il valore di un test di regressione più che di una misura di
+efficacia. È esattamente per questa ragione che RQ$_2$ esiste. Una seconda
+minaccia riguarda la corrispondenza fra segnalazioni e vulnerabilità
+documentate su crAPI, che è un giudizio umano: i criteri di corrispondenza
+per endpoint e categoria sono fissati prima dell'ispezione, e i casi dubbi
+vengono riportati.
 
-Sul piano della validità interna, l'esito dipende dalla configurazione della
-baseline: insiemi di regole più estesi di quelli predefiniti ridurrebbero
-verosimilmente la classe emergente. La scelta della configurazione predefinita
-è, da questo punto di vista, conservativa rispetto alla facilità di
-riproduzione, ma resta una scelta, e va riportata come tale.
+Sul piano della validità interna, l'esito della fase dinamica dipende dalla
+disponibilità e dalla stabilità dell'ambiente di esecuzione: un servizio di
+identità non raggiungibile o un token non acquisito producono esiti
+\texttt{INCONCLUSIVE} che, se contati come falsi negativi, imputerebbero
+alle regole un difetto dell'ambiente. La contabilizzazione separata degli
+esiti inconclusivi è la mitigazione adottata. Il punteggio di rischio, dal
+canto suo, dipende da pesi e soglie fissati a priori; la
+Sezione~\ref{sec:fase4} ne dichiara i valori, e un'analisi di sensibilità
+ai pesi esula dal presente lavoro.
 
-Sul piano della validità esterna, il numero e la natura dei progetti
-analizzati limitano la generalizzabilità dei risultati. Il vincolo di
-compresenza dei tre artefatti restringe la popolazione dei progetti
-ammissibili e introduce una selezione verso sistemi con un certo grado di
-maturità nelle pratiche di sviluppo, che non sono rappresentativi
-dell'insieme dei servizi basati su API.
+Sul piano della validità esterna, il numero dei target è ridotto e la loro
+natura non è rappresentativa dell'insieme dei servizi basati su API: le
+fixture sono quasi esclusivamente in Python con Flask, il benchmark reale è
+uno soltanto, e il vincolo di cooperazione richiesto per la fase dinamica
+seleziona progetti che espongono un contratto di identità e di seeding non
+comune nella pratica. I risultati documentano il comportamento del framework
+sui bersagli considerati e non autorizzano generalizzazioni a stack o
+progetti diversi.
 
-Resta infine, sul piano della validità di conclusione, il fatto che le misure
-riportate sono descrittive e su un campione limitato: esse documentano il
-comportamento del sistema sui bersagli considerati e non autorizzano stime
-puntuali sulla popolazione dei progetti reali.
+Sul piano della validità di conclusione, infine, le misure riportate sono
+descrittive e calcolate su campioni piccoli; non vengono condotti test
+statistici, che con queste numerosità non avrebbero potenza sufficiente, e
+le differenze fra contesti richieste da RQ$_2$ vanno lette come indicazioni
+di tendenza, non come stime puntuali.
