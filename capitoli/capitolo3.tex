@@ -2,4 +2,68 @@
 \chapter{Metodo di ricerca}
 \label{cap:metodo}
 
-% Capitolo da costruire passo dopo passo.
+\section{Obiettivi e domande di ricerca}
+\label{sec:research-questions}
+
+La rassegna condotta nel capitolo precedente restituisce un quadro
+disomogeneo. Alcune categorie dell'OWASP API Security Top 10 dispongono di
+tecniche di rilevazione consolidate e ampiamente validate, mentre altre
+risultano trattate quasi esclusivamente in chiave dinamica o di runtime, e
+altre ancora non trovano una formulazione operativa che ne consenta il
+riconoscimento automatico. Questo divario non significa che alcune
+categorie siano meno importanti o meno studiate, ma dipende da come si
+manifesta la violazione di sicurezza in ciascuna di esse.
+
+Da un lato, vi sono violazioni che lasciano una traccia strutturale
+evidente e possono essere individuate direttamente dal codice sorgente,
+dalle configurazioni o dalle specifiche del sistema. Dall'altro, vi sono
+violazioni il cui riconoscimento presuppone di sapere quale utilizzo
+dell'applicazione sia da considerarsi legittimo, informazione che non è
+deducibile dal solo codice sorgente.
+
+Questa frattura riflette la distinzione, ampiamente consolidata nella letteratura
+sulla sicurezza del software, tra \emph{vulnerabilità tecniche} e
+\emph{vulnerabilità di logica di business} (\emph{business logic vulnerabilities}).
+Mentre le prime violano proprietà strutturali direttamente verificabili negli
+artefatti di progetto (codice applicativo, definizioni infrastrutturali IaC o
+specifiche dell'interfaccia), le seconde violano l'intento per cui il flusso
+applicativo è stato concepito. Come evidenziato dalla stessa OWASP nella
+motivazione di categorie quali API6:2023, le problematiche di business logic
+resistono al rilevamento automatico proprio perché la correttezza è definita
+rispetto all'intento del dominio applicativo.
+
+In questo quadro, il contributo del presente lavoro non consiste nell'introdurre
+una nuova categoria teorica, bensì nell'applicare sistematicamente tale
+distinzione consolidata alle dieci classi dell'OWASP API Security Top 10 (2023),
+verificandone le conseguenze implementative attraverso un'analisi statica
+multi-layer.
+
+Su questa base si articola la domanda di ricerca principale del lavoro.
+
+\rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023)
+sono riconducibili a vulnerabilità tecniche rilevabili mediante analisi statica
+multi-layer su codice applicativo, definizioni infrastrutturali e specifica
+dell'interfaccia, e quali ricadono nella logica di business richiedendo
+informazioni di dominio non ricostruibili dagli artefatti analizzati?}
+
+La domanda si scompone in due interrogativi subordinati, che ne precisano
+rispettivamente la portata costruttiva e quella critica.
+
+\rqbox{1.1}{Per le categorie riconducibili a vulnerabilità tecniche,
+quale combinazione di livelli di analisi è necessaria alla loro copertura, e
+quali di esse risultano accessibili soltanto attraverso la correlazione di
+segnali provenienti da livelli distinti?}
+
+\rqbox{1.2}{Per le categorie legate alla logica di business, quale
+frazione della proprietà violata resta comunque approssimabile staticamente,
+e quale residuo richiede necessariamente evidenza dinamica o conoscenza del
+dominio?}
+
+L'evidenza a sostegno di queste domande proviene da tre fonti distinte. La
+mappatura per categoria presentata nel capitolo precedente fornisce la base
+documentale sulla quale la distinzione viene applicata; l'implementazione dei
+moduli di rilevazione e la loro validazione su fixture controllate e su un
+bersaglio realistico ne verificano la traducibilità operativa; l'esclusione
+motivata delle categorie inerenti alla logica di business costituisce essa stessa
+un risultato, in quanto delimita con precisione il perimetro dell'approccio
+anziché lasciarne i limiti impliciti.
