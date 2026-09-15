@@ -36,28 +36,24 @@
 \node[comp] (spectral) at (4.6,-8.1)  {\st{adapter}\\ Spectral};
 \node[comp] (semgrep)  at (7.65,-8.1) {\st{adapter}\\ Semgrep};
 \node[comp] (ollama)   at (10.7,-8.1) {\st{provider}\\ Ollama};
-% --- Moduli per categoria (colonna destra) ---------------------------------
-\node[comp, text width=2.9cm] (secmis) at (15.1,-3.6)
+% --- Modulo Security Misconfiguration (colonna destra) ---------------------
+\node[comp, text width=2.9cm] (secmis) at (15.1,-2.7)
   {\st{component}\\ Security\\Misconfiguration\\ {\scriptsize detector + regole SC-001\ldots005}};
-\node[comp, text width=2.9cm] (others) at (15.1,-6.8)
-  {\st{component}\\ Moduli delle altre categorie};
 % --- Package (livelli) -----------------------------------------------------
 \begin{scope}[on background layer]
   \node[layer, fit=(dash)(runner)(xL |- dash.north)(xR |- dash.north)]        (pres)  {};
   \node[layer, fit=(orc)(rem)(xL |- orc.north)(xR |- orc.north)]               (app)   {};
   \node[layer, fit=(finding)(events)(xL |- finding.north)(xR |- finding.north)] (dom)   {};
   \node[layer, fit=(checkov)(ollama)(xL |- checkov.north)(xR |- checkov.north)] (infra) {};
-  \node[layer, fit=(secmis)(others)]  (core)  {};
 \end{scope}
 \node[layertab] at (pres.north west)  {Presentazione};
 \node[layertab] at (app.north west)   {Applicazione};
 \node[layertab] at (dom.north west)   {Dominio};
 \node[layertab] at (infra.north west) {Infrastruttura};
-\node[layertab] at (core.north west)  {Moduli per categoria};
 % --- Dipendenze ------------------------------------------------------------
 \draw[dep]  (pres.south)  -- (app.north);
 \draw[dep]  (app.south)   -- (dom.north);
 \draw[real] (infra.north) -- (dom.south);
 \draw[dep]  (app.west) -- ++(-0.45,0) |- (infra.west);
-\draw[dep]  (runner.east) -| (core.north);
+\draw[dep]  (runner.east) -| (secmis.north);
 \end{tikzpicture}
