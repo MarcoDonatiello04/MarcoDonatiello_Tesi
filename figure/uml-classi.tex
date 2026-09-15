@@ -1,7 +1,7 @@
 % !TEX root = ../main.tex
-% Diagramma UML delle classi: entita' Finding con i suoi oggetti valore, le
-% enumerazioni, l'interfaccia IScanner con gli adapter, il motore di
-% correlazione e i modelli propri del modulo applicativo. Il disegno e' su
+% Diagramma UML delle classi: entita' Finding con i suoi oggetti valore,
+% l'enumerazione Severity, l'interfaccia IScanner con l'adapter Checkov e il
+% motore di correlazione. Il disegno e' su
 % un canvas largo e viene ridotto alla larghezza del testo.
 \linespread{1.0}\selectfont
 \resizebox{\linewidth}{!}{%
@@ -69,31 +69,9 @@
 \end{interface}
 \draw[umlcd style, dashed, ->] (IScanner) -- (Finding)
   node[pos=0.3, above, sloped, font=\scriptsize]{\guillemotleft create\guillemotright};
-\begin{class}[text width=3.3cm]{CheckovScannerAdapter}{12.6,-9.2}
-  \implement{IScanner}
+\begin{class}[text width=3.9cm]{CheckovScannerAdapter}{14.0,-9.4}
+  \operation{scan(target\_dir): list[Finding]}
 \end{class}
-\begin{class}[text width=3.3cm]{SpectralScannerAdapter}{16.3,-9.2}
-  \implement{IScanner}
-\end{class}
-\begin{class}[text width=3.3cm]{SemgrepScannerAdapter}{14.45,-10.9}
-  \implement{IScanner}
-\end{class}
-% --- Modelli del modulo Security Misconfiguration --------------------------
-\begin{class}[text width=3.4cm]{MisconfigReport}{0.0,-10.4}
-  \attribute{target\_path: str}
-  \attribute{coverage\_signals: dict[str, bool]}
-  \attribute{summary: dict}
-\end{class}
-\begin{class}[text width=3.6cm]{MisconfigFinding}{5.0,-10.4}
-  \attribute{rule\_id, cwe\_id: str}
-  \attribute{severity: str}
-  \attribute{file\_path: str}
-  \attribute{line\_number: int}
-  \attribute{evidence: str}
-  \attribute{missing\_guard: str}
-  \attribute{confidence: float}
-\end{class}
-\draw[umlcd style, fill=\umldrawcolor, diamond->] (MisconfigReport) -- (MisconfigFinding)
-  node[midway, above, font=\scriptsize]{findings} node[midway, below, font=\scriptsize]{*};
+\draw[umlcd style, dashed, ->, >=open triangle 45] (CheckovScannerAdapter) -- (IScanner);
 \end{tikzpicture}%
 }

@@ -209,15 +209,19 @@ una copertura mancante.
 
 Questa sezione illustra l'applicazione operativa del metodo alla prima delle
 classi in esame: la \emph{Security Misconfiguration}
-(Sottosezione~\ref{sec:cloud-misconfig}). Trattandosi di una categoria
-trasversale --- le cui anomalie possono distribuirsi fra codice sorgente,
-specifiche di interfaccia e definizioni infrastrutturali --- essa rappresenta
-il principale banco di prova per i requisiti di analisi multilivello e
-correlazione introdotti nella Sottosezione~\ref{sec:requisiti}. La
-trattazione è limitata al rilevamento statico: le condizioni descritte sono
-riconosciute interamente sugli artefatti di progetto, e la verifica dinamica
-prevista dal terzo requisito, demandata ad altri moduli della piattaforma,
-non è oggetto di questa sezione.
+(Sottosezione~\ref{sec:cloud-misconfig}). Nel perimetro fissato in quella
+sottosezione rientrano le configurazioni difettose dichiarate in un artefatto
+ispezionabile prima del rilascio; qui l'artefatto è la definizione
+dell'infrastruttura come codice --- i manifest Terraform e, con lo stesso
+strumento, i Dockerfile e i manifest Kubernetes --- e il rilevamento è
+interamente statico: nessuna risorsa viene creata né interrogata, e la
+verifica dinamica prevista dal terzo requisito, demandata ad altri moduli
+della piattaforma, non è oggetto di questa sezione. La sezione descrive
+l'architettura entro cui lo scanner opera, lo strumento adottato e le policy
+pertinenti, l'adapter che ne traduce l'uscita nel modello di dominio,
+l'aggregazione delle segnalazioni con il calcolo del punteggio di rischio, e
+si chiude con la validazione condotta secondo il disegno della
+Sottosezione~\ref{sec:disegno-valutazione} e con i limiti che ne emergono.
 
 \subsection{Architettura del sistema}
 \label{sec:architettura}
@@ -232,330 +236,244 @@ viene ricondotta a un'unica entità di dominio, il \emph{Finding}, che
 registra la sorgente, la categoria, la severità su quattro livelli
 (\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, oltre a
 \texttt{INFO} per le note informative), un grado di confidenza fra $0$ e $1$,
-la posizione nel file, l'eventuale risorsa infrastrutturale o endpoint
-interessato e una chiave di correlazione. La
-Figura~\ref{fig:uml-componenti} mostra i
-componenti raggruppati per livello e le dipendenze fra i livelli: la
-presentazione dipende dall'applicazione, l'applicazione dal dominio, e
-l'infrastruttura realizza le interfacce che il dominio dichiara.
+la posizione nel file, la risorsa infrastrutturale interessata, la regola
+che l'ha generata, una chiave di correlazione e i dati grezzi dello
+strumento. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
+per livello e le dipendenze fra i livelli: la presentazione dipende
+dall'applicazione, l'applicazione dal dominio, e l'infrastruttura realizza le
+interfacce che il dominio dichiara.
 
 \begin{figure}[tbp]
 \centering
 \input{figure/uml-componenti}
-\caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti del sistema, raggruppati per livello
-architetturale. Le frecce tratteggiate indicano dipendenze; quella con la
-punta triangolare vuota indica la realizzazione delle interfacce di dominio da
-parte degli adapter. Il modulo per la Security Misconfiguration è invocato
-dal livello di presentazione e usa modelli propri.}
+\caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti
+del sistema, raggruppati per livello architetturale. Le frecce tratteggiate
+indicano dipendenze; quella con la punta triangolare vuota indica la
+realizzazione delle interfacce di dominio da parte degli adapter.}
 \label{fig:uml-componenti}
 \end{figure}
 
 Un'interfaccia astratta, \texttt{IScanner}, fissa il contratto dei
-componenti di analisi. È implementata dagli \emph{adapter} che avvolgono
-strumenti esterni --- Checkov per le definizioni
-infrastrutturali~\cite{checkov2026docs}, Spectral per la specifica
-dell'interfaccia~\cite{spectral2026docs}, Semgrep per il
-codice~\cite{semgrep2026docs} --- e ha il compito di eseguire lo strumento,
-leggerne l'uscita e tradurla in Finding. Il diagramma delle classi in
-Figura~\ref{fig:uml-classi} riporta l'entità Finding con i suoi oggetti
-valore, l'enumerazione della severità, l'interfaccia con i tre adapter che la
-realizzano e il motore di correlazione. I componenti non si chiamano a
+componenti di analisi: un metodo \texttt{scan} che riceve il percorso del
+bersaglio e restituisce una lista di Finding. È implementata dagli
+\emph{adapter} che avvolgono strumenti esterni e hanno il compito di
+eseguire lo strumento, leggerne l'uscita e tradurla nel modello di dominio.
+L'adapter di cui si occupa questa sezione è quello di
+Checkov~\cite{checkov2026docs}, che analizza le definizioni
+infrastrutturali; la stessa interfaccia è realizzata dagli adapter di
+Semgrep~\cite{semgrep2026docs} e Spectral~\cite{spectral2026docs}, che
+servono altre categorie e non sono trattati qui. Il diagramma delle classi
+in Figura~\ref{fig:uml-classi} riporta l'entità Finding con i suoi oggetti
+valore, l'enumerazione della severità, l'interfaccia con l'adapter che la
+realizza e il motore di correlazione. I componenti non si chiamano a
 vicenda: comunicano attraverso un bus di eventi su cui l'orchestratore
 pubblica il completamento dell'analisi statica e quello della pipeline.
-L'esecuzione procede in fasi: gli scanner vengono eseguiti sul repository
-bersaglio; l'evento di completamento viene pubblicato a beneficio dei moduli
-che vi si sottoscrivono; le segnalazioni raccolte vengono consegnate al
-motore di correlazione, che le aggrega per chiave e assegna a ciascuna un
-punteggio di rischio. Aggiungere un controllo significa registrare un nuovo
-scanner, senza modificare l'orchestratore.
-
-Il modulo dedicato alla configurazione del codice applicativo, descritto
-nella sottosezione seguente, ha una forma più semplice: espone una funzione
-\texttt{analyze} che riceve il percorso del repository e restituisce un
-rapporto con le segnalazioni, un vettore che indica quali regole hanno
-prodotto almeno un risultato e un riepilogo per severità e categoria. Ogni
-segnalazione porta l'identificativo della regola, la debolezza CWE associata,
-la severità, il file e la riga, l'estratto di codice che costituisce
-l'evidenza, la protezione mancante espressa come indicazione correttiva e la
-confidenza. Il modulo è invocato, accanto ai moduli dedicati alle altre
-categorie, dal runner unificato e dal cruscotto di presentazione; i suoi
-modelli, \texttt{MisconfigReport} e \texttt{MisconfigFinding}, compaiono
-nella Figura~\ref{fig:uml-classi} separati dall'entità di dominio, perché
-tali sono nel codice.
+L'esecuzione procede in fasi: gli scanner registrati vengono eseguiti sul
+repository bersaglio; l'evento di completamento viene pubblicato a beneficio
+dei moduli che vi si sottoscrivono; le segnalazioni raccolte vengono
+consegnate al motore di correlazione, che le aggrega per chiave e assegna a
+ciascuna un punteggio di rischio. Aggiungere un controllo significa
+registrare un nuovo scanner, senza modificare l'orchestratore.
 
 \begin{figure}[tbp]
 \centering
 \input{figure/uml-classi}
-\caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma UML delle classi del dominio e del motore di
-correlazione. \texttt{Severity} è un'enumerazione;
-\texttt{APIEndpointNormalizer} espone solo metodi di classe.
-In basso a sinistra i modelli del modulo per la Security Misconfiguration,
-che non derivano da \texttt{Finding}.}
+\caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma
+UML delle classi del dominio e del motore di correlazione.
+\texttt{Severity} è un'enumerazione; \texttt{APIEndpointNormalizer} espone
+solo metodi di classe. Gli adapter di Semgrep e Spectral, non trattati,
+realizzano la stessa interfaccia.}
 \label{fig:uml-classi}
 \end{figure}
 
-\subsection{Analisi del codice applicativo}
-\label{sec:analisi-codice}
+\subsection{Lo scanner: Checkov e le policy infrastrutturali}
+\label{sec:checkov}
 
-Il modulo esamina il codice senza eseguirlo. Attraversa il repository
-saltando le directory di build, gli ambienti virtuali e le cache
-(\texttt{.git}, \texttt{.venv}, \texttt{node\_modules},
-\texttt{\_\_pycache\_\_}, \texttt{dist}, \texttt{build}) e trattiene i file
-con estensione \texttt{.py}, \texttt{.js} e \texttt{.ts}. I sorgenti Python
-vengono convertiti nell'albero sintattico astratto\footnote{AST
-(\emph{Abstract Syntax Tree}): rappresentazione ad albero della struttura
-sintattica di un programma, in cui ogni nodo corrisponde a un costrutto del
-linguaggio (una chiamata, un'assegnazione, una definizione di funzione);
-consente di riconoscere un costrutto per la sua forma e non per il testo che
-lo esprime.} messo a disposizione dal modulo \texttt{ast} della libreria
-standard, e ogni regola è realizzata come visitatore dell'albero che
-intercetta i nodi di suo interesse; per JavaScript e TypeScript, per i quali
-il modulo non dispone di un parser, l'unica regola attiva opera su
-espressioni regolari riga per riga. Su ciascun file vengono applicate quattro
-regole locali; una quinta è globale, perché la condizione che riconosce ---
-l'assenza di una protezione --- non è attribuibile a un file ma al repository
-nel suo insieme. Le segnalazioni con confidenza inferiore a $0{,}70$ vengono
-scartate prima di comporre il rapporto: la soglia è il compromesso adottato
-fra copertura e rumore, e il suo effetto sulle singole regole è discusso più
-avanti. La Figura~\ref{fig:uml-attivita} riporta il diagramma di attività
-della funzione \texttt{analyze}; la Tabella~\ref{tab:regole-misconfig}
-riassume le regole, e i paragrafi che seguono ne descrivono il funzionamento.
+Checkov~\cite{checkov2026docs} è un analizzatore statico per
+Infrastructure-as-Code\footnote{IaC (\emph{Infrastructure as Code}):
+pratica per cui le risorse infrastrutturali --- reti, istanze, storage,
+permessi --- sono dichiarate in file versionati che uno strumento di
+provisioning traduce nello stato reale; il file diventa così un artefatto
+ispezionabile prima che la risorsa esista.} che legge i file di definizione
+--- Terraform~\cite{terraform2026docs}, CloudFormation, Kubernetes,
+Dockerfile, Helm, specifiche OpenAPI --- ne costruisce un grafo di risorse
+e vi valuta un catalogo di policy. Le policy sono di due tipi: controlli
+sugli attributi di una singola risorsa, scritti in Python e identificati da
+\texttt{CKV\_\emph{provider}\_\emph{n}}, e controlli sulle relazioni fra
+risorse, espressi in YAML sul grafo e identificati da
+\texttt{CKV2\_\emph{provider}\_\emph{n}}; a questi si aggiunge un
+riconoscitore di segreti che esamina qualunque file e produce identificativi
+\texttt{CKV\_SECRET\_\emph{n}}. Ogni valutazione di una policy su una
+risorsa dà un esito superato, fallito o non determinabile, con il file e
+l'intervallo di righe della risorsa. Nell'ambiente del sistema è installata
+la versione 3.2.459, ed è questa a fissare il catalogo: l'adapter esegue lo
+strumento con l'opzione che impedisce di scaricare policy aggiuntive dal
+servizio cloud del produttore, così che l'insieme dei controlli sia noto e
+riproducibile.
+
+Per lo scenario in perimetro --- i permessi di condivisione di una risorsa di
+storage lasciati aperti --- il catalogo contiene controlli che coprono le tre
+vie attraverso cui un bucket S3 può risultare pubblico: la lista di
+controllo d'accesso, la policy del bucket e il blocco dell'accesso pubblico
+a livello di account o di bucket. La Tabella~\ref{tab:policy-checkov} li
+elenca insieme ai controlli che Checkov valuta sulle stesse risorse senza
+che riguardino l'esposizione --- registrazione degli accessi, versioning,
+cifratura con chiave gestita, replica, ciclo di vita, notifiche --- e che
+lo strumento colloca sullo stesso piano dei primi: la distinzione fra
+esposizione e irrobustimento, che per questo lavoro è essenziale, nel
+catalogo non esiste. Il secondo scenario dichiarato in perimetro nella
+Sottosezione~\ref{sec:cloud-misconfig}, la direttiva che abilita l'elenco
+delle directory nella configurazione del server web, non ha invece alcun
+controllo corrispondente: Checkov non analizza i file di configurazione dei
+server HTTP, e la condizione resta al di fuori di ciò che lo strumento può
+riconoscere.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\linespread{1.0}\selectfont
+\begin{tabularx}{\linewidth}{@{}l>{\hsize=0.9\hsize}X>{\hsize=1.1\hsize}X@{}}
+\toprule
+\textbf{Policy} & \textbf{Risorsa Terraform} & \textbf{Condizione verificata} \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Esposizione dello storage}} \\
+CKV\_AWS\_20  & \texttt{aws\_s3\_bucket} & ACL che concede lettura pubblica \\
+CKV\_AWS\_53--56 & \texttt{aws\_s3\_bucket\_\allowbreak public\_\allowbreak access\_\allowbreak block} & i quattro flag del blocco dell'accesso pubblico non attivi \\
+CKV\_AWS\_70  & \texttt{aws\_s3\_bucket\_policy} & policy che concede un'azione a qualunque principal \\
+CKV2\_AWS\_6  & \texttt{aws\_s3\_bucket} & bucket privo di un blocco dell'accesso pubblico attivo (controllo sul grafo) \\
+CKV2\_AWS\_65 & \texttt{aws\_s3\_bucket\_\allowbreak ownership\_\allowbreak controls} & liste di controllo d'accesso non disabilitate \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Irrobustimento dello storage, senza esposizione}} \\
+CKV\_AWS\_18  & \texttt{aws\_s3\_bucket} & registrazione degli accessi assente \\
+CKV\_AWS\_21  & \texttt{aws\_s3\_bucket} & versioning non abilitato \\
+CKV\_AWS\_145 & \texttt{aws\_s3\_bucket} & cifratura non basata su chiave KMS \\
+CKV\_AWS\_144 & \texttt{aws\_s3\_bucket} & replica fra regioni assente \\
+CKV2\_AWS\_61, 62 & \texttt{aws\_s3\_bucket} & ciclo di vita e notifiche di evento assenti \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Altre risorse del bersaglio di prova}} \\
+CKV\_AWS\_59  & \texttt{aws\_api\_gateway\_\allowbreak method} & metodo esposto senza autorizzazione \\
+CKV\_AWS\_62, 63 & \texttt{aws\_iam\_role\_policy} & policy con privilegi amministrativi o azioni \texttt{*} \\
+CKV\_AWS\_45  & \texttt{aws\_lambda\_function} & segreto cablato nelle variabili d'ambiente \\
+CKV\_AWS\_169 & \texttt{aws\_sns\_topic\_policy} & policy del topic aperta a qualunque principal \\
+\bottomrule
+\end{tabularx}
+\caption[Policy Checkov pertinenti]{Policy di Checkov 3.2.459 pertinenti
+allo scenario in perimetro e alle altre risorse del bersaglio di prova. Le
+denominazioni sono tradotte dai nomi ufficiali dei controlli.}
+\label{tab:policy-checkov}
+\end{table}
+
+\subsection{L'adapter e la traduzione nel modello di dominio}
+\label{sec:adapter-checkov}
+
+L'adapter esegue Checkov come processo esterno, con un limite di sessanta
+secondi, chiedendo l'uscita in formato JSON. Se nella directory di lavoro è
+presente il file \path{.checkov.yaml}, lo strumento segue quella
+configurazione --- nel sistema: la directory corrente, con l'esclusione
+dell'ambiente virtuale, dei sorgenti della piattaforma, dei test e delle
+directory di uscita --- altrimenti riceve la directory bersaglio passata a
+\texttt{scan}. L'uscita è un rapporto per ciascun formato riconosciuto nel
+bersaglio (Terraform, Dockerfile, Kubernetes, segreti, e così via), e
+l'adapter li attraversa tutti leggendo i soli controlli falliti. La
+Figura~\ref{fig:uml-attivita} riporta il diagramma di attività.
 
 \begin{figure}[tbp]
 \centering
-\input{figure/uml-attivita-misconfig}
-\caption[Diagramma di attività del modulo di analisi del codice]{Diagramma UML di attività della funzione \texttt{analyze} del
-modulo di analisi del codice applicativo. Le quattro regole locali sono
-invocate su ogni file; la regola globale SC-004 e il filtro di confidenza
-operano una sola volta, a valle del ciclo.}
+\input{figure/uml-attivita-checkov}
+\caption[Diagramma di attività dell'adapter Checkov]{Diagramma UML di
+attività del metodo \texttt{scan} dell'adapter di Checkov. Ogni controllo
+fallito diventa un Finding con categoria e severità derivate
+dall'identificativo del controllo e dal tipo di risorsa.}
 \label{fig:uml-attivita}
 \end{figure}
+
+Ogni controllo fallito diventa un Finding. Due informazioni vengono derivate
+con regole a parole chiave, riassunte nella Tabella~\ref{tab:mappatura-adapter}.
+La categoria dipende dal tipo di risorsa e dall'identificativo del controllo:
+gestione delle identità se uno dei due contiene \texttt{iam}; storage se
+l'identificativo contiene \texttt{s3} o \texttt{acl}, o il tipo di risorsa
+contiene \texttt{storage}; rete per i gruppi di sicurezza e le VPC;
+cifratura per le chiavi KMS; logging per CloudTrail; API gateway per le
+risorse omonime; configurazione generica negli altri casi. La severità parte
+da \texttt{MEDIUM} e sale a \texttt{CRITICAL} quando la categoria è identità
+o storage e l'identificativo del controllo menziona esposizione pubblica,
+caratteri jolly o privilegi amministrativi, a \texttt{HIGH} per rete,
+cifratura o esposizione pubblica, e scende a \texttt{LOW} se l'identificativo
+lo dichiara. La confidenza è fissata a $1$, perché il controllo è
+deterministico rispetto al file. Il Finding conserva inoltre il nome
+ufficiale del controllo come titolo, il file con l'intervallo di righe, il
+nome completo della risorsa (per esempio
+\path{aws_s3_bucket.bucket_1_public_acl}) e, come chiave di correlazione,
+il suo ultimo segmento (\path{bucket_1_public_acl}): è il nome che lo
+sviluppatore ha assegnato alla risorsa, non il tipo generato dal provider,
+ed è quindi il nome con cui la stessa risorsa può essere ritrovata in altri
+artefatti e in altre segnalazioni. L'intero record di Checkov è allegato
+come dato grezzo, così che nessuna informazione dello strumento vada perduta
+nella traduzione.
 
 \begin{table}[htbp]
 \centering
 \small
 \linespread{1.0}\selectfont
-\begin{tabularx}{\linewidth}{@{}ll>{\hsize=1.35\hsize}X>{\hsize=0.65\hsize}Xl@{}}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
 \toprule
-\textbf{Regola} & \textbf{CWE} & \textbf{Condizione riconosciuta} &
-\textbf{Severità} & \textbf{Confidenza} \\
+\textbf{Esito} & \textbf{Condizione sull'identificativo del controllo o sul tipo di risorsa} \\
 \midrule
-SC-001 & 942 & Politica CORS che ammette qualunque origine (Flask-CORS,
-FastAPI/Starlette, Django, Express) & \texttt{HIGH}; \texttt{CRITICAL} se
-con credenziali & $0{,}75$ / $0{,}95$ \\
-SC-002 & 94 & Modalità di debug o ricaricamento automatico attivi nel codice
-o in un file di impostazioni & \texttt{HIGH} & $0{,}95$ \\
-SC-003 & 209 & Gestore di errori che restituisce al client l'eccezione o la
-traccia dello stack & \texttt{HIGH} & $0{,}90$ \\
-SC-004 & 693 & Nessun segnale di intestazioni di sicurezza nell'intero
-repository & \texttt{MEDIUM} & $0{,}70$ \\
-SC-005 & 798 & Letterale stringa assegnato a una variabile dal nome
-sensibile & \texttt{CRITICAL} & $0{,}40$--$0{,}90$ \\
+\multicolumn{2}{@{}l}{\emph{Categoria (prima regola soddisfatta)}} \\
+\texttt{IAM}              & \texttt{iam} nell'identificativo o nella risorsa \\
+\texttt{STORAGE}          & \texttt{s3} o \texttt{acl} nell'identificativo, oppure \texttt{storage} nella risorsa \\
+\texttt{NETWORK}          & \texttt{sg} o \texttt{port} nell'identificativo, oppure \texttt{security\_group} o \texttt{vpc} nella risorsa \\
+\texttt{ENCRYPTION}       & \texttt{encrypt} nell'identificativo, oppure \texttt{kms} nella risorsa \\
+\texttt{LOGGING}          & \texttt{log} nell'identificativo, oppure \texttt{trail} nella risorsa \\
+\texttt{API\_GATEWAY}     & \texttt{apigateway} nell'identificativo, oppure \texttt{api\_gateway} nella risorsa \\
+\texttt{MISCONFIGURATION} & nessuna delle precedenti \\
+\midrule
+\multicolumn{2}{@{}l}{\emph{Severità (prima regola soddisfatta)}} \\
+\texttt{CRITICAL} & categoria \texttt{IAM} o \texttt{STORAGE} e \texttt{public}, \texttt{star} o \texttt{admin} nell'identificativo \\
+\texttt{HIGH}     & categoria \texttt{NETWORK} o \texttt{ENCRYPTION}, oppure \texttt{public} nell'identificativo \\
+\texttt{LOW}      & \texttt{low} nell'identificativo \\
+\texttt{MEDIUM}   & negli altri casi \\
 \bottomrule
 \end{tabularx}
-\caption[Regole di analisi del codice applicativo]{Regole di analisi del codice applicativo per la Security
-Misconfiguration. La confidenza è quella assegnata prima del filtro a
-$0{,}70$.}
-\label{tab:regole-misconfig}
+\caption[Derivazione di categoria e severità nell'adapter]{Regole con cui
+l'adapter deriva categoria e severità di un controllo fallito. Le parole
+chiave sono confrontate, senza distinzione di maiuscole, con l'identificativo
+del controllo (\texttt{CKV\_AWS\_53}) e con il nome completo della risorsa.}
+\label{tab:mappatura-adapter}
 \end{table}
-
-La prima regola, SC-001, riconosce una politica CORS che ammette qualunque
-origine, condizione che annulla la \emph{Same-Origin Policy} del browser e
-permette a un sito terzo di leggere le risposte dell'API~\cite{cwe942}. Il
-riconoscimento è specifico per framework. In Flask la regola intercetta la
-chiamata \texttt{CORS(app, \ldots)} dell'estensione Flask-CORS e ne esamina
-l'argomento \texttt{origins}: il valore \texttt{"*"}, da solo o in una lista,
-produce una segnalazione con confidenza $0{,}95$; l'assenza dell'argomento,
-che nell'estensione equivale ad ammettere qualunque
-origine~\cite{flaskcors2026docs}, produce la stessa segnalazione con
-confidenza $0{,}75$, perché la condizione è implicita e non dichiarata. In
-FastAPI e Starlette la regola intercetta
-\texttt{add\_middleware(CORSMiddleware, \ldots)} e verifica
-\texttt{allow\_origins}; se al carattere jolly si accompagna
-\texttt{allow\_credentials=True}, la severità sale da \texttt{HIGH} a
-\texttt{CRITICAL}, perché la combinazione consente a un'origine arbitraria
-di inviare richieste con i cookie di sessione dell'utente. In Django la
-regola riconosce l'assegnazione \texttt{CORS\_ALLOW\_ALL\_ORIGINS = True}; in
-Express riconosce \texttt{cors()} senza argomenti o con
-\texttt{origin: "*"}.
-
-SC-002 riconosce la modalità di debug attiva in tre forme: la chiamata
-\texttt{run(\ldots, debug=True)} sull'oggetto applicazione, che in Flask
-attiva la console interattiva di Werkzeug, capace di eseguire codice
-arbitrario sul server~\cite{werkzeug2026debug}; la chiamata
-\texttt{uvicorn.run} con \texttt{debug=True} o \texttt{reload=True};
-l'assegnazione \texttt{DEBUG = True} nei file \texttt{settings.py},
-\texttt{config.py} e \texttt{app.py}, dove le impostazioni di Django e delle
-applicazioni Flask sono per convenzione collocate. In tutti i casi la regola
-richiede il letterale booleano \texttt{True}: un valore letto dall'ambiente
-non viene segnalato, ed è esattamente la forma che la regola indica come
-correzione.
-
-SC-003 riconosce i gestori di errore che restituiscono al client
-informazioni diagnostiche, la debolezza CWE-209~\cite{cwe209}. La regola
-individua le funzioni decorate con \texttt{@app.errorhandler}, prende il
-nome del parametro che riceve l'eccezione e ne segue l'uso nel corpo della
-funzione con un secondo visitatore. Tre forme di esposizione sono
-riconosciute, in ordine di gravità decrescente: l'invocazione di
-\texttt{traceback.format\_exc()} o \texttt{print\_exc()}, che riproduce
-l'intera traccia dello stack; \texttt{repr} applicato all'eccezione;
-\texttt{str} applicato all'eccezione o la sua interpolazione in una
-f-string. Quando più forme coesistono la segnalazione punta alla più grave,
-con confidenza $0{,}90$.
-
-SC-004 è la regola globale. Cerca in tutti i file del repository, esclusi
-quelli di test, i segnali di una configurazione delle intestazioni di
-sicurezza: l'istanziazione di \texttt{Talisman} in Flask o di
-\texttt{helmet} in Express, la registrazione di un middleware tramite
-\texttt{add\_middleware}, oppure la presenza letterale del nome di una
-delle quattro intestazioni difensive, cioè \path{Strict-Transport-Security},
-\path{Content-Security-Policy}, \path{X-Frame-Options} e
-\path{X-Content-Type-Options}. Se
-nessun file contiene alcun segnale, la regola emette una sola segnalazione
-riferita al repository, con severità \texttt{MEDIUM} e confidenza $0{,}70$;
-se anche un solo file ne contiene uno, non emette nulla. La forma aggregata
-evita che l'assenza di una protezione, che per sua natura non ha una riga,
-venga ripetuta per ogni file esaminato.
-
-SC-005 riconosce le credenziali cablate nel codice, la debolezza
-CWE-798~\cite{cwe798}. Intercetta le assegnazioni di un letterale stringa a
-una variabile il cui nome contiene uno fra i termini sensibili
-(\texttt{secret}, \texttt{password}, \texttt{token}, \texttt{api\_key},
-\texttt{private\_key}, \texttt{signing\_key} e simili) e stima la confidenza
-dal valore assegnato. I valori più corti di otto caratteri ricevono
-$0{,}50$, quelli presenti in una lista di segnaposto (\texttt{changeme},
-\texttt{your\_secret\_here}, \texttt{placeholder}, \texttt{test}) $0{,}40$,
-quelli che contengono spazi $0{,}45$: tutti sotto la soglia, e quindi
-scartati. Per gli altri la confidenza dipende dall'entropia di
-Shannon~\cite{shannon1948mathematical} del valore $v$,
-\begin{equation}
-H(v) = -\sum_{c \in v} p_c \log_2 p_c ,
-\label{eq:entropia}
-\end{equation}
-dove $p_c$ è la frequenza del carattere $c$ nella stringa: sopra $3{,}5$ bit
-per carattere la confidenza è $0{,}90$, sopra $2{,}5$ è $0{,}70$, altrimenti
-è $0{,}60$ e la segnalazione viene scartata. L'entropia distingue una chiave
-generata casualmente, che usa molti caratteri con frequenze simili, da una
-parola o da un valore di prova; la severità è sempre \texttt{CRITICAL},
-perché una credenziale nel repository è esposta a chiunque ne ottenga una
-copia.
-
-Le regole SC-001 e SC-005 ignorano i file collocati in directory di test o
-di \emph{fixture}, dove valori di prova e configurazioni permissive sono
-attesi; l'eccezione riguarda i soli artefatti di prova del sistema stesso,
-che devono restare analizzabili.
-
-\subsection{Analisi delle definizioni infrastrutturali}
-\label{sec:analisi-iac}
-
-Per le definizioni infrastrutturali il sistema non implementa regole proprie
-ma si affida a Checkov~\cite{checkov2026docs}, analizzatore statico per
-Infrastructure-as-Code che verifica i file Terraform~\cite{terraform2026docs}
-rispetto a un catalogo di policy sulle risorse cloud. L'adapter lo esegue
-come processo esterno con uscita in formato JSON, legge l'elenco dei
-controlli falliti e traduce ciascuno in un Finding. Due informazioni vengono
-derivate dal controllo. La prima è la categoria, ricavata dall'identificativo
-del controllo e dal tipo di risorsa: gestione delle identità, storage, rete,
-cifratura, logging, API gateway, oppure configurazione generica quando nessun
-indizio prevale. La seconda è la severità: \texttt{CRITICAL} per i controlli
-su identità e storage il cui identificativo indica esposizione pubblica,
-permessi con carattere jolly o privilegi amministrativi; \texttt{HIGH} per
-rete e cifratura e per ogni altro controllo che menzioni l'esposizione
-pubblica; \texttt{MEDIUM} negli altri casi. La confidenza è fissata a $1$,
-perché il controllo di Checkov è deterministico rispetto al file. È a questo
-livello che ricadono i due scenari della
-Sottosezione~\ref{sec:cloud-misconfig} dichiarati in perimetro: i permessi
-di condivisione di una risorsa di storage sono contenuti nel manifest della
-risorsa, e lì vengono letti.
-
-Il contributo specifico dell'adapter è la chiave di correlazione. Checkov
-identifica la risorsa con il nome Terraform, ad esempio
-\path{aws_api_gateway_method.order_post}; l'adapter ne estrae l'ultimo
-segmento, \texttt{order\_post}, e lo registra come chiave. È il nome che lo
-sviluppatore ha assegnato alla risorsa, non il tipo generato dal provider, ed
-è quindi il nome con cui la stessa risorsa può essere ritrovata in altri
-artefatti e in altre segnalazioni.
-
-\subsection{Analisi della specifica dell'interfaccia}
-\label{sec:analisi-contratto}
-
-Il terzo livello è la specifica OpenAPI~\cite{openapi2021spec}, esaminata
-con Spectral~\cite{spectral2026docs}, un linter che valuta un documento
-rispetto a un insieme di regole dichiarative. L'adapter individua il
-contratto cercando fra i file YAML e JSON del repository quelli che
-dichiarano \texttt{openapi:} o \texttt{swagger:}, ed esegue Spectral con un
-insieme di regole che estende quello standard per la validità strutturale con
-tre controlli di sicurezza: il contratto deve dichiarare almeno uno schema di
-sicurezza in \path{components.securitySchemes}; ogni operazione di tipo
-\texttt{get}, \texttt{post}, \texttt{put}, \texttt{patch} o
-\texttt{delete} deve dichiarare il campo \texttt{security}; ogni operazione
-deve avere una descrizione. I primi due sono violazioni di livello errore,
-tradotte in severità \texttt{HIGH}; il terzo è un avvertimento, tradotto in
-\texttt{MEDIUM}. L'assenza del campo \texttt{security} su un'operazione non
-prova che l'endpoint sia raggiungibile senza autenticazione --- il controllo
-potrebbe risiedere in un gateway --- ma stabilisce che il contratto non lo
-dichiara, ed è quanto un'analisi dell'artefatto può affermare.
-
-L'adapter fa però una cosa in più, che anticipa la correlazione. Prima di
-eseguire Spectral confronta le rotte dichiarate nel contratto con gli
-endpoint che l'analisi del codice ha scoperto e costruisce una copia
-temporanea del contratto in cui gli endpoint presenti nel codice ma assenti
-dal contratto vengono aggiunti come operazioni minime. Il confronto avviene
-su percorsi normalizzati, così che \texttt{/users/<id>} nel codice e
-\texttt{/users/\{userId\}} nel contratto coincidano. Le violazioni sulle
-operazioni aggiunte vengono marcate come relative a un'API \emph{scoperta} e
-non \emph{documentata}: è la discrepanza fra codice e contratto di cui parla
-il secondo requisito, resa osservabile facendo passare attraverso le stesse
-regole anche ciò che il contratto tace.
 
 \subsection{Correlazione e punteggio di rischio}
 \label{sec:correlazione}
 
-Il motore di correlazione riceve le segnalazioni prodotte dagli adapter e
-le unisce in un unico inventario indicizzato per chiave. La chiave è quella
-esplicita quando l'adapter l'ha assegnata; altrimenti, per le segnalazioni
-riferite a un endpoint, è la coppia formata da metodo e percorso
-normalizzato; per le risorse infrastrutturali è l'identificativo della
-risorsa; in ultima istanza è la coppia file e riga. La normalizzazione dei
-percorsi sostituisce con il segnaposto \texttt{\{id\}} i segmenti numerici,
-gli UUID, gli hash esadecimali e i parametri di rotta nelle notazioni dei
-diversi framework (\texttt{<id>}, \texttt{\{id\}}, \texttt{:id}), ed elimina
-la stringa di query e il prefisso dell'API gateway locale: così la rotta
-\texttt{/api/v1/users/<int:id>} dichiarata nel codice e l'operazione
-\texttt{/api/v1/users/\{userId\}} del contratto ricevono la stessa chiave.
-
-Le segnalazioni vengono indicizzate una alla volta; quando due condividono la
-chiave vengono fuse in una sola, che conserva la severità maggiore, l'unione
-dei riferimenti e i dati grezzi di entrambe. È il secondo requisito reso
-operativo sul piano statico: una condizione rilevata nel contratto e una
-rilevata nel codice o nel manifest sulla stessa risorsa confluiscono in
-un'unica voce, e il rapporto finale non ripete la stessa esposizione per ogni
-livello che l'ha vista. Il motore accetta anche un secondo insieme di
-segnalazioni, riservato ai moduli della piattaforma che operano a runtime,
-che nel perimetro di questa sezione resta vuoto. La
-Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica: le
-scansioni, l'evento di completamento, la correlazione e il calcolo del
+Il motore di correlazione riceve le segnalazioni prodotte dagli adapter e le
+unisce in un unico inventario indicizzato per chiave. La chiave è quella
+esplicita quando l'adapter l'ha assegnata, come avviene sempre per le
+segnalazioni infrastrutturali; altrimenti, per le segnalazioni riferite a un
+endpoint, è la coppia formata da metodo e percorso normalizzato, e in ultima
+istanza la coppia file e riga. Le segnalazioni vengono indicizzate una alla
+volta; quando due condividono la chiave vengono fuse in una sola, che
+conserva la severità maggiore, l'unione dei riferimenti e i dati grezzi di
+entrambe, mentre il titolo resta quello della prima segnalazione incontrata.
+È il secondo requisito reso operativo sul piano statico: più controlli
+falliti sulla stessa risorsa confluiscono in un'unica voce, e il rapporto
+non ripete la risorsa per ogni policy che l'ha vista. Sul bersaglio di prova
+descritto nella sottosezione seguente, gli 86 controlli falliti si riducono
+così a 24 voci, una per risorsa. Il motore accetta anche un secondo insieme
+di segnalazioni, riservato ai moduli della piattaforma che operano a
+runtime, che nel perimetro di questa sezione resta vuoto. La
+Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica:
+le scansioni, l'evento di completamento, la correlazione e il calcolo del
 punteggio.
 
 \begin{figure}[tbp]
 \centering
 \input{figure/uml-sequenza-correlazione}
 \caption[Diagramma di sequenza della pipeline statica]{Diagramma UML di
-sequenza della pipeline statica dell'orchestratore. \texttt{IScanner}
-rappresenta gli adapter Checkov, Spectral e Semgrep; il secondo argomento di
+sequenza della pipeline statica dell'orchestratore. Il secondo argomento di
 \texttt{correlate}, riservato alle segnalazioni a runtime di altri moduli, è
 vuoto.}
 \label{fig:uml-sequenza}
 \end{figure}
-
-Le segnalazioni delle cinque regole applicative non attraversano oggi questo
-motore: il modulo restituisce il proprio rapporto, che il runner unificato e
-il cruscotto presentano accanto a quelli degli altri moduli, mentre la
-correlazione opera sulle segnalazioni degli adapter infrastrutturale,
-contrattuale e del codice. Ne segue che una segnalazione del modulo e una di
-Checkov o di Spectral sulla stessa risorsa restano, allo stato attuale, due
-voci distinte; la loro unione è la naturale estensione del meccanismo appena
-descritto, non un meccanismo diverso.
 
 Il punteggio di rischio segue una decisione documentata fra le scelte
 architetturali del sistema: un modello pesato proprio, preferito al CVSS
@@ -573,105 +491,139 @@ sensibili e $2$ se è dichiarata pubblica; quando nessuna informazione di
 contesto è disponibile, $X$ vale $6$ per le segnalazioni di autenticazione e
 autorizzazione e $3$ per le altre. Pesi e costanti risiedono in un modulo di
 configurazione centrale e non nelle regole, come richiede il quarto
-requisito. Per le segnalazioni degli adapter, la cui confidenza è $1$, il
+requisito. Per le segnalazioni infrastrutturali, la cui confidenza è $1$, il
 punteggio dipende soltanto da severità e contesto: con il contesto
 predefinito una segnalazione \texttt{MEDIUM} vale $5{,}3$, una
 \texttt{HIGH} $6{,}8$ e una \texttt{CRITICAL} $8{,}0$.
 
-Ogni segnalazione conserva infine la protezione mancante come indicazione
-correttiva --- per SC-002, leggere il flag dall'ambiente; per SC-005,
-trasferire il valore in una variabile d'ambiente --- e un motore di
-remediation, che consulta una base di conoscenza locale per i controlli
-Checkov, per le categorie OWASP e per le risorse cloud e, in sua assenza,
-interroga un modello linguistico eseguito localmente tramite Ollama, produce
-un'indicazione più estesa senza che alcun frammento di codice lasci la
-macchina dell'analista.
+Ogni voce dell'inventario è infine corredata di un'indicazione correttiva
+da un motore di remediation, che consulta prima una base di conoscenza
+locale indicizzata per identificativo di controllo --- per i controlli
+Checkov vi compaiono, ad esempio, \texttt{CKV\_AWS\_20}, \texttt{CKV\_AWS\_21}
+e \texttt{CKV\_AWS\_53}, ciascuno con descrizione, impatto e passi di
+correzione sul manifest --- poi una cache delle risposte già prodotte e, in
+mancanza di entrambe, un modello linguistico eseguito localmente tramite
+Ollama, senza che alcun frammento della definizione infrastrutturale lasci
+la macchina dell'analista.
 
 \subsection{Validazione e limiti}
 \label{sec:validazione-misconfig}
 
 La validazione segue il disegno della
-Sottosezione~\ref{sec:disegno-valutazione}. Al primo scopo serve la coppia di
-artefatti di prova per il codice applicativo: un'applicazione Flask di
-trentaquattro righe che concentra le cinque condizioni --- Flask-CORS con
-origine \texttt{"*"}, \texttt{app.run(debug=True)}, un gestore di errori che
-restituisce \texttt{str(e)}, \texttt{traceback.format\_exc()} e
-\texttt{repr(e)}, tre credenziali cablate, nessuna intestazione di
-sicurezza --- e una controparte di trentadue righe che le inverte una per
-una: lista esplicita di origini, flag di debug letto dall'ambiente, gestore
-che registra l'eccezione nel log e restituisce un messaggio generico,
-credenziali lette dall'ambiente, \texttt{Talisman} istanziato. Il modulo
-segnala le cinque regole sulla prima e nessuna sulla seconda: cinque veri
-positivi, un vero negativo, nessun falso positivo né falso negativo, contro
-un criterio di accettazione che richiede una sensibilità di almeno l'ottanta
-per cento e nessun falso positivo. Come anticipato nel disegno, il risultato
-attesta che l'implementazione fa ciò che si intendeva: le due fixture sono
-state scritte dallo stesso autore delle regole, con la sintassi esatta che i
-visitatori cercano, e i valori non si estendono a codice non scritto per
-essere analizzato.
+Sottosezione~\ref{sec:disegno-valutazione}. Al primo scopo serve il
+bersaglio di prova infrastrutturale del repository: due manifest Terraform,
+per complessive 469 righe, che dichiarano cinque bucket S3 a livelli
+crescenti di protezione e un insieme di risorse volutamente difettose. Il
+riferimento di verità è noto per costruzione. Il primo bucket ha una lista di
+controllo d'accesso in lettura pubblica e un blocco dell'accesso pubblico con
+i quattro flag disattivati; il secondo ha lo stesso blocco disattivato e una
+policy che concede lettura e scrittura a qualunque principal; il terzo è
+privo del blocco; il quarto e il quinto hanno il blocco attivo, cifratura con
+chiave gestita, versioning e una policy che impone il canale cifrato, e il
+quinto aggiunge il blocco delle modifiche e una restrizione per indirizzo
+sorgente. Un sesto bucket, in un secondo file, ripete la condizione del
+secondo; accanto a esso stanno una tabella DynamoDB senza cifratura con
+chiave gestita né ripristino puntuale, un topic SNS con policy aperta, un
+ruolo IAM con policy \texttt{*} su \texttt{*}, una funzione Lambda con una
+chiave di accesso cablata fra le variabili d'ambiente e un API gateway i cui
+metodi non richiedono autorizzazione. La coppia richiesta dal disegno ---
+un artefatto con la condizione e uno senza --- è qui realizzata dentro lo
+stesso manifest, dal contrasto fra i primi tre bucket e gli ultimi due.
+
+Checkov riporta 85 controlli falliti sul formato Terraform e uno del
+riconoscitore di segreti, per 86 segnalazioni su 24 risorse. Sull'esposizione
+dello storage l'esito coincide con il riferimento: \texttt{CKV\_AWS\_20}
+fallisce sul solo primo bucket; \texttt{CKV\_AWS\_53}--\texttt{56} falliscono
+sui tre blocchi dell'accesso pubblico con i flag disattivati;
+\texttt{CKV2\_AWS\_6} fallisce sui bucket primo, secondo, terzo e sesto e
+supera il quarto e il quinto; \texttt{CKV2\_AWS\_65} fallisce sul primo, che
+non disabilita le liste di controllo d'accesso. Le altre risorse difettose
+sono tutte riconosciute: i metodi dell'API gateway da \texttt{CKV\_AWS\_59},
+il ruolo IAM da \texttt{CKV\_AWS\_62} e \texttt{CKV\_AWS\_63}, la chiave
+cablata sia da \texttt{CKV\_AWS\_45} sia dal riconoscitore di segreti, la
+tabella DynamoDB e il topic SNS dai controlli corrispondenti. Un solo caso si
+discosta dal riferimento, e lo fa in silenzio: la policy del secondo bucket,
+che concede lettura e scrittura a qualunque principal, non viene valutata da
+\texttt{CKV\_AWS\_70}, che compare per quella risorsa né fra i controlli
+superati né fra quelli falliti, mentre la policy equivalente del sesto
+bucket è segnalata. Le due policy differiscono soltanto nella forma
+dell'attributo \texttt{Resource}, una lista di due interpolazioni nel primo
+caso e una singola stringa nel secondo, e la valutazione della prima si
+arresta come non determinabile. Il bucket resta comunque segnalato attraverso
+il blocco dell'accesso pubblico, ma la condizione che lo definisce difettoso
+--- la policy --- non è quella riportata. Come anticipato nel disegno, il
+bersaglio è stato scritto dallo stesso autore del sistema e i suoi commenti
+citano gli identificativi dei controlli attesi: l'esito attesta che
+strumento e adapter fanno ciò che si intendeva, non che funzionino su
+definizioni non scritte per essere analizzate.
 
 Al secondo scopo serve crAPI~\cite{owasp2026crapi}, nella revisione 1.1.5
-fissata nel repository. L'applicazione è composta da servizi in linguaggi
-diversi: due in Python --- il servizio \emph{workshop}, un'applicazione
-Django, e il \emph{chatbot}, un'applicazione Quart --- uno in Go, uno in
-Java e un'interfaccia web in TypeScript. Il modulo produce quattro
-segnalazioni. Due sono di SC-002: \texttt{app.run(debug=True, port=5555)}
-nel chatbot e \texttt{DEBUG = True} nelle impostazioni del workshop. Una è di
-SC-005: l'assegnazione \texttt{API\_GATEWAY\_PASSWORD = "Pa\$\$4Vendor\_1"}
-nello stesso file di impostazioni, che la regola distingue dalle altre
-credenziali del file, tutte lette dall'ambiente. Una è di SC-004, riferita
-all'intero repository: nessun sorgente configura intestazioni di sicurezza,
-e nemmeno i file di distribuzione le menzionano. Tutte e quattro
-corrispondono a difetti presenti nel bersaglio.
+fissata nel repository, che non contiene manifest Terraform ma è distribuita
+con sette Dockerfile, manifest Kubernetes, un chart Helm e un file Docker
+Compose, tutti formati che Checkov riconosce. Lo scanner produce 237
+segnalazioni, che la correlazione riduce a 46 voci: 207 sui manifest
+Kubernetes, da 22 controlli distinti su 41 risorse --- fra i più frequenti,
+l'uso dello spazio dei nomi predefinito, contenitori che ammettono
+l'escalation di privilegi o girano come root, filesystem non in sola lettura,
+immagini non fissate a un digest --- 14 sui Dockerfile, dove nessuna immagine
+dichiara un controllo di salute e sei su sette non definiscono un utente non
+privilegiato, 13 dal riconoscitore di segreti e 3 sulla specifica OpenAPI,
+che Checkov lint a sua volta. Fra le 13 segnalazioni di segreti, otto
+riguardano stringhe ad alta entropia nei \texttt{ConfigMap} e nei file di
+composizione, dove crAPI colloca in chiaro le credenziali dei propri
+database, due i token di sessione presenti nella collezione Postman
+distribuita con il progetto, e due il file di integrazione continua di una
+dipendenza Go inclusa nel repository: queste ultime non riguardano il
+bersaglio ma una libreria terza, e sono falsi positivi rispetto allo scopo
+dell'analisi.
 
-Il confronto con il riferimento ricostruito a mano rivela però due falsi
-negativi, entrambi di SC-001, ed entrambi istruttivi. Il workshop abilita
-CORS verso qualunque origine con \texttt{CORS\_ORIGIN\_ALLOW\_ALL = True},
-nome storico dell'impostazione di django-cors-headers che la libreria accetta
-ancora accanto a quello attuale~\cite{djangocors2026docs}, mentre la regola
-riconosce soltanto \texttt{CORS\_ALLOW\_ALL\_ORIGINS}. Il chatbot apre CORS
-con \texttt{cors(app, allow\_origin="*")} dell'estensione quart-cors, la cui
-funzione ha nome minuscolo e argomento diverso da quelli di Flask-CORS. In
-entrambi i casi la condizione è dichiarata nell'artefatto ed è esattamente
-quella che la regola vuole riconoscere, ma la forma sintattica non è fra
-quelle previste: il limite non è del metodo, che qui è applicabile, ma del
-catalogo di forme che la regola conosce, e va registrato come copertura
-mancante nel senso della Sottosezione~\ref{sec:disegno-valutazione}. A
-questi si aggiunge un limite di perimetro linguistico: i servizi in Go e in
-Java, che costituiscono la maggior parte del codice di crAPI, non vengono
-esaminati, perché il modulo dispone di un parser solo per Python. Il livello
-infrastrutturale, infine, non è esercitato su crAPI, che è distribuita con
-Docker Compose, Helm e manifest Kubernetes e non contiene definizioni
-Terraform; la sua verifica resta affidata alla coppia di artefatti di prova
-di quel livello.
+L'uso su entrambi i bersagli fa emergere un limite dell'adapter che il
+bersaglio di prova, da solo, non avrebbe rivelato. Le regole della
+Tabella~\ref{tab:mappatura-adapter} confrontano le parole chiave con
+l'identificativo del controllo, ma gli identificativi di Checkov hanno la
+forma \texttt{CKV\_AWS\_53} e non contengono mai \texttt{s3}, \texttt{acl},
+\texttt{public}, \texttt{admin} o \texttt{encrypt}: le condizioni che
+elevano la severità non si verificano, e la categoria viene riconosciuta
+soltanto quando è il tipo di risorsa a contenere la parola chiave, come per
+\texttt{aws\_iam\_role\_policy} e \texttt{aws\_api\_gateway\_method}. Ne
+segue che tutte le 86 segnalazioni del bersaglio di prova e tutte le 237 di
+crAPI hanno severità \texttt{MEDIUM}, che le segnalazioni sui bucket S3
+ricadono nella categoria generica, e che ogni voce dell'inventario riceve lo
+stesso punteggio, $5{,}3$: la lista di controllo d'accesso pubblica del primo
+bucket e la regola di ciclo di vita mancante del quinto sono indistinguibili
+nel rapporto. La fusione per risorsa aggrava l'effetto, perché con severità
+uniformi il criterio della severità maggiore non seleziona nulla e la voce
+conserva il titolo del primo controllo incontrato: per il primo bucket è
+quello sulle notifiche di evento, mentre l'ACL pubblica compare fra i sette
+controlli collegati. Le parole che le regole cercano si trovano nel nome
+ufficiale del controllo, che l'adapter conserva come titolo; applicarle a
+quel campo anziché all'identificativo è la correzione che restituisce alle
+regole il comportamento previsto.
 
-L'uso su codice non scritto per essere analizzato fa emergere anche i limiti
-generali delle regole. SC-001 cerca un'apertura dichiarata: se il codice non
-configura CORS e la politica permissiva è impostata da un reverse proxy o da
-un gateway a monte, non c'è nulla da riconoscere. SC-002 richiede il
-letterale \texttt{True}, e non intercetta un flag impostato attraverso
-\texttt{app.config.update} o caricato da un file di ambiente tramite una
-libreria di impostazioni. SC-003 conosce il solo decoratore
-\texttt{errorhandler} di Flask e non i gestori di eccezione di FastAPI né i
-middleware WSGI o ASGI che formattano gli errori. SC-004 può sbagliare in
-entrambe le direzioni: produce un falso positivo quando le intestazioni sono
-iniettate da un componente perimetrale --- una CDN, un gateway, un reverse
-proxy --- che non compare nel repository, e un falso negativo quando conta
-come segnale la sola registrazione di un middleware, qualunque esso sia, dato
-che \texttt{add\_middleware} è fra le firme cercate. SC-005 segnala un valore
-casuale assegnato a un nome sensibile anche quando è un identificativo di
-prova o un hash, e tace su una chiave strutturata con entropia inferiore a
-$2{,}5$ o su una credenziale assegnata a un attributo o a una chiave di
-dizionario anziché a un nome semplice. Vale infine un'osservazione sul quarto
-requisito: se i pesi del punteggio sono centralizzati, la soglia di
-confidenza a $0{,}70$ e i valori di confidenza delle regole sono costanti del
-modulo, e non sono ancora esposti come parametri dell'analisi.
+Restano poi i limiti propri dello strumento. Il primo è la non
+determinabilità silenziosa mostrata dalla policy del secondo bucket: un
+controllo che non riesce a valutare un'espressione non fallisce, e nulla nel
+rapporto segnala che quella risorsa non è stata giudicata. Il secondo è
+l'assenza, nel catalogo, di una distinzione fra controlli di esposizione e
+controlli di irrobustimento: i bucket quarto e quinto, privi di esposizione
+per costruzione, ricevono quattro segnalazioni ciascuno, e su crAPI la gran
+parte delle 207 segnalazioni Kubernetes riguarda pratiche di irrobustimento
+dei contenitori più che esposizioni. Il terzo riprende i limiti già
+individuati nel capitolo precedente: la copertura, perché ciò che
+non è dichiarato in un manifest non è ispezionabile, e lo scenario
+dell'elenco delle directory ne è l'esempio; la deriva, perché il manifest
+attesta ciò che è dichiarato e non ciò che è attivo; il contesto, perché un
+bucket pubblico è un difetto per un archivio di dati personali e una scelta
+legittima per un sito statico, e lo strumento non dispone di questa
+informazione. Vale infine un'osservazione sul quarto requisito: il file di
+configurazione governa i percorsi da escludere e il formato di uscita, ma le
+parole chiave e le severità della Tabella~\ref{tab:mappatura-adapter} sono
+costanti dell'adapter, non parametri dell'analisi.
 
 Questi risultati costituiscono l'evidenza che il disegno della valutazione
-ammette: l'esito verificato dell'esecuzione sugli artefatti di prova e su un
+ammette: l'esito verificato dell'esecuzione sull'artefatto di prova e su un
 bersaglio realistico, con il riferimento di verità dichiarato e le
-segnalazioni mancate registrate come tali. I due casi di CORS non
-riconosciuti su crAPI mostrano che la distanza fra la condizione definita e
-la sua rilevazione non sta nel criterio ma nella varietà delle forme con cui
-la stessa configurazione viene scritta, ed è su questa varietà che il
-catalogo delle regole va esteso.
+segnalazioni mancate registrate come tali. Lo scenario dello storage esposto
+è riconosciuto su ogni bucket che lo presenta; ciò che il sistema non fa
+ancora è distinguerlo, nel punteggio e nel titolo della voce, dalle molte
+segnalazioni di minore portata che lo circondano.

@@ -1,0 +1,69 @@
+% !TEX root = ../main.tex
+% Diagramma UML di attivita' del metodo scan() dell'adapter di Checkov:
+% esecuzione dello strumento, lettura del JSON e traduzione di ogni
+% controllo fallito in un Finding di dominio.
+\linespread{1.0}\selectfont
+% Ridotto per contenere l'altezza della figura entro la pagina.
+\resizebox{0.86\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >=Stealth,
+  node distance=0.5cm and 0.8cm,
+  action/.style={draw, rounded corners=6pt, align=center, inner xsep=7pt,
+                 inner ysep=5pt, fill=white, text width=4.6cm},
+  decision/.style={draw, diamond, aspect=2.2, inner sep=1.5pt, align=center,
+                   font=\scriptsize, fill=white},
+  initial/.style={circle, fill=black, minimum size=8pt, inner sep=0pt},
+  final/.style={circle, draw, minimum size=11pt, inner sep=0pt,
+                path picture={\fill[black] (path picture bounding box.center)
+                              circle (3.2pt);}},
+  guard/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
+  flow/.style={->}
+]
+% --- Colonna sinistra: esecuzione dello strumento ---------------------------
+\node[initial] (start) {};
+\node[decision, below=of start] (cfg) {\texttt{.checkov.yaml}\\ nella directory di lavoro?};
+\node[action, below=0.6cm of cfg, xshift=-3.3cm, text width=4.0cm] (usecfg)
+  {Usa la configurazione\\ {\scriptsize directory e percorsi esclusi}};
+\node[action, below=0.6cm of cfg, xshift=3.3cm, text width=4.0cm] (usedir)
+  {Usa la directory bersaglio\\ {\scriptsize \texttt{-d target\_dir}}};
+\node[action, below=2.6cm of cfg] (run)
+  {Esegui \texttt{checkov -o json}\\ {\scriptsize senza policy esterne; limite 60~s}};
+\node[decision, below=of run] (ok) {uscita JSON\\ ottenuta?};
+\node[action, below=0.6cm of ok] (read)
+  {Leggi i rapporti\\ {\scriptsize uno per formato: Terraform, Dockerfile, Kubernetes, segreti, \ldots}};
+% --- Colonna destra: ciclo sui controlli falliti ----------------------------
+\node[decision, right=2.4cm of read] (more) {altro controllo\\ fallito?};
+\node[action, below=0.6cm of more] (derive)
+  {Deriva categoria e severità\\ {\scriptsize parole chiave su identificativo del controllo e tipo di risorsa}};
+\node[action, below=of derive] (mk)
+  {Componi il Finding\\ {\scriptsize file e righe; chiave = ultimo segmento del nome della risorsa; confidenza 1; titolo dal controllo; record grezzo allegato}};
+\node[action, below=of mk] (acc) {Accoda alla lista};
+\node[action, below=1.0cm of acc] (ret) {Restituisci la lista di Finding};
+\node[final, below=of ret] (end) {};
+% --- Errore: lista vuota ----------------------------------------------------
+\node[action, left=1.0cm of ret, text width=3.4cm] (empty)
+  {Registra l'errore\\ {\scriptsize la lista resta vuota}};
+\coordinate (railL) at ($(usecfg.west)+(-0.4,0)$);
+\coordinate (railR) at ($(derive.east)+(0.5,0)$);
+\coordinate (railN) at ($(derive.east)+(1.0,0)$);
+% --- Flussi -----------------------------------------------------------------
+\draw[flow] (start) -- (cfg);
+\draw[flow] (cfg.west) -| node[guard, pos=0.25, above] {[sì]} (usecfg);
+\draw[flow] (cfg.east) -| node[guard, pos=0.25, above] {[no]} (usedir);
+\draw[flow] (usecfg) |- (run);
+\draw[flow] (usedir) |- (run);
+\draw[flow] (run) -- (ok);
+\draw[flow] (ok) -- node[guard, right] {[sì]} (read);
+\draw[flow] (read.east) -- (more.west);
+\draw[flow] (more) -- node[guard, right] {[sì]} (derive);
+\draw[flow] (derive) -- (mk);
+\draw[flow] (mk) -- (acc);
+\draw[flow] (acc.east) -- (railR |- acc) -- (railR |- more) -- (more.east);
+\draw[flow] (more.north) -- node[guard, right] {[no]} ++(0,0.45) -| (railN |- more) -- (railN |- ret) -- (ret.east);
+\draw[flow] (ret) -- (end);
+% errore di esecuzione o di parsing
+\draw[flow] (ok.west) -- node[guard, above] {[no]} (railL |- ok) -- (railL |- empty) -- (empty.west);
+\draw[flow] (empty.east) -- (ret.west);
+\end{tikzpicture}%
+}

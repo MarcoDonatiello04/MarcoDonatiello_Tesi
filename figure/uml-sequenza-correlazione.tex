@@ -13,11 +13,11 @@
   \tikzstyle{inststyle}+=[font=\footnotesize, rounded corners=0pt, fill=white]
   \tikzset{every node/.style={font=\footnotesize}}
   \newthread[white]{orc}{Orchestratore}
-  \newinst[1.4]{sc}{IScanner}
-  \newinst[1.8]{bus}{EventBus}
+  \newinst[1.2]{sc}{CheckovScannerAdapter}
+  \newinst[1.4]{bus}{EventBus}
   \newinst[1.6]{eng}{RiskCorrelationEngine}
 %
-  \begin{sdblock}{loop}{per ogni adapter (Checkov, Spectral, Semgrep)}
+  \begin{sdblock}{loop}{per ogni scanner registrato}
     \begin{call}{orc}{scan(target\_dir)}{sc}{list[Finding]}
     \end{call}
   \end{sdblock}

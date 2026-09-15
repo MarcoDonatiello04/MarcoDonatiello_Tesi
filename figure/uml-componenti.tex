@@ -36,9 +36,6 @@
 \node[comp] (spectral) at (4.6,-8.1)  {\st{adapter}\\ Spectral};
 \node[comp] (semgrep)  at (7.65,-8.1) {\st{adapter}\\ Semgrep};
 \node[comp] (ollama)   at (10.7,-8.1) {\st{provider}\\ Ollama};
-% --- Modulo Security Misconfiguration (colonna destra) ---------------------
-\node[comp, text width=2.9cm] (secmis) at (15.1,-2.7)
-  {\st{component}\\ Security\\Misconfiguration\\ {\scriptsize detector + regole SC-001\ldots005}};
 % --- Package (livelli) -----------------------------------------------------
 \begin{scope}[on background layer]
   \node[layer, fit=(dash)(runner)(xL |- dash.north)(xR |- dash.north)]        (pres)  {};
@@ -55,5 +52,4 @@
 \draw[dep]  (app.south)   -- (dom.north);
 \draw[real] (infra.north) -- (dom.south);
 \draw[dep]  (app.west) -- ++(-0.45,0) |- (infra.west);
-\draw[dep]  (runner.east) -| (secmis.north);
 \end{tikzpicture}
