@@ -67,7 +67,7 @@ regga richiede di costruire i moduli di rilevazione corrispondenti e di
 osservarne il comportamento su codice reale. Lo studio assume perciò una
 forma costruttiva.
 
-Ne discende il ruolo del sistema descritto nei capitoli seguenti: è lo
+Ne discende il ruolo del sistema descritto nel seguito: è lo
 strumento con cui la classificazione viene messa alla prova, non l'oggetto
 della ricerca. Se una categoria è stata ricondotta a una violazione
 strutturale, deve esistere una regola che la riconosca; se è stata esclusa,
@@ -129,7 +129,9 @@ tripartizione e viene trattata a parte.
 La classificazione non descrive uno strumento, ma vincola ciò che uno
 strumento adeguato deve saper fare. I requisiti che seguono sono formulati
 come capacità richieste, indipendentemente dalle tecnologie; la loro
-traduzione in un'architettura concreta è oggetto del capitolo successivo.
+traduzione in un'architettura concreta è mostrata nella
+Sezione~\ref{sec:rilevamento-misconfig} per la Security Misconfiguration e
+nei capitoli seguenti per le altre categorie.
 
 Il primo requisito è l'analisi su più livelli. Le proprietà individuate dal
 criterio non risiedono tutte nello stesso luogo: alcune si manifestano nel
@@ -201,3 +203,436 @@ ogni categoria, se i moduli segnalano gli artefatti che contengono la
 condizione e non quelli che ne sono privi, e si distinguono le categorie senza
 segnalazioni in cui ciò discende dalla classificazione da quelle in cui indica
 una copertura mancante.
+
+\section{Rilevamento delle Security Misconfiguration}
+\label{sec:rilevamento-misconfig}
+
+I requisiti della Sottosezione~\ref{sec:requisiti} sono formulati come
+capacità; questa sezione mostra come sono stati resi operativi per la prima
+delle due voci in perimetro, la Security Misconfiguration della
+Sottosezione~\ref{sec:cloud-misconfig}. La voce è quella che esercita di più
+il metodo: come si è visto, la configurazione non risiede in un luogo unico né
+sotto una responsabilità unica, e la stessa esposizione può essere dichiarata
+nel codice applicativo, nelle definizioni infrastrutturali o nella specifica
+dell'interfaccia, oppure manifestarsi soltanto nelle risposte del sistema in
+esecuzione. Richiede dunque tutti e tre i livelli di analisi previsti dal
+primo requisito e rende necessaria la correlazione richiesta dal secondo. La
+sezione descrive prima l'architettura entro cui i moduli operano, poi i tre
+livelli di analisi statica, quindi il modo in cui le segnalazioni vengono
+messe in relazione fra loro e con l'evidenza dinamica, e si chiude con la
+validazione condotta secondo il disegno della
+Sottosezione~\ref{sec:disegno-valutazione} e con i limiti che ne emergono.
+
+\subsection{Architettura del sistema}
+\label{sec:architettura}
+
+Il sistema è organizzato secondo i principi della \emph{Clean Architecture}:
+un livello di dominio che definisce le entità e i contratti, un livello
+applicativo che orchestra l'analisi, un livello infrastrutturale che
+incapsula gli strumenti esterni e un livello di presentazione che espone i
+risultati. La separazione risponde direttamente al quinto requisito, la
+tracciabilità: qualunque sia lo strumento che l'ha prodotta, ogni anomalia
+viene ricondotta a un'unica entità di dominio, il \emph{Finding}, che
+registra la sorgente, la categoria, la severità su quattro livelli
+(\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, oltre a
+\texttt{INFO} per le note informative), un grado di confidenza fra $0$ e $1$,
+la posizione nel file, l'eventuale risorsa infrastrutturale o endpoint
+interessato, una chiave di correlazione e uno stato di convalida, che vale
+\texttt{NOT\_VALIDATED} finché non interviene un riscontro dinamico e
+\texttt{CONFIRMED} dopo.
+
+Due interfacce astratte fissano il contratto dei componenti di analisi.
+\texttt{IScanner} è implementata dagli \emph{adapter} che avvolgono strumenti
+esterni --- Checkov per le definizioni
+infrastrutturali~\cite{checkov2026docs}, Spectral per la specifica
+dell'interfaccia~\cite{spectral2026docs}, Semgrep per il
+codice~\cite{semgrep2026docs}, ZAP~\cite{zap2026docs} e
+mitmproxy~\cite{mitmproxy2026docs} per il traffico --- e ha il compito di
+eseguire lo strumento, leggerne l'uscita e tradurla in Finding.
+\texttt{IDetector} è implementata dai moduli interni, che non invocano
+strumenti ma reagiscono a eventi. I componenti non si chiamano infatti a
+vicenda: comunicano attraverso un bus di eventi su cui l'orchestratore
+pubblica il completamento dell'analisi statica, la disponibilità del traffico
+catturato, ogni segnalazione rilevata e il completamento della pipeline.
+L'esecuzione procede in fasi: gli scanner statici vengono eseguiti sul
+repository bersaglio; l'evento di completamento sveglia i detector che
+lavorano sugli artefatti; se è disponibile traffico registrato, un secondo
+evento sveglia quelli che lavorano sulle risposte del sistema; le
+segnalazioni raccolte vengono separate in statiche e dinamiche in base alla
+sorgente e consegnate al motore di correlazione, che le unisce e assegna a
+ciascuna un punteggio di rischio. Aggiungere un controllo significa
+registrare un nuovo scanner o detector, senza modificare l'orchestratore.
+
+Il modulo dedicato alla configurazione del codice applicativo, descritto
+nella sottosezione seguente, ha una forma più semplice: espone una funzione
+\texttt{analyze} che riceve il percorso del repository e restituisce un
+rapporto con le segnalazioni, un vettore che indica quali regole hanno
+prodotto almeno un risultato e un riepilogo per severità e categoria. Ogni
+segnalazione porta l'identificativo della regola, la debolezza CWE associata,
+la severità, il file e la riga, l'estratto di codice che costituisce
+l'evidenza, la protezione mancante espressa come indicazione correttiva e la
+confidenza. Il modulo è invocato, accanto ai moduli dedicati alle altre
+categorie, dal runner unificato e dal cruscotto di presentazione.
+
+\subsection{Analisi del codice applicativo}
+\label{sec:analisi-codice}
+
+Il modulo esamina il codice senza eseguirlo. Attraversa il repository
+saltando le directory di build, gli ambienti virtuali e le cache
+(\texttt{.git}, \texttt{.venv}, \texttt{node\_modules},
+\texttt{\_\_pycache\_\_}, \texttt{dist}, \texttt{build}) e trattiene i file
+con estensione \texttt{.py}, \texttt{.js} e \texttt{.ts}. I sorgenti Python
+vengono convertiti nell'albero sintattico astratto\footnote{AST
+(\emph{Abstract Syntax Tree}): rappresentazione ad albero della struttura
+sintattica di un programma, in cui ogni nodo corrisponde a un costrutto del
+linguaggio (una chiamata, un'assegnazione, una definizione di funzione);
+consente di riconoscere un costrutto per la sua forma e non per il testo che
+lo esprime.} messo a disposizione dal modulo \texttt{ast} della libreria
+standard, e ogni regola è realizzata come visitatore dell'albero che
+intercetta i nodi di suo interesse; per JavaScript e TypeScript, per i quali
+il modulo non dispone di un parser, l'unica regola attiva opera su
+espressioni regolari riga per riga. Su ciascun file vengono applicate quattro
+regole locali; una quinta è globale, perché la condizione che riconosce ---
+l'assenza di una protezione --- non è attribuibile a un file ma al repository
+nel suo insieme. Le segnalazioni con confidenza inferiore a $0{,}70$ vengono
+scartate prima di comporre il rapporto: la soglia è il compromesso adottato
+fra copertura e rumore, e il suo effetto sulle singole regole è discusso più
+avanti. La Tabella~\ref{tab:regole-misconfig} riassume le regole; i paragrafi
+che seguono ne descrivono il funzionamento.
+
+\begin{table}[htbp]
+\centering
+\small
+\linespread{1.0}\selectfont
+\begin{tabularx}{\linewidth}{@{}ll>{\hsize=1.35\hsize}X>{\hsize=0.65\hsize}Xl@{}}
+\toprule
+\textbf{Regola} & \textbf{CWE} & \textbf{Condizione riconosciuta} &
+\textbf{Severità} & \textbf{Confidenza} \\
+\midrule
+SC-001 & 942 & Politica CORS che ammette qualunque origine (Flask-CORS,
+FastAPI/Starlette, Django, Express) & \texttt{HIGH}; \texttt{CRITICAL} se
+con credenziali & $0{,}75$ / $0{,}95$ \\
+SC-002 & 94 & Modalità di debug o ricaricamento automatico attivi nel codice
+o in un file di impostazioni & \texttt{HIGH} & $0{,}95$ \\
+SC-003 & 209 & Gestore di errori che restituisce al client l'eccezione o la
+traccia dello stack & \texttt{HIGH} & $0{,}90$ \\
+SC-004 & 693 & Nessun segnale di intestazioni di sicurezza nell'intero
+repository & \texttt{MEDIUM} & $0{,}70$ \\
+SC-005 & 798 & Letterale stringa assegnato a una variabile dal nome
+sensibile & \texttt{CRITICAL} & $0{,}40$--$0{,}90$ \\
+\bottomrule
+\end{tabularx}
+\caption{Regole di analisi del codice applicativo per la Security
+Misconfiguration. La confidenza è quella assegnata prima del filtro a
+$0{,}70$.}
+\label{tab:regole-misconfig}
+\end{table}
+
+La prima regola, SC-001, riconosce una politica CORS che ammette qualunque
+origine, condizione che annulla la \emph{Same-Origin Policy} del browser e
+permette a un sito terzo di leggere le risposte dell'API~\cite{cwe942}. Il
+riconoscimento è specifico per framework. In Flask la regola intercetta la
+chiamata \texttt{CORS(app, \ldots)} dell'estensione Flask-CORS e ne esamina
+l'argomento \texttt{origins}: il valore \texttt{"*"}, da solo o in una lista,
+produce una segnalazione con confidenza $0{,}95$; l'assenza dell'argomento,
+che nell'estensione equivale ad ammettere qualunque
+origine~\cite{flaskcors2026docs}, produce la stessa segnalazione con
+confidenza $0{,}75$, perché la condizione è implicita e non dichiarata. In
+FastAPI e Starlette la regola intercetta
+\texttt{add\_middleware(CORSMiddleware, \ldots)} e verifica
+\texttt{allow\_origins}; se al carattere jolly si accompagna
+\texttt{allow\_credentials=True}, la severità sale da \texttt{HIGH} a
+\texttt{CRITICAL}, perché la combinazione consente a un'origine arbitraria
+di inviare richieste con i cookie di sessione dell'utente. In Django la
+regola riconosce l'assegnazione \texttt{CORS\_ALLOW\_ALL\_ORIGINS = True}; in
+Express riconosce \texttt{cors()} senza argomenti o con
+\texttt{origin: "*"}.
+
+SC-002 riconosce la modalità di debug attiva in tre forme: la chiamata
+\texttt{run(\ldots, debug=True)} sull'oggetto applicazione, che in Flask
+attiva la console interattiva di Werkzeug, capace di eseguire codice
+arbitrario sul server~\cite{werkzeug2026debug}; la chiamata
+\texttt{uvicorn.run} con \texttt{debug=True} o \texttt{reload=True};
+l'assegnazione \texttt{DEBUG = True} nei file \texttt{settings.py},
+\texttt{config.py} e \texttt{app.py}, dove le impostazioni di Django e delle
+applicazioni Flask sono per convenzione collocate. In tutti i casi la regola
+richiede il letterale booleano \texttt{True}: un valore letto dall'ambiente
+non viene segnalato, ed è esattamente la forma che la regola indica come
+correzione.
+
+SC-003 riconosce i gestori di errore che restituiscono al client
+informazioni diagnostiche, la debolezza CWE-209~\cite{cwe209}. La regola
+individua le funzioni decorate con \texttt{@app.errorhandler}, prende il
+nome del parametro che riceve l'eccezione e ne segue l'uso nel corpo della
+funzione con un secondo visitatore. Tre forme di esposizione sono
+riconosciute, in ordine di gravità decrescente: l'invocazione di
+\texttt{traceback.format\_exc()} o \texttt{print\_exc()}, che riproduce
+l'intera traccia dello stack; \texttt{repr} applicato all'eccezione;
+\texttt{str} applicato all'eccezione o la sua interpolazione in una
+f-string. Quando più forme coesistono la segnalazione punta alla più grave,
+con confidenza $0{,}90$.
+
+SC-004 è la regola globale. Cerca in tutti i file del repository, esclusi
+quelli di test, i segnali di una configurazione delle intestazioni di
+sicurezza: l'istanziazione di \texttt{Talisman} in Flask o di
+\texttt{helmet} in Express, la registrazione di un middleware tramite
+\texttt{add\_middleware}, oppure la presenza letterale del nome di una
+delle quattro intestazioni difensive, cioè \path{Strict-Transport-Security},
+\path{Content-Security-Policy}, \path{X-Frame-Options} e
+\path{X-Content-Type-Options}. Se
+nessun file contiene alcun segnale, la regola emette una sola segnalazione
+riferita al repository, con severità \texttt{MEDIUM} e confidenza $0{,}70$;
+se anche un solo file ne contiene uno, non emette nulla. La forma aggregata
+evita che l'assenza di una protezione, che per sua natura non ha una riga,
+venga ripetuta per ogni file esaminato.
+
+SC-005 riconosce le credenziali cablate nel codice, la debolezza
+CWE-798~\cite{cwe798}. Intercetta le assegnazioni di un letterale stringa a
+una variabile il cui nome contiene uno fra i termini sensibili
+(\texttt{secret}, \texttt{password}, \texttt{token}, \texttt{api\_key},
+\texttt{private\_key}, \texttt{signing\_key} e simili) e stima la confidenza
+dal valore assegnato. I valori più corti di otto caratteri ricevono
+$0{,}50$, quelli presenti in una lista di segnaposto (\texttt{changeme},
+\texttt{your\_secret\_here}, \texttt{placeholder}, \texttt{test}) $0{,}40$,
+quelli che contengono spazi $0{,}45$: tutti sotto la soglia, e quindi
+scartati. Per gli altri la confidenza dipende dall'entropia di
+Shannon~\cite{shannon1948mathematical} del valore $v$,
+\begin{equation}
+H(v) = -\sum_{c \in v} p_c \log_2 p_c ,
+\label{eq:entropia}
+\end{equation}
+dove $p_c$ è la frequenza del carattere $c$ nella stringa: sopra $3{,}5$ bit
+per carattere la confidenza è $0{,}90$, sopra $2{,}5$ è $0{,}70$, altrimenti
+è $0{,}60$ e la segnalazione viene scartata. L'entropia distingue una chiave
+generata casualmente, che usa molti caratteri con frequenze simili, da una
+parola o da un valore di prova; la severità è sempre \texttt{CRITICAL},
+perché una credenziale nel repository è esposta a chiunque ne ottenga una
+copia.
+
+Le regole SC-001 e SC-005 ignorano i file collocati in directory di test o
+di \emph{fixture}, dove valori di prova e configurazioni permissive sono
+attesi; l'eccezione riguarda i soli artefatti di prova del sistema stesso,
+che devono restare analizzabili.
+
+\subsection{Analisi delle definizioni infrastrutturali}
+\label{sec:analisi-iac}
+
+Per le definizioni infrastrutturali il sistema non implementa regole proprie
+ma si affida a Checkov~\cite{checkov2026docs}, analizzatore statico per
+Infrastructure-as-Code che verifica i file Terraform~\cite{terraform2026docs}
+rispetto a un catalogo di policy sulle risorse cloud. L'adapter lo esegue
+come processo esterno con uscita in formato JSON, legge l'elenco dei
+controlli falliti e traduce ciascuno in un Finding. Due informazioni vengono
+derivate dal controllo. La prima è la categoria, ricavata dall'identificativo
+del controllo e dal tipo di risorsa: gestione delle identità, storage, rete,
+cifratura, logging, API gateway, oppure configurazione generica quando nessun
+indizio prevale. La seconda è la severità: \texttt{CRITICAL} per i controlli
+su identità e storage il cui identificativo indica esposizione pubblica,
+permessi con carattere jolly o privilegi amministrativi; \texttt{HIGH} per
+rete e cifratura e per ogni altro controllo che menzioni l'esposizione
+pubblica; \texttt{MEDIUM} negli altri casi. La confidenza è fissata a $1$,
+perché il controllo di Checkov è deterministico rispetto al file. È a questo
+livello che ricadono i due scenari della
+Sottosezione~\ref{sec:cloud-misconfig} dichiarati in perimetro: i permessi
+di condivisione di una risorsa di storage sono contenuti nel manifest della
+risorsa, e lì vengono letti.
+
+Il contributo specifico dell'adapter è la chiave di correlazione. Checkov
+identifica la risorsa con il nome Terraform, ad esempio
+\path{aws_api_gateway_method.order_post}; l'adapter ne estrae l'ultimo
+segmento, \texttt{order\_post}, e lo registra come chiave. È il nome che lo
+sviluppatore ha assegnato alla risorsa, non il tipo generato dal provider, ed
+è quindi il nome con cui la stessa risorsa può essere ritrovata in altri
+artefatti e in altre segnalazioni.
+
+\subsection{Analisi della specifica dell'interfaccia}
+\label{sec:analisi-contratto}
+
+Il terzo livello è la specifica OpenAPI~\cite{openapi2021spec}, esaminata
+con Spectral~\cite{spectral2026docs}, un linter che valuta un documento
+rispetto a un insieme di regole dichiarative. L'adapter individua il
+contratto cercando fra i file YAML e JSON del repository quelli che
+dichiarano \texttt{openapi:} o \texttt{swagger:}, ed esegue Spectral con un
+insieme di regole che estende quello standard per la validità strutturale con
+tre controlli di sicurezza: il contratto deve dichiarare almeno uno schema di
+sicurezza in \path{components.securitySchemes}; ogni operazione di tipo
+\texttt{get}, \texttt{post}, \texttt{put}, \texttt{patch} o
+\texttt{delete} deve dichiarare il campo \texttt{security}; ogni operazione
+deve avere una descrizione. I primi due sono violazioni di livello errore,
+tradotte in severità \texttt{HIGH}; il terzo è un avvertimento, tradotto in
+\texttt{MEDIUM}. L'assenza del campo \texttt{security} su un'operazione non
+prova che l'endpoint sia raggiungibile senza autenticazione --- il controllo
+potrebbe risiedere in un gateway --- ma stabilisce che il contratto non lo
+dichiara, ed è quanto un'analisi dell'artefatto può affermare.
+
+L'adapter fa però una cosa in più, che anticipa la correlazione. Prima di
+eseguire Spectral confronta le rotte dichiarate nel contratto con gli
+endpoint che l'analisi del codice ha scoperto e costruisce una copia
+temporanea del contratto in cui gli endpoint presenti nel codice ma assenti
+dal contratto vengono aggiunti come operazioni minime. Il confronto avviene
+su percorsi normalizzati, così che \texttt{/users/<id>} nel codice e
+\texttt{/users/\{userId\}} nel contratto coincidano. Le violazioni sulle
+operazioni aggiunte vengono marcate come relative a un'API \emph{scoperta} e
+non \emph{documentata}: è la discrepanza fra codice e contratto di cui parla
+il secondo requisito, resa osservabile facendo passare attraverso le stesse
+regole anche ciò che il contratto tace.
+
+\subsection{Correlazione e punteggio di rischio}
+\label{sec:correlazione}
+
+Il motore di correlazione riceve due insiemi di Finding, statici e dinamici,
+e li unisce in un unico inventario indicizzato per chiave. La chiave è quella
+esplicita quando l'adapter l'ha assegnata; altrimenti, per le segnalazioni
+riferite a un endpoint, è la coppia formata da metodo e percorso
+normalizzato; per le risorse infrastrutturali è l'identificativo della
+risorsa; in ultima istanza è la coppia file e riga. La normalizzazione dei
+percorsi sostituisce con il segnaposto \texttt{\{id\}} i segmenti numerici,
+gli UUID, gli hash esadecimali e i parametri di rotta nelle notazioni dei
+diversi framework (\texttt{<id>}, \texttt{\{id\}}, \texttt{:id}), ed elimina
+la stringa di query e il prefisso dell'API gateway locale: così la richiesta
+\texttt{/api/v1/users/12345} osservata nel traffico e la rotta
+\texttt{/api/v1/users/<int:id>} dichiarata nel codice ricevono la stessa
+chiave.
+
+Le segnalazioni statiche vengono indicizzate per prime; se due condividono la
+chiave vengono fuse conservando la severità maggiore. Le segnalazioni
+dinamiche vengono poi confrontate con l'indice. Quando una trova una
+controparte statica, questa passa allo stato \texttt{CONFIRMED}, acquisisce
+l'evidenza runtime, sale di un livello di severità (\texttt{HIGH} diventa
+\texttt{CRITICAL}, ogni altro livello diventa \texttt{HIGH}) e porta la
+confidenza a $1$: la condizione prevista sull'artefatto è stata osservata nel
+comportamento del sistema. Quando non la trova, entra nell'inventario come
+segnalazione confermata a sé stante, con confidenza $0{,}9$. È il terzo
+requisito reso operativo: l'analisi statica formula l'ipotesi, l'evidenza
+dinamica la conferma, e la distinzione fra le due resta leggibile nello stato
+della segnalazione.
+
+Le segnalazioni delle cinque regole applicative non attraversano oggi questo
+motore: il modulo restituisce il proprio rapporto, che il runner unificato e
+il cruscotto presentano accanto a quelli degli altri moduli, mentre la
+correlazione opera sulle segnalazioni degli adapter infrastrutturale e
+contrattuale e su quelle dinamiche. Ne segue che una politica CORS aperta
+riconosciuta nel codice e un'intestazione
+\texttt{Access-Control-Allow-Origin: *} osservata nel traffico restano, allo
+stato attuale, due segnalazioni distinte; la loro unione è la naturale
+estensione del meccanismo appena descritto, non un meccanismo diverso.
+
+Il punteggio di rischio segue una decisione documentata fra le scelte
+architetturali del sistema: un modello pesato proprio, preferito al CVSS
+perché quest'ultimo richiede la composizione di un vettore che nessuno degli
+strumenti integrati produce e non offre un modo naturale di rappresentare la
+conferma dinamica. Il punteggio è
+\begin{equation}
+R = \min\bigl(10,\; 0{,}6\,S + 0{,}2 \cdot 10\,C + 0{,}2\,X\bigr),
+\label{eq:risk-score}
+\end{equation}
+dove $S$ è il valore numerico della severità ($9{,}0$ per \texttt{CRITICAL},
+$7{,}0$ per \texttt{HIGH}, $4{,}5$ per \texttt{MEDIUM}, $2{,}0$ per
+\texttt{LOW}), $C \in [0,1]$ è la confidenza e $X$ è un fattore di contesto
+che somma $4$ punti se la risorsa è esposta a Internet, $4$ se tratta dati
+sensibili e $2$ se è dichiarata pubblica; quando nessuna informazione di
+contesto è disponibile, $X$ vale $6$ per le segnalazioni di autenticazione e
+autorizzazione e $3$ per le altre. Pesi e costanti risiedono in un modulo di
+configurazione centrale e non nelle regole, come richiede il quarto
+requisito. Un esempio rende leggibile l'effetto della conferma: una
+segnalazione \texttt{HIGH} con confidenza $0{,}95$ e contesto predefinito
+vale $6{,}7$; la stessa segnalazione confermata a runtime, divenuta
+\texttt{CRITICAL} con confidenza $1$, vale $8{,}0$.
+
+Ogni segnalazione conserva infine la protezione mancante come indicazione
+correttiva --- per SC-002, leggere il flag dall'ambiente; per SC-005,
+trasferire il valore in una variabile d'ambiente --- e un motore di
+remediation, che consulta una base di conoscenza locale per i controlli
+Checkov, per le categorie OWASP e per le risorse cloud e, in sua assenza,
+interroga un modello linguistico eseguito localmente tramite Ollama, produce
+un'indicazione più estesa senza che alcun frammento di codice lasci la
+macchina dell'analista.
+
+\subsection{Validazione e limiti}
+\label{sec:validazione-misconfig}
+
+La validazione segue il disegno della
+Sottosezione~\ref{sec:disegno-valutazione}. Al primo scopo serve la coppia di
+artefatti di prova per il codice applicativo: un'applicazione Flask di
+trentaquattro righe che concentra le cinque condizioni --- Flask-CORS con
+origine \texttt{"*"}, \texttt{app.run(debug=True)}, un gestore di errori che
+restituisce \texttt{str(e)}, \texttt{traceback.format\_exc()} e
+\texttt{repr(e)}, tre credenziali cablate, nessuna intestazione di
+sicurezza --- e una controparte di trentadue righe che le inverte una per
+una: lista esplicita di origini, flag di debug letto dall'ambiente, gestore
+che registra l'eccezione nel log e restituisce un messaggio generico,
+credenziali lette dall'ambiente, \texttt{Talisman} istanziato. Il modulo
+segnala le cinque regole sulla prima e nessuna sulla seconda: cinque veri
+positivi, un vero negativo, nessun falso positivo né falso negativo, contro
+un criterio di accettazione che richiede una sensibilità di almeno l'ottanta
+per cento e nessun falso positivo. Come anticipato nel disegno, il risultato
+attesta che l'implementazione fa ciò che si intendeva: le due fixture sono
+state scritte dallo stesso autore delle regole, con la sintassi esatta che i
+visitatori cercano, e i valori non si estendono a codice non scritto per
+essere analizzato.
+
+Al secondo scopo serve crAPI~\cite{owasp2026crapi}, nella revisione 1.1.5
+fissata nel repository. L'applicazione è composta da servizi in linguaggi
+diversi: due in Python --- il servizio \emph{workshop}, un'applicazione
+Django, e il \emph{chatbot}, un'applicazione Quart --- uno in Go, uno in
+Java e un'interfaccia web in TypeScript. Il modulo produce quattro
+segnalazioni. Due sono di SC-002: \texttt{app.run(debug=True, port=5555)}
+nel chatbot e \texttt{DEBUG = True} nelle impostazioni del workshop. Una è di
+SC-005: l'assegnazione \texttt{API\_GATEWAY\_PASSWORD = "Pa\$\$4Vendor\_1"}
+nello stesso file di impostazioni, che la regola distingue dalle altre
+credenziali del file, tutte lette dall'ambiente. Una è di SC-004, riferita
+all'intero repository: nessun sorgente configura intestazioni di sicurezza,
+e nemmeno i file di distribuzione le menzionano. Tutte e quattro
+corrispondono a difetti presenti nel bersaglio.
+
+Il confronto con il riferimento ricostruito a mano rivela però due falsi
+negativi, entrambi di SC-001, ed entrambi istruttivi. Il workshop abilita
+CORS verso qualunque origine con \texttt{CORS\_ORIGIN\_ALLOW\_ALL = True},
+nome storico dell'impostazione di django-cors-headers che la libreria accetta
+ancora accanto a quello attuale~\cite{djangocors2026docs}, mentre la regola
+riconosce soltanto \texttt{CORS\_ALLOW\_ALL\_ORIGINS}. Il chatbot apre CORS
+con \texttt{cors(app, allow\_origin="*")} dell'estensione quart-cors, la cui
+funzione ha nome minuscolo e argomento diverso da quelli di Flask-CORS. In
+entrambi i casi la condizione è dichiarata nell'artefatto ed è esattamente
+quella che la regola vuole riconoscere, ma la forma sintattica non è fra
+quelle previste: il limite non è del metodo, che qui è applicabile, ma del
+catalogo di forme che la regola conosce, e va registrato come copertura
+mancante nel senso della Sottosezione~\ref{sec:disegno-valutazione}. A
+questi si aggiunge un limite di perimetro linguistico: i servizi in Go e in
+Java, che costituiscono la maggior parte del codice di crAPI, non vengono
+esaminati, perché il modulo dispone di un parser solo per Python. Il livello
+infrastrutturale, infine, non è esercitato su crAPI, che è distribuita con
+Docker Compose, Helm e manifest Kubernetes e non contiene definizioni
+Terraform; la sua verifica resta affidata alla coppia di artefatti di prova
+di quel livello.
+
+L'uso su codice non scritto per essere analizzato fa emergere anche i limiti
+generali delle regole. SC-001 cerca un'apertura dichiarata: se il codice non
+configura CORS e la politica permissiva è impostata da un reverse proxy o da
+un gateway a monte, non c'è nulla da riconoscere. SC-002 richiede il
+letterale \texttt{True}, e non intercetta un flag impostato attraverso
+\texttt{app.config.update} o caricato da un file di ambiente tramite una
+libreria di impostazioni. SC-003 conosce il solo decoratore
+\texttt{errorhandler} di Flask e non i gestori di eccezione di FastAPI né i
+middleware WSGI o ASGI che formattano gli errori. SC-004 può sbagliare in
+entrambe le direzioni: produce un falso positivo quando le intestazioni sono
+iniettate da un componente perimetrale --- una CDN, un gateway, un reverse
+proxy --- che non compare nel repository, e un falso negativo quando conta
+come segnale la sola registrazione di un middleware, qualunque esso sia, dato
+che \texttt{add\_middleware} è fra le firme cercate. SC-005 segnala un valore
+casuale assegnato a un nome sensibile anche quando è un identificativo di
+prova o un hash, e tace su una chiave strutturata con entropia inferiore a
+$2{,}5$ o su una credenziale assegnata a un attributo o a una chiave di
+dizionario anziché a un nome semplice. Vale infine un'osservazione sul quarto
+requisito: se i pesi del punteggio sono centralizzati, la soglia di
+confidenza a $0{,}70$ e i valori di confidenza delle regole sono costanti del
+modulo, e non sono ancora esposti come parametri dell'analisi.
+
+Questi risultati costituiscono l'evidenza che il disegno della valutazione
+ammette: l'esito verificato dell'esecuzione sugli artefatti di prova e su un
+bersaglio realistico, con il riferimento di verità dichiarato e le
+segnalazioni mancate registrate come tali. I due casi di CORS non
+riconosciuti su crAPI mostrano che la distanza fra la condizione definita e
+la sua rilevazione non sta nel criterio ma nella varietà delle forme con cui
+la stessa configurazione viene scritta, ed è su questa varietà che il
+catalogo delle regole va esteso.
