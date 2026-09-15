@@ -207,21 +207,13 @@ una copertura mancante.
 \section{Rilevamento delle Security Misconfiguration}
 \label{sec:rilevamento-misconfig}
 
-I requisiti della Sottosezione~\ref{sec:requisiti} sono formulati come
-capacità; questa sezione mostra come sono stati resi operativi per la prima
-delle due voci in perimetro, la Security Misconfiguration della
-Sottosezione~\ref{sec:cloud-misconfig}. La voce è quella che esercita di più
-il metodo: come si è visto, la configurazione non risiede in un luogo unico né
-sotto una responsabilità unica, e la stessa esposizione può essere dichiarata
-nel codice applicativo, nelle definizioni infrastrutturali o nella specifica
-dell'interfaccia, oppure manifestarsi soltanto nelle risposte del sistema in
-esecuzione. Richiede dunque tutti e tre i livelli di analisi previsti dal
-primo requisito e rende necessaria la correlazione richiesta dal secondo. La
-sezione descrive prima l'architettura entro cui i moduli operano, poi i tre
-livelli di analisi statica, quindi il modo in cui le segnalazioni vengono
-messe in relazione fra loro e con l'evidenza dinamica, e si chiude con la
-validazione condotta secondo il disegno della
-Sottosezione~\ref{sec:disegno-valutazione} e con i limiti che ne emergono.
+Questa sezione illustra l'applicazione operativa del metodo alla prima delle
+classi in esame: la \emph{Security Misconfiguration}
+(Sottosezione~\ref{sec:cloud-misconfig}). Trattandosi di una categoria
+trasversale --- le cui anomalie possono distribuirsi fra codice sorgente,
+specifiche di interfaccia, definizioni infrastrutturali e risposte a runtime ---
+essa rappresenta il principale banco di prova per i requisiti di analisi
+multilivello e correlazione introdotti nella Sottosezione~\ref{sec:requisiti}.
 
 \subsection{Architettura del sistema}
 \label{sec:architettura}
@@ -237,9 +229,8 @@ registra la sorgente, la categoria, la severità su quattro livelli
 (\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, oltre a
 \texttt{INFO} per le note informative), un grado di confidenza fra $0$ e $1$,
 la posizione nel file, l'eventuale risorsa infrastrutturale o endpoint
-interessato, una chiave di correlazione e uno stato di convalida, che vale
-\texttt{NOT\_VALIDATED} finché non interviene un riscontro dinamico e
-\texttt{CONFIRMED} dopo. La Figura~\ref{fig:uml-componenti} mostra i
+interessato, una chiave di correlazione e l'eventuale evidenza raccolta a
+runtime. La Figura~\ref{fig:uml-componenti} mostra i
 componenti raggruppati per livello e le dipendenze fra i livelli: la
 presentazione dipende dall'applicazione, l'applicazione dal dominio, e
 l'infrastruttura realizza le interfacce che il dominio dichiara.
@@ -300,8 +291,8 @@ tali sono nel codice.
 \centering
 \input{figure/uml-classi}
 \caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma UML delle classi del dominio e del motore di
-correlazione. \texttt{Severity} e \texttt{ValidationStatus} sono
-enumerazioni; \texttt{APIEndpointNormalizer} espone solo metodi di classe.
+correlazione. \texttt{Severity} è un'enumerazione;
+\texttt{APIEndpointNormalizer} espone solo metodi di classe.
 In basso a sinistra i modelli del modulo per la Security Misconfiguration,
 che non derivano da \texttt{Finding}.}
 \label{fig:uml-classi}
@@ -541,15 +532,15 @@ chiave.
 Le segnalazioni statiche vengono indicizzate per prime; se due condividono la
 chiave vengono fuse conservando la severità maggiore. Le segnalazioni
 dinamiche vengono poi confrontate con l'indice. Quando una trova una
-controparte statica, questa passa allo stato \texttt{CONFIRMED}, acquisisce
-l'evidenza runtime, sale di un livello di severità (\texttt{HIGH} diventa
+controparte statica, questa acquisisce l'evidenza runtime, sale di un
+livello di severità (\texttt{HIGH} diventa
 \texttt{CRITICAL}, ogni altro livello diventa \texttt{HIGH}) e porta la
 confidenza a $1$: la condizione prevista sull'artefatto è stata osservata nel
 comportamento del sistema. Quando non la trova, entra nell'inventario come
-segnalazione confermata a sé stante, con confidenza $0{,}9$. È il terzo
-requisito reso operativo: l'analisi statica formula l'ipotesi, l'evidenza
-dinamica la conferma, e la distinzione fra le due resta leggibile nello stato
-della segnalazione. La Figura~\ref{fig:uml-sequenza} colloca la correlazione
+segnalazione a sé stante, con confidenza $0{,}9$. È il terzo requisito reso
+operativo: l'analisi statica formula l'ipotesi, l'evidenza dinamica la
+riscontra, e la distinzione fra le due resta leggibile nell'evidenza allegata
+alla segnalazione. La Figura~\ref{fig:uml-sequenza} colloca la correlazione
 nella sequenza completa della pipeline: le scansioni statiche, i due eventi
 che svegliano i detector, la separazione delle segnalazioni per sorgente,
 la correlazione e il calcolo del punteggio; la pubblicazione dell'evento
@@ -578,8 +569,8 @@ estensione del meccanismo appena descritto, non un meccanismo diverso.
 Il punteggio di rischio segue una decisione documentata fra le scelte
 architetturali del sistema: un modello pesato proprio, preferito al CVSS
 perché quest'ultimo richiede la composizione di un vettore che nessuno degli
-strumenti integrati produce e non offre un modo naturale di rappresentare la
-conferma dinamica. Il punteggio è
+strumenti integrati produce e non offre un modo naturale di rappresentare il
+riscontro a runtime. Il punteggio è
 \begin{equation}
 R = \min\bigl(10,\; 0{,}6\,S + 0{,}2 \cdot 10\,C + 0{,}2\,X\bigr),
 \label{eq:risk-score}
@@ -592,9 +583,9 @@ sensibili e $2$ se è dichiarata pubblica; quando nessuna informazione di
 contesto è disponibile, $X$ vale $6$ per le segnalazioni di autenticazione e
 autorizzazione e $3$ per le altre. Pesi e costanti risiedono in un modulo di
 configurazione centrale e non nelle regole, come richiede il quarto
-requisito. Un esempio rende leggibile l'effetto della conferma: una
+requisito. Un esempio rende leggibile l'effetto del riscontro a runtime: una
 segnalazione \texttt{HIGH} con confidenza $0{,}95$ e contesto predefinito
-vale $6{,}7$; la stessa segnalazione confermata a runtime, divenuta
+vale $6{,}7$; la stessa segnalazione dopo il riscontro, divenuta
 \texttt{CRITICAL} con confidenza $1$, vale $8{,}0$.
 
 Ogni segnalazione conserva infine la protezione mancante come indicazione

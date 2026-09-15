@@ -19,7 +19,6 @@
   \attribute{rule\_id, cwe\_id: str}
   \attribute{resource\_id: str}
   \attribute{correlation\_key: str}
-  \attribute{validation\_status: ValidationStatus}
   \attribute{related\_findings: list[str]}
   \operation{create(\ldots): Finding}
   \operation{to\_dict(): dict}
@@ -48,8 +47,8 @@
 \composition{Finding}{api}{0..1}{APIContext}
 \composition{Finding}{runtime\_evidence}{0..1}{RuntimeEvidence}
 \composition{Finding}{risk\_context}{0..1}{RiskContext}
-% --- Enumerazioni ----------------------------------------------------------
-\begin{class}[text width=2.6cm]{Severity}{1.2,-6.0}
+% --- Enumerazione ----------------------------------------------------------
+\begin{class}[text width=2.6cm]{Severity}{3.2,-6.0}
   \attribute{CRITICAL = 9.0}
   \attribute{HIGH = 7.0}
   \attribute{MEDIUM = 4.5}
@@ -57,12 +56,7 @@
   \attribute{INFO}
   \operation{score(): float}
 \end{class}
-\begin{class}[text width=2.8cm]{ValidationStatus}{4.3,-6.0}
-  \attribute{NOT\_VALIDATED}
-  \attribute{CONFIRMED}
-\end{class}
 \unidirectionalAssociation{Finding}{}{1}{Severity}
-\unidirectionalAssociation{Finding}{}{1}{ValidationStatus}
 % --- Motore di correlazione ------------------------------------------------
 \begin{class}[text width=5.0cm]{RiskCorrelationEngine}{9.1,-6.0}
   \attribute{correlated\_findings: dict[str, Finding]}
