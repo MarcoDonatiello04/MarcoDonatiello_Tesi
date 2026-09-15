@@ -3,7 +3,10 @@
 \chapter{Metodo di ricerca}
 \label{cap:metodo}
 
-\section{Obiettivi e domande di ricerca}
+\section{Approccio metodologico}
+\label{sec:approccio-metodologico}
+
+\subsection{Obiettivi e domande di ricerca}
 \label{sec:research-questions}
 
 La rassegna del capitolo precedente restituisce un quadro disomogeneo:
@@ -54,7 +57,7 @@ sistema in esecuzione, colmabile estendendo il perimetro degli artefatti
 esaminati, esplicitabile come parametro dichiarato dell'analisi, oppure
 irriducibile alla conoscenza del dominio applicativo?}
 
-\section{Impostazione dello studio}
+\subsection{Impostazione dello studio}
 \label{sec:impostazione}
 
 Le domande non ammettono una risposta puramente documentale: stabilire
@@ -78,19 +81,17 @@ requisiti per lo strumento e si chiude con il disegno della valutazione;
 l'applicazione del criterio alle dieci categorie è presentata insieme ai
 risultati.
 
-\section{Il criterio di classificazione}
+\subsection{Il criterio di classificazione}
 \label{sec:criterio}
 
 Il criterio rende operativa la distinzione della
-Sezione~\ref{sec:research-questions}. Per ogni categoria si individua la
+Sottosezione~\ref{sec:research-questions}. Per ogni categoria si individua la
 proprietà di sicurezza la cui violazione la definisce, attenendosi alla
 formulazione ufficiale OWASP~\cite{owasp2023apitop10}, alle debolezze CWE
-associate e alla caratterizzazione emersa dalla rassegna; si valuta quindi se
-esista un predicato sugli artefatti di progetto la cui valutazione richieda
-il solo esame di tali artefatti.
+associate e alla caratterizzazione emersa dalla rassegna.
 
-Una categoria è detta \emph{tecnica} quando esiste un predicato di questo
-tipo che sia al tempo stesso necessario e sufficiente a stabilire la
+Una categoria è detta \emph{tecnica} quando esiste un predicato sugli artefatti
+di progetto che sia al tempo stesso necessario e sufficiente a stabilire la
 violazione, una volta fissati i parametri dichiarati dell'analisi. È detta
 \emph{ibrida} quando esiste un predicato necessario ma non sufficiente:
 l'analisi degli artefatti riconosce una condizione senza la quale la
@@ -99,14 +100,12 @@ detta infine \emph{di logica di business} quando non esiste alcun predicato
 necessario esprimibile sugli artefatti, poiché la proprietà violata è
 definita per riferimento all'intento applicativo.
 
-La nozione di parametro dichiarato va delimitata, altrimenti qualunque
-residuo potrebbe essere assorbito dichiarandolo. Si ammette come parametro
-un'informazione uniforme rispetto al sistema e indipendente dalle singole
-richieste, come la configurazione attesa di un servizio o il livello di
-protezione richiesto a un canale; non un'informazione che leghi identità
-specifiche a risorse specifiche, perché coinciderebbe con la politica di
-autorizzazione dell'applicazione, cioè con ciò che il criterio intende
-classificare come residuo.
+È necessario delimitare quali parametri sia lecito fornire all'analisi:
+si ammettono unicamente configurazioni generali valide per l'intero sistema
+(come l'uso di canali cifrati o limiti di traffico attesi). Si escludono
+invece regole puntuali sui permessi degli utenti rispetto alle singole
+risorse, per evitare di inserire a priori la logica di autorizzazione che
+l'analisi stessa dovrebbe verificare.
 
 Il residuo delle categorie ibride non è omogeneo, e distinguerne la natura è
 l'oggetto di \RQ{1.2}. Un residuo è \emph{dinamico} quando la proprietà
@@ -124,7 +123,7 @@ condizione non vale per API9:2023, che descrive l'esistenza di sistemi che
 l'organizzazione ignora di possedere: la categoria resta fuori dalla
 tripartizione e viene trattata a parte.
 
-\section{Requisiti derivati per lo strumento di rilevazione}
+\subsection{Requisiti derivati per lo strumento di rilevazione}
 \label{sec:requisiti}
 
 La classificazione non descrive uno strumento, ma vincola ciò che uno
@@ -150,16 +149,15 @@ prevedano uno altrove. Lo strumento deve quindi mettere in relazione segnali
 di livelli diversi e derivarne giudizi che nessun livello esprime da solo.
 Questo requisito risponde a \RQ{1.1}.
 
-Il terzo requisito è l'evidenza dinamica. Per le categorie ibride con residuo
-dinamico lo strumento deve poter sollecitare l'interfaccia e valutarne le
-risposte, perché la componente strutturale stabilisce solo la possibilità
-della violazione; senza di essa queste categorie resterebbero indecise.
+Il terzo requisito è la verifica dinamica: per le categorie che richiedono
+un riscontro a runtime, lo strumento deve poter inviare richieste reali
+all'API e analizzarne le risposte. L'analisi del codice rileva infatti solo
+un rischio potenziale, che rimarrebbe incerto senza una conferma attiva.
 
-Il quarto requisito riguarda i parametri dichiarati: dove la classificazione
-ha assorbito un residuo dichiarandolo, lo strumento deve rendere esplicito il
-valore assunto e consentirne la modifica, altrimenti una baseline incorporata
-nelle regole trasformerebbe una scelta di contesto in un giudizio implicito
-dello strumento.
+Il quarto requisito è la configurabilità dei parametri: i valori e le
+soglie utilizzati dall'analisi devono essere espliciti e modificabili
+dall'utente, per evitare che impostazioni predefinite e cablate nelle
+regole impongano scelte arbitrarie come se fossero vincoli universali.
 
 Il quinto requisito è la tracciabilità: ogni segnalazione deve essere
 riconducibile alla categoria di cui costituisce evidenza e al livello di
@@ -167,7 +165,7 @@ analisi che l'ha generata, perché una segnalazione priva di tale riconduzione
 può indicare un difetto reale ma non contribuisce a rispondere alle domande
 di ricerca.
 
-\section{Disegno della valutazione}
+\subsection{Disegno della valutazione}
 \label{sec:disegno-valutazione}
 
 La valutazione ha due scopi distinti: controllare che ogni modulo riconosca
