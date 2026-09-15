@@ -33,19 +33,13 @@
   \attribute{method: str}
   \attribute{base\_url: str}
 \end{class}
-\begin{class}[text width=3.9cm]{RuntimeEvidence}{12.9,1.7}
-  \attribute{tested\_url: str}
-  \attribute{http\_status: int}
-  \attribute{response\_headers: dict}
-\end{class}
-\begin{class}[text width=3.9cm]{RiskContext}{12.9,-1.6}
+\begin{class}[text width=3.9cm]{RiskContext}{12.9,0.2}
   \attribute{internet\_exposed: bool}
   \attribute{sensitive\_data\_detected: bool}
   \attribute{public\_resource: bool}
 \end{class}
 \composition{Finding}{location}{0..1}{CodeLocation}
 \composition{Finding}{api}{0..1}{APIContext}
-\composition{Finding}{runtime\_evidence}{0..1}{RuntimeEvidence}
 \composition{Finding}{risk\_context}{0..1}{RiskContext}
 % --- Enumerazione ----------------------------------------------------------
 \begin{class}[text width=2.6cm]{Severity}{3.2,-6.0}
@@ -81,14 +75,11 @@
 \begin{class}[text width=3.3cm]{SpectralScannerAdapter}{16.3,-9.2}
   \implement{IScanner}
 \end{class}
-\begin{class}[text width=3.3cm]{SemgrepScannerAdapter}{12.6,-10.9}
-  \implement{IScanner}
-\end{class}
-\begin{class}[text width=3.3cm]{ZapClientAdapter}{16.3,-10.9}
+\begin{class}[text width=3.3cm]{SemgrepScannerAdapter}{14.45,-10.9}
   \implement{IScanner}
 \end{class}
 % --- Modelli del modulo Security Misconfiguration --------------------------
-\begin{class}[text width=3.4cm]{MisconfigReport}{0.2,-10.4}
+\begin{class}[text width=3.4cm]{MisconfigReport}{0.0,-10.4}
   \attribute{target\_path: str}
   \attribute{coverage\_signals: dict[str, bool]}
   \attribute{summary: dict}

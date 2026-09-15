@@ -211,9 +211,13 @@ Questa sezione illustra l'applicazione operativa del metodo alla prima delle
 classi in esame: la \emph{Security Misconfiguration}
 (Sottosezione~\ref{sec:cloud-misconfig}). Trattandosi di una categoria
 trasversale --- le cui anomalie possono distribuirsi fra codice sorgente,
-specifiche di interfaccia, definizioni infrastrutturali e risposte a runtime ---
-essa rappresenta il principale banco di prova per i requisiti di analisi
-multilivello e correlazione introdotti nella Sottosezione~\ref{sec:requisiti}.
+specifiche di interfaccia e definizioni infrastrutturali --- essa rappresenta
+il principale banco di prova per i requisiti di analisi multilivello e
+correlazione introdotti nella Sottosezione~\ref{sec:requisiti}. La
+trattazione è limitata al rilevamento statico: le condizioni descritte sono
+riconosciute interamente sugli artefatti di progetto, e la verifica dinamica
+prevista dal terzo requisito, demandata ad altri moduli della piattaforma,
+non è oggetto di questa sezione.
 
 \subsection{Architettura del sistema}
 \label{sec:architettura}
@@ -229,8 +233,8 @@ registra la sorgente, la categoria, la severità su quattro livelli
 (\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, oltre a
 \texttt{INFO} per le note informative), un grado di confidenza fra $0$ e $1$,
 la posizione nel file, l'eventuale risorsa infrastrutturale o endpoint
-interessato, una chiave di correlazione e l'eventuale evidenza raccolta a
-runtime. La Figura~\ref{fig:uml-componenti} mostra i
+interessato e una chiave di correlazione. La
+Figura~\ref{fig:uml-componenti} mostra i
 componenti raggruppati per livello e le dipendenze fra i livelli: la
 presentazione dipende dall'applicazione, l'applicazione dal dominio, e
 l'infrastruttura realizza le interfacce che il dominio dichiara.
@@ -247,31 +251,24 @@ propri.}
 \label{fig:uml-componenti}
 \end{figure}
 
-Due interfacce astratte fissano il contratto dei componenti di analisi.
-\texttt{IScanner} è implementata dagli \emph{adapter} che avvolgono strumenti
-esterni --- Checkov per le definizioni
+Un'interfaccia astratta, \texttt{IScanner}, fissa il contratto dei
+componenti di analisi. È implementata dagli \emph{adapter} che avvolgono
+strumenti esterni --- Checkov per le definizioni
 infrastrutturali~\cite{checkov2026docs}, Spectral per la specifica
 dell'interfaccia~\cite{spectral2026docs}, Semgrep per il
-codice~\cite{semgrep2026docs} e ZAP~\cite{zap2026docs} per la
-sollecitazione attiva dell'API --- e ha il compito di eseguire lo strumento,
-leggerne l'uscita e tradurla in Finding; un adapter distinto carica il
-traffico catturato da mitmproxy~\cite{mitmproxy2026docs}, che alimenta i
-detector dinamici. \texttt{IDetector} è implementata dai moduli interni, che
-non invocano strumenti ma reagiscono a eventi. Il diagramma delle classi in
+codice~\cite{semgrep2026docs} --- e ha il compito di eseguire lo strumento,
+leggerne l'uscita e tradurla in Finding. Il diagramma delle classi in
 Figura~\ref{fig:uml-classi} riporta l'entità Finding con i suoi oggetti
-valore, le enumerazioni di severità e stato, l'interfaccia con i quattro
-adapter che la realizzano e il motore di correlazione. I componenti non si chiamano infatti a
+valore, l'enumerazione della severità, l'interfaccia con i tre adapter che la
+realizzano e il motore di correlazione. I componenti non si chiamano a
 vicenda: comunicano attraverso un bus di eventi su cui l'orchestratore
-pubblica il completamento dell'analisi statica, la disponibilità del traffico
-catturato, ogni segnalazione rilevata e il completamento della pipeline.
-L'esecuzione procede in fasi: gli scanner statici vengono eseguiti sul
-repository bersaglio; l'evento di completamento sveglia i detector che
-lavorano sugli artefatti; se è disponibile traffico registrato, un secondo
-evento sveglia quelli che lavorano sulle risposte del sistema; le
-segnalazioni raccolte vengono separate in statiche e dinamiche in base alla
-sorgente e consegnate al motore di correlazione, che le unisce e assegna a
-ciascuna un punteggio di rischio. Aggiungere un controllo significa
-registrare un nuovo scanner o detector, senza modificare l'orchestratore.
+pubblica il completamento dell'analisi statica e quello della pipeline.
+L'esecuzione procede in fasi: gli scanner vengono eseguiti sul repository
+bersaglio; l'evento di completamento viene pubblicato a beneficio dei moduli
+che vi si sottoscrivono; le segnalazioni raccolte vengono consegnate al
+motore di correlazione, che le aggrega per chiave e assegna a ciascuna un
+punteggio di rischio. Aggiungere un controllo significa registrare un nuovo
+scanner, senza modificare l'orchestratore.
 
 Il modulo dedicato alla configurazione del codice applicativo, descritto
 nella sottosezione seguente, ha una forma più semplice: espone una funzione
@@ -515,8 +512,8 @@ regole anche ciò che il contratto tace.
 \subsection{Correlazione e punteggio di rischio}
 \label{sec:correlazione}
 
-Il motore di correlazione riceve due insiemi di Finding, statici e dinamici,
-e li unisce in un unico inventario indicizzato per chiave. La chiave è quella
+Il motore di correlazione riceve le segnalazioni prodotte dagli adapter e
+le unisce in un unico inventario indicizzato per chiave. La chiave è quella
 esplicita quando l'adapter l'ha assegnata; altrimenti, per le segnalazioni
 riferite a un endpoint, è la coppia formata da metodo e percorso
 normalizzato; per le risorse infrastrutturali è l'identificativo della
@@ -524,53 +521,47 @@ risorsa; in ultima istanza è la coppia file e riga. La normalizzazione dei
 percorsi sostituisce con il segnaposto \texttt{\{id\}} i segmenti numerici,
 gli UUID, gli hash esadecimali e i parametri di rotta nelle notazioni dei
 diversi framework (\texttt{<id>}, \texttt{\{id\}}, \texttt{:id}), ed elimina
-la stringa di query e il prefisso dell'API gateway locale: così la richiesta
-\texttt{/api/v1/users/12345} osservata nel traffico e la rotta
-\texttt{/api/v1/users/<int:id>} dichiarata nel codice ricevono la stessa
-chiave.
+la stringa di query e il prefisso dell'API gateway locale: così la rotta
+\texttt{/api/v1/users/<int:id>} dichiarata nel codice e l'operazione
+\texttt{/api/v1/users/\{userId\}} del contratto ricevono la stessa chiave.
 
-Le segnalazioni statiche vengono indicizzate per prime; se due condividono la
-chiave vengono fuse conservando la severità maggiore. Le segnalazioni
-dinamiche vengono poi confrontate con l'indice. Quando una trova una
-controparte statica, questa acquisisce l'evidenza runtime, sale di un
-livello di severità (\texttt{HIGH} diventa
-\texttt{CRITICAL}, ogni altro livello diventa \texttt{HIGH}) e porta la
-confidenza a $1$: la condizione prevista sull'artefatto è stata osservata nel
-comportamento del sistema. Quando non la trova, entra nell'inventario come
-segnalazione a sé stante, con confidenza $0{,}9$. È il terzo requisito reso
-operativo: l'analisi statica formula l'ipotesi, l'evidenza dinamica la
-riscontra, e la distinzione fra le due resta leggibile nell'evidenza allegata
-alla segnalazione. La Figura~\ref{fig:uml-sequenza} colloca la correlazione
-nella sequenza completa della pipeline: le scansioni statiche, i due eventi
-che svegliano i detector, la separazione delle segnalazioni per sorgente,
-la correlazione e il calcolo del punteggio; la pubblicazione dell'evento
-di completamento della pipeline, che chiude la sequenza, è omessa.
+Le segnalazioni vengono indicizzate una alla volta; quando due condividono la
+chiave vengono fuse in una sola, che conserva la severità maggiore, l'unione
+dei riferimenti e i dati grezzi di entrambe. È il secondo requisito reso
+operativo sul piano statico: una condizione rilevata nel contratto e una
+rilevata nel codice o nel manifest sulla stessa risorsa confluiscono in
+un'unica voce, e il rapporto finale non ripete la stessa esposizione per ogni
+livello che l'ha vista. Il motore accetta anche un secondo insieme di
+segnalazioni, riservato ai moduli della piattaforma che operano a runtime,
+che nel perimetro di questa sezione resta vuoto. La
+Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica: le
+scansioni, l'evento di completamento, la correlazione e il calcolo del
+punteggio.
 
 \begin{figure}[tbp]
 \centering
 \input{figure/uml-sequenza-correlazione}
-\caption[Diagramma di sequenza della pipeline]{Diagramma UML di sequenza della pipeline dell'orchestratore.
-\texttt{IScanner} rappresenta gli adapter statici (Checkov, Spectral,
-Semgrep); \texttt{IDetector} i moduli che reagiscono agli eventi di
-completamento della scansione statica e di cattura del traffico.}
+\caption[Diagramma di sequenza della pipeline statica]{Diagramma UML di
+sequenza della pipeline statica dell'orchestratore. \texttt{IScanner}
+rappresenta gli adapter Checkov, Spectral e Semgrep; il secondo argomento di
+\texttt{correlate}, riservato alle segnalazioni a runtime di altri moduli, è
+vuoto.}
 \label{fig:uml-sequenza}
 \end{figure}
 
 Le segnalazioni delle cinque regole applicative non attraversano oggi questo
 motore: il modulo restituisce il proprio rapporto, che il runner unificato e
 il cruscotto presentano accanto a quelli degli altri moduli, mentre la
-correlazione opera sulle segnalazioni degli adapter infrastrutturale e
-contrattuale e su quelle dinamiche. Ne segue che una politica CORS aperta
-riconosciuta nel codice e un'intestazione
-\texttt{Access-Control-Allow-Origin: *} osservata nel traffico restano, allo
-stato attuale, due segnalazioni distinte; la loro unione è la naturale
-estensione del meccanismo appena descritto, non un meccanismo diverso.
+correlazione opera sulle segnalazioni degli adapter infrastrutturale,
+contrattuale e del codice. Ne segue che una segnalazione del modulo e una di
+Checkov o di Spectral sulla stessa risorsa restano, allo stato attuale, due
+voci distinte; la loro unione è la naturale estensione del meccanismo appena
+descritto, non un meccanismo diverso.
 
 Il punteggio di rischio segue una decisione documentata fra le scelte
 architetturali del sistema: un modello pesato proprio, preferito al CVSS
 perché quest'ultimo richiede la composizione di un vettore che nessuno degli
-strumenti integrati produce e non offre un modo naturale di rappresentare il
-riscontro a runtime. Il punteggio è
+strumenti integrati produce. Il punteggio è
 \begin{equation}
 R = \min\bigl(10,\; 0{,}6\,S + 0{,}2 \cdot 10\,C + 0{,}2\,X\bigr),
 \label{eq:risk-score}
@@ -583,10 +574,10 @@ sensibili e $2$ se è dichiarata pubblica; quando nessuna informazione di
 contesto è disponibile, $X$ vale $6$ per le segnalazioni di autenticazione e
 autorizzazione e $3$ per le altre. Pesi e costanti risiedono in un modulo di
 configurazione centrale e non nelle regole, come richiede il quarto
-requisito. Un esempio rende leggibile l'effetto del riscontro a runtime: una
-segnalazione \texttt{HIGH} con confidenza $0{,}95$ e contesto predefinito
-vale $6{,}7$; la stessa segnalazione dopo il riscontro, divenuta
-\texttt{CRITICAL} con confidenza $1$, vale $8{,}0$.
+requisito. Per le segnalazioni degli adapter, la cui confidenza è $1$, il
+punteggio dipende soltanto da severità e contesto: con il contesto
+predefinito una segnalazione \texttt{MEDIUM} vale $5{,}3$, una
+\texttt{HIGH} $6{,}8$ e una \texttt{CRITICAL} $8{,}0$.
 
 Ogni segnalazione conserva infine la protezione mancante come indicazione
 correttiva --- per SC-002, leggere il flag dall'ambiente; per SC-005,
