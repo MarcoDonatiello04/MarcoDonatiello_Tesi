@@ -239,18 +239,37 @@ registra la sorgente, la categoria, la severità su quattro livelli
 la posizione nel file, l'eventuale risorsa infrastrutturale o endpoint
 interessato, una chiave di correlazione e uno stato di convalida, che vale
 \texttt{NOT\_VALIDATED} finché non interviene un riscontro dinamico e
-\texttt{CONFIRMED} dopo.
+\texttt{CONFIRMED} dopo. La Figura~\ref{fig:uml-componenti} mostra i
+componenti raggruppati per livello e le dipendenze fra i livelli: la
+presentazione dipende dall'applicazione, l'applicazione dal dominio, e
+l'infrastruttura realizza le interfacce che il dominio dichiara.
+
+\begin{figure}[tbp]
+\centering
+\input{figure/uml-componenti}
+\caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti del sistema, raggruppati per livello
+architetturale. Le frecce tratteggiate indicano dipendenze; quella con la
+punta triangolare vuota indica la realizzazione delle interfacce di dominio da
+parte degli adapter. I moduli per categoria, fra cui quello per la Security
+Misconfiguration, sono invocati dal livello di presentazione e usano modelli
+propri.}
+\label{fig:uml-componenti}
+\end{figure}
 
 Due interfacce astratte fissano il contratto dei componenti di analisi.
 \texttt{IScanner} è implementata dagli \emph{adapter} che avvolgono strumenti
 esterni --- Checkov per le definizioni
 infrastrutturali~\cite{checkov2026docs}, Spectral per la specifica
 dell'interfaccia~\cite{spectral2026docs}, Semgrep per il
-codice~\cite{semgrep2026docs}, ZAP~\cite{zap2026docs} e
-mitmproxy~\cite{mitmproxy2026docs} per il traffico --- e ha il compito di
-eseguire lo strumento, leggerne l'uscita e tradurla in Finding.
-\texttt{IDetector} è implementata dai moduli interni, che non invocano
-strumenti ma reagiscono a eventi. I componenti non si chiamano infatti a
+codice~\cite{semgrep2026docs} e ZAP~\cite{zap2026docs} per la
+sollecitazione attiva dell'API --- e ha il compito di eseguire lo strumento,
+leggerne l'uscita e tradurla in Finding; un adapter distinto carica il
+traffico catturato da mitmproxy~\cite{mitmproxy2026docs}, che alimenta i
+detector dinamici. \texttt{IDetector} è implementata dai moduli interni, che
+non invocano strumenti ma reagiscono a eventi. Il diagramma delle classi in
+Figura~\ref{fig:uml-classi} riporta l'entità Finding con i suoi oggetti
+valore, le enumerazioni di severità e stato, l'interfaccia con i quattro
+adapter che la realizzano e il motore di correlazione. I componenti non si chiamano infatti a
 vicenda: comunicano attraverso un bus di eventi su cui l'orchestratore
 pubblica il completamento dell'analisi statica, la disponibilità del traffico
 catturato, ogni segnalazione rilevata e il completamento della pipeline.
@@ -272,7 +291,21 @@ segnalazione porta l'identificativo della regola, la debolezza CWE associata,
 la severità, il file e la riga, l'estratto di codice che costituisce
 l'evidenza, la protezione mancante espressa come indicazione correttiva e la
 confidenza. Il modulo è invocato, accanto ai moduli dedicati alle altre
-categorie, dal runner unificato e dal cruscotto di presentazione.
+categorie, dal runner unificato e dal cruscotto di presentazione; i suoi
+modelli, \texttt{MisconfigReport} e \texttt{MisconfigFinding}, compaiono
+nella Figura~\ref{fig:uml-classi} separati dall'entità di dominio, perché
+tali sono nel codice.
+
+\begin{figure}[tbp]
+\centering
+\input{figure/uml-classi}
+\caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma UML delle classi del dominio e del motore di
+correlazione. \texttt{Severity} e \texttt{ValidationStatus} sono
+enumerazioni; \texttt{APIEndpointNormalizer} espone solo metodi di classe.
+In basso a sinistra i modelli del modulo per la Security Misconfiguration,
+che non derivano da \texttt{Finding}.}
+\label{fig:uml-classi}
+\end{figure}
 
 \subsection{Analisi del codice applicativo}
 \label{sec:analisi-codice}
@@ -297,8 +330,19 @@ l'assenza di una protezione --- non è attribuibile a un file ma al repository
 nel suo insieme. Le segnalazioni con confidenza inferiore a $0{,}70$ vengono
 scartate prima di comporre il rapporto: la soglia è il compromesso adottato
 fra copertura e rumore, e il suo effetto sulle singole regole è discusso più
-avanti. La Tabella~\ref{tab:regole-misconfig} riassume le regole; i paragrafi
-che seguono ne descrivono il funzionamento.
+avanti. La Figura~\ref{fig:uml-attivita} riporta il diagramma di attività
+della funzione \texttt{analyze}; la Tabella~\ref{tab:regole-misconfig}
+riassume le regole, e i paragrafi che seguono ne descrivono il funzionamento.
+
+\begin{figure}[tbp]
+\centering
+\input{figure/uml-attivita-misconfig}
+\caption[Diagramma di attività del modulo di analisi del codice]{Diagramma UML di attività della funzione \texttt{analyze} del
+modulo di analisi del codice applicativo. Le quattro regole locali sono
+invocate su ogni file; la regola globale SC-004 e il filtro di confidenza
+operano una sola volta, a valle del ciclo.}
+\label{fig:uml-attivita}
+\end{figure}
 
 \begin{table}[htbp]
 \centering
@@ -322,7 +366,7 @@ SC-005 & 798 & Letterale stringa assegnato a una variabile dal nome
 sensibile & \texttt{CRITICAL} & $0{,}40$--$0{,}90$ \\
 \bottomrule
 \end{tabularx}
-\caption{Regole di analisi del codice applicativo per la Security
+\caption[Regole di analisi del codice applicativo]{Regole di analisi del codice applicativo per la Security
 Misconfiguration. La confidenza è quella assegnata prima del filtro a
 $0{,}70$.}
 \label{tab:regole-misconfig}
@@ -505,7 +549,21 @@ comportamento del sistema. Quando non la trova, entra nell'inventario come
 segnalazione confermata a sé stante, con confidenza $0{,}9$. È il terzo
 requisito reso operativo: l'analisi statica formula l'ipotesi, l'evidenza
 dinamica la conferma, e la distinzione fra le due resta leggibile nello stato
-della segnalazione.
+della segnalazione. La Figura~\ref{fig:uml-sequenza} colloca la correlazione
+nella sequenza completa della pipeline: le scansioni statiche, i due eventi
+che svegliano i detector, la separazione delle segnalazioni per sorgente,
+la correlazione e il calcolo del punteggio; la pubblicazione dell'evento
+di completamento della pipeline, che chiude la sequenza, è omessa.
+
+\begin{figure}[tbp]
+\centering
+\input{figure/uml-sequenza-correlazione}
+\caption[Diagramma di sequenza della pipeline]{Diagramma UML di sequenza della pipeline dell'orchestratore.
+\texttt{IScanner} rappresenta gli adapter statici (Checkov, Spectral,
+Semgrep); \texttt{IDetector} i moduli che reagiscono agli eventi di
+completamento della scansione statica e di cattura del traffico.}
+\label{fig:uml-sequenza}
+\end{figure}
 
 Le segnalazioni delle cinque regole applicative non attraversano oggi questo
 motore: il modulo restituisce il proprio rapporto, che il runner unificato e

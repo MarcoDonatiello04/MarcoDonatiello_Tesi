@@ -147,6 +147,15 @@ bindingoffset=15mm,marginpar=2cm,headheight=15pt,reversemp]{geometry}
 \usetikzlibrary{arrows}
 \usetikzlibrary{backgrounds}
 \usetikzlibrary{positioning,fit,calc,arrows.meta}
+\usetikzlibrary{shapes.geometric,shapes.misc}
+% Diagrammi UML disegnati in TikZ: classi (pgf-umlcd) e sequenza (pgf-umlsd).
+% L'opzione simplified omette i compartimenti vuoti delle classi.
+\usepackage[simplified]{pgf-umlcd}
+\usepackage{pgf-umlsd}
+% Una figura da sola occupa una pagina intera solo se ne riempie almeno i
+% tre quarti; altrimenti il testo le scorre accanto.
+\renewcommand{\floatpagefraction}{0.8}
+\renewcommand{\topfraction}{0.85}
 %\usepackage{pgflibraryarrows}
 %\usepackage{pgflibrarysnakes}
 % opzionali per tikz

@@ -1,0 +1,55 @@
+% !TEX root = ../main.tex
+% Diagramma UML di sequenza della pipeline run_pipeline() dell'orchestratore:
+% scansioni statiche, eventi, detector e correlazione con punteggio.
+% NB: \mess usa il testo del messaggio come nome di nodo TikZ: niente
+% parentesi, virgole o macro nel terzo argomento.
+\linespread{1.0}\selectfont
+% Ridotto alla larghezza del testo solo se la eccede.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{sequencediagram}
+  % passo verticale fra i livelli (default 0.6cm): compattato
+  \renewcommand{\unitfactor}{0.55}
+  \tikzstyle{inststyle}+=[font=\footnotesize, rounded corners=0pt, fill=white]
+  \tikzset{every node/.style={font=\footnotesize}}
+  \newthread[white]{orc}{Orchestratore}
+  \newinst[1.0]{sc}{IScanner}
+  \newinst[1.4]{bus}{EventBus}
+  \newinst[0.9]{det}{IDetector}
+  \newinst[1.0]{eng}{RiskCorrelationEngine}
+%
+  \begin{sdblock}{loop}{per ogni scanner statico}
+    \begin{call}{orc}{scan(target\_dir)}{sc}{list[Finding]}
+    \end{call}
+  \end{sdblock}
+  \postlevel
+%
+  \begin{call}{orc}{publish(STATIC\_SCAN\_COMPLETED)}{bus}{}
+    \begin{call}{bus}{handler(event)}{det}{}
+      \mess{det}{pubblica finding rilevato}{bus}
+    \end{call}
+  \end{call}
+%
+  \begin{sdblock}{opt}{traffico catturato disponibile}
+    \begin{call}{orc}{publish(TRAFFIC\_CAPTURED)}{bus}{}
+      \begin{call}{bus}{handler(event)}{det}{}
+        \mess{det}{pubblica finding rilevato}{bus}
+      \end{call}
+    \end{call}
+  \end{sdblock}
+%
+  \begin{callself}{orc}{separa statici e dinamici per sorgente}{}
+  \end{callself}
+%
+  \begin{call}{orc}{correlate(static, runtime)}{eng}{list[Finding]}
+    \begin{callself}[2]{eng}{\shortstack[l]{indicizza gli statici per chiave\\ e fonde i duplicati}}{}
+    \end{callself}
+    \begin{callself}[2]{eng}{\shortstack[l]{chiave trovata a runtime:\\ CONFIRMED, severità +1, confidenza 1}}{}
+    \end{callself}
+  \end{call}
+%
+  \begin{sdblock}{loop}{per ogni finding correlato}
+    \begin{call}{orc}{calculate\_risk\_score(finding)}{eng}{score}
+    \end{call}
+  \end{sdblock}
+\end{sequencediagram}%
+}

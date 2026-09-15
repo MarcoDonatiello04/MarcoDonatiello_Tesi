@@ -1,0 +1,114 @@
+% !TEX root = ../main.tex
+% Diagramma UML delle classi: entita' Finding con i suoi oggetti valore, le
+% enumerazioni, l'interfaccia IScanner con gli adapter, il motore di
+% correlazione e i modelli propri del modulo applicativo. Il disegno e' su
+% un canvas largo e viene ridotto alla larghezza del testo.
+\linespread{1.0}\selectfont
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[font=\scriptsize]
+\def\umldrawcolor{black}
+\def\umlfillcolor{white}
+\def\umltextcolor{black}
+% --- Entita' di dominio e oggetti valore -----------------------------------
+\begin{class}[text width=4.6cm]{Finding}{6.3,0}
+  \attribute{finding\_id: str}
+  \attribute{source: FindingSource}
+  \attribute{category: FindingCategory}
+  \attribute{severity: Severity}
+  \attribute{confidence: float}
+  \attribute{rule\_id, cwe\_id: str}
+  \attribute{resource\_id: str}
+  \attribute{correlation\_key: str}
+  \attribute{validation\_status: ValidationStatus}
+  \attribute{related\_findings: list[str]}
+  \operation{create(\ldots): Finding}
+  \operation{to\_dict(): dict}
+\end{class}
+\begin{class}[text width=2.8cm]{CodeLocation}{1.2,1.7}
+  \attribute{file\_path: str}
+  \attribute{start\_line: int}
+  \attribute{end\_line: int}
+\end{class}
+\begin{class}[text width=2.8cm]{APIContext}{1.2,-1.6}
+  \attribute{endpoint: str}
+  \attribute{method: str}
+  \attribute{base\_url: str}
+\end{class}
+\begin{class}[text width=3.9cm]{RuntimeEvidence}{12.9,1.7}
+  \attribute{tested\_url: str}
+  \attribute{http\_status: int}
+  \attribute{response\_headers: dict}
+\end{class}
+\begin{class}[text width=3.9cm]{RiskContext}{12.9,-1.6}
+  \attribute{internet\_exposed: bool}
+  \attribute{sensitive\_data\_detected: bool}
+  \attribute{public\_resource: bool}
+\end{class}
+\composition{Finding}{location}{0..1}{CodeLocation}
+\composition{Finding}{api}{0..1}{APIContext}
+\composition{Finding}{runtime\_evidence}{0..1}{RuntimeEvidence}
+\composition{Finding}{risk\_context}{0..1}{RiskContext}
+% --- Enumerazioni ----------------------------------------------------------
+\begin{class}[text width=2.6cm]{Severity}{1.2,-6.0}
+  \attribute{CRITICAL = 9.0}
+  \attribute{HIGH = 7.0}
+  \attribute{MEDIUM = 4.5}
+  \attribute{LOW = 2.0}
+  \attribute{INFO}
+  \operation{score(): float}
+\end{class}
+\begin{class}[text width=2.8cm]{ValidationStatus}{4.3,-6.0}
+  \attribute{NOT\_VALIDATED}
+  \attribute{CONFIRMED}
+\end{class}
+\unidirectionalAssociation{Finding}{}{1}{Severity}
+\unidirectionalAssociation{Finding}{}{1}{ValidationStatus}
+% --- Motore di correlazione ------------------------------------------------
+\begin{class}[text width=5.0cm]{RiskCorrelationEngine}{9.1,-6.0}
+  \attribute{correlated\_findings: dict[str, Finding]}
+  \operation{correlate(static, runtime): list[Finding]}
+  \operation{calculate\_risk\_score(f): float}
+\end{class}
+\begin{staticclass}[text width=3.6cm]{APIEndpointNormalizer}{9.1,-9.6}
+  \operation{normalize\_path(path): str}
+\end{staticclass}
+\unidirectionalAssociation{RiskCorrelationEngine}{}{*}{Finding}
+\draw[umlcd style, dashed, ->] (RiskCorrelationEngine) -- (APIEndpointNormalizer)
+  node[midway, right, font=\scriptsize]{\guillemotleft use\guillemotright};
+% --- Interfaccia scanner e adapter -----------------------------------------
+\begin{interface}[text width=3.9cm]{IScanner}{14.0,-6.0}
+  \operation{scan(target\_dir): list[Finding]}
+\end{interface}
+\draw[umlcd style, dashed, ->] (IScanner) -- (Finding)
+  node[pos=0.3, above, sloped, font=\scriptsize]{\guillemotleft create\guillemotright};
+\begin{class}[text width=3.3cm]{CheckovScannerAdapter}{12.6,-9.2}
+  \implement{IScanner}
+\end{class}
+\begin{class}[text width=3.3cm]{SpectralScannerAdapter}{16.3,-9.2}
+  \implement{IScanner}
+\end{class}
+\begin{class}[text width=3.3cm]{SemgrepScannerAdapter}{12.6,-10.9}
+  \implement{IScanner}
+\end{class}
+\begin{class}[text width=3.3cm]{ZapClientAdapter}{16.3,-10.9}
+  \implement{IScanner}
+\end{class}
+% --- Modelli del modulo Security Misconfiguration --------------------------
+\begin{class}[text width=3.4cm]{MisconfigReport}{0.2,-10.4}
+  \attribute{target\_path: str}
+  \attribute{coverage\_signals: dict[str, bool]}
+  \attribute{summary: dict}
+\end{class}
+\begin{class}[text width=3.6cm]{MisconfigFinding}{5.0,-10.4}
+  \attribute{rule\_id, cwe\_id: str}
+  \attribute{severity: str}
+  \attribute{file\_path: str}
+  \attribute{line\_number: int}
+  \attribute{evidence: str}
+  \attribute{missing\_guard: str}
+  \attribute{confidence: float}
+\end{class}
+\draw[umlcd style, fill=\umldrawcolor, diamond->] (MisconfigReport) -- (MisconfigFinding)
+  node[midway, above, font=\scriptsize]{findings} node[midway, below, font=\scriptsize]{*};
+\end{tikzpicture}%
+}
