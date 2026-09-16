@@ -4,7 +4,7 @@
 % controllo fallito in un Finding di dominio.
 \linespread{1.0}\selectfont
 % Ridotto per contenere l'altezza della figura entro la pagina.
-\resizebox{0.86\linewidth}{!}{%
+\resizebox{0.88\linewidth}{!}{%
 \begin{tikzpicture}[
   font=\footnotesize,
   >=Stealth,
@@ -35,9 +35,11 @@
 % --- Colonna destra: ciclo sui controlli falliti ----------------------------
 \node[decision, right=2.4cm of read] (more) {altro controllo\\ fallito?};
 \node[action, below=0.6cm of more] (derive)
-  {Deriva categoria e severità\\ {\scriptsize parole chiave su identificativo del controllo e tipo di risorsa}};
-\node[action, below=of derive] (mk)
-  {Componi il Finding\\ {\scriptsize file e righe; chiave = ultimo segmento del nome della risorsa; confidenza 1; titolo dal controllo; record grezzo allegato}};
+  {Deriva la categoria\\ {\scriptsize parole chiave su identificativo, nome ufficiale e tipo di risorsa}};
+\node[action, below=of derive] (classify)
+  {Classifica con il catalogo delle policy\\ {\scriptsize mappatura per identificativo, prefisso, parole chiave sul nome, predefinito $\rightarrow$ natura, severità, esposizione pubblica}};
+\node[action, below=of classify] (mk)
+  {Componi il Finding\\ {\scriptsize file e righe; chiave = ultimo segmento del nome della risorsa; confidenza 1; titolo dal controllo; contesto di rischio se pubblica; record grezzo allegato}};
 \node[action, below=of mk] (acc) {Accoda alla lista};
 \node[action, below=1.0cm of acc] (ret) {Restituisci la lista di Finding};
 \node[final, below=of ret] (end) {};
@@ -57,7 +59,8 @@
 \draw[flow] (ok) -- node[guard, right] {[sì]} (read);
 \draw[flow] (read.east) -- (more.west);
 \draw[flow] (more) -- node[guard, right] {[sì]} (derive);
-\draw[flow] (derive) -- (mk);
+\draw[flow] (derive) -- (classify);
+\draw[flow] (classify) -- (mk);
 \draw[flow] (mk) -- (acc);
 \draw[flow] (acc.east) -- (railR |- acc) -- (railR |- more) -- (more.east);
 \draw[flow] (more.north) -- node[guard, right] {[no]} ++(0,0.45) -| (railN |- more) -- (railN |- ret) -- (ret.east);

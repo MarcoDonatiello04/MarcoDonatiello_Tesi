@@ -1,7 +1,7 @@
 % !TEX root = ../main.tex
 % Diagramma UML delle classi: entita' Finding con i suoi oggetti valore,
-% l'enumerazione Severity, l'interfaccia IScanner con l'adapter Checkov e il
-% motore di correlazione. Il disegno e' su
+% le enumerazioni Severity e FindingNature, l'interfaccia IScanner con
+% l'adapter Checkov e il suo catalogo delle policy, e il motore di correlazione. Il disegno e' su
 % un canvas largo e viene ridotto alla larghezza del testo.
 \linespread{1.0}\selectfont
 \resizebox{\linewidth}{!}{%
@@ -20,8 +20,10 @@
   \attribute{resource\_id: str}
   \attribute{correlation\_key: str}
   \attribute{related\_findings: list[str]}
+  \attribute{nature: FindingNature}
   \operation{create(\ldots): Finding}
-  \operation{to\_dict(): dict}
+  \operation{nature\_rank(): int}
+  \operation{is\_directly\_exploitable(): bool}
 \end{class}
 \begin{class}[text width=2.8cm]{CodeLocation}{1.2,1.7}
   \attribute{file\_path: str}
@@ -42,7 +44,7 @@
 \composition{Finding}{api}{0..1}{APIContext}
 \composition{Finding}{risk\_context}{0..1}{RiskContext}
 % --- Enumerazione ----------------------------------------------------------
-\begin{class}[text width=2.6cm]{Severity}{3.2,-6.0}
+\begin{class}[text width=2.6cm]{Severity}{1.2,-6.0}
   \attribute{CRITICAL = 9.0}
   \attribute{HIGH = 7.0}
   \attribute{MEDIUM = 4.5}
@@ -50,12 +52,19 @@
   \attribute{INFO}
   \operation{score(): float}
 \end{class}
+\begin{class}[text width=2.9cm]{FindingNature}{4.6,-6.0}
+  \attribute{EXPOSURE}
+  \attribute{HARDENING}
+  \operation{rank(): int}
+\end{class}
 \unidirectionalAssociation{Finding}{}{1}{Severity}
+\unidirectionalAssociation{Finding}{}{0..1}{FindingNature}
 % --- Motore di correlazione ------------------------------------------------
 \begin{class}[text width=5.0cm]{RiskCorrelationEngine}{9.1,-6.0}
   \attribute{correlated\_findings: dict[str, Finding]}
   \operation{correlate(static, runtime): list[Finding]}
   \operation{calculate\_risk\_score(f): float}
+  \operation{\_outranks(candidate, incumbent): bool}
 \end{class}
 \begin{staticclass}[text width=3.6cm]{APIEndpointNormalizer}{9.1,-9.6}
   \operation{normalize\_path(path): str}
@@ -71,7 +80,21 @@
   node[pos=0.3, above, sloped, font=\scriptsize]{\guillemotleft create\guillemotright};
 \begin{class}[text width=3.9cm]{CheckovScannerAdapter}{14.0,-9.4}
   \operation{scan(target\_dir): list[Finding]}
+  \operation{build\_finding(check): Finding}
 \end{class}
 \draw[umlcd style, dashed, ->, >=open triangle 45] (CheckovScannerAdapter) -- (IScanner);
+\begin{class}[text width=4.7cm]{CheckovPolicyCatalog}{14.2,-12.6}
+  \attribute{policies, prefixes, keywords}
+  \operation{classify(id, name): PolicyClassification}
+\end{class}
+\begin{class}[text width=3.4cm]{PolicyClassification}{8.6,-12.6}
+  \attribute{nature: FindingNature}
+  \attribute{severity: Severity}
+  \attribute{public\_facing: bool}
+  \attribute{matched\_by: str}
+\end{class}
+\unidirectionalAssociation{CheckovScannerAdapter}{policy\_catalog}{1}{CheckovPolicyCatalog}
+\draw[umlcd style, dashed, ->] (CheckovPolicyCatalog) -- (PolicyClassification)
+  node[midway, above, font=\scriptsize]{\guillemotleft create\guillemotright};
 \end{tikzpicture}%
 }
