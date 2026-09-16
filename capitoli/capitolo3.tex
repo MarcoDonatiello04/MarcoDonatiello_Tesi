@@ -434,10 +434,9 @@ precede un irrobustimento; a parità di natura prevale la severità maggiore.
 Un controllo di natura inferiore non altera mai la severità della
 rappresentante e resta come sotto-elemento della voce, con la propria natura
 e severità: nulla viene scartato, e una sola esecuzione restituisce l'intero
-insieme delle condizioni da correggere. Il motore accetta anche un secondo
-insieme di segnalazioni, riservato ai moduli che operano a runtime, che nel
-perimetro di questa sezione resta vuoto. La Figura~\ref{fig:uml-sequenza}
-riporta la sequenza della pipeline statica.
+insieme delle condizioni da correggere. Un secondo insieme di segnalazioni,
+riservato ai moduli a runtime, resta qui vuoto. La
+Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica.
 
 \begin{figure}[tbp]
 \centering
@@ -466,11 +465,9 @@ segnalazioni infrastrutturali, con confidenza $1$, un'esposizione
 \texttt{CRITICAL} su risorsa pubblica vale $8{,}6$, una \texttt{HIGH} non
 pubblica $6{,}8$, un irrobustimento \texttt{LOW} $3{,}2$. Il cruscotto ordina
 le voci per natura e severità e, sotto ciascuna, elenca i controlli
-aggregati; ogni voce e ogni controllo aggregato è corredato di
-un'indicazione correttiva da un motore di remediation, che consulta una base
-di conoscenza locale indicizzata per controllo e, in sua assenza, un modello
-linguistico eseguito localmente tramite Ollama, senza che alcun frammento
-della definizione infrastrutturale lasci la macchina dell'analista.
+aggregati; ogni voce e ogni controllo aggregato riceve un'indicazione
+correttiva da una base di conoscenza locale indicizzata per controllo o, in
+sua assenza, da un modello linguistico eseguito localmente.
 
 \subsection{Validazione e limiti}
 \label{sec:validazione-misconfig}
