@@ -4,7 +4,7 @@
 % controllo fallito in un Finding di dominio.
 \linespread{1.0}\selectfont
 % Ridotto per contenere l'altezza della figura entro la pagina.
-\resizebox{0.88\linewidth}{!}{%
+\resizebox{0.92\linewidth}{!}{%
 \begin{tikzpicture}[
   font=\footnotesize,
   >=Stealth,
@@ -22,13 +22,8 @@
 ]
 % --- Colonna sinistra: esecuzione dello strumento ---------------------------
 \node[initial] (start) {};
-\node[decision, below=of start] (cfg) {\texttt{.checkov.yaml}\\ nella directory di lavoro?};
-\node[action, below=0.6cm of cfg, xshift=-3.3cm, text width=4.0cm] (usecfg)
-  {Usa la configurazione\\ {\scriptsize directory e percorsi esclusi}};
-\node[action, below=0.6cm of cfg, xshift=3.3cm, text width=4.0cm] (usedir)
-  {Usa la directory bersaglio\\ {\scriptsize \texttt{-d target\_dir}}};
-\node[action, below=2.6cm of cfg] (run)
-  {Esegui \texttt{checkov -o json}\\ {\scriptsize senza policy esterne; limite 60~s}};
+\node[action, below=of start, text width=5.4cm] (run)
+  {Esegui Checkov sul bersaglio\\ {\scriptsize \texttt{-d target\_dir}, uscita JSON, senza policy esterne; opzioni accessorie da \texttt{.checkov.yaml} se presente; limite 60~s}};
 \node[decision, below=of run] (ok) {uscita JSON\\ ottenuta?};
 \node[action, below=0.6cm of ok] (read)
   {Leggi i rapporti\\ {\scriptsize uno per formato: Terraform, Dockerfile, Kubernetes, segreti, \ldots}};
@@ -46,15 +41,11 @@
 % --- Errore: lista vuota ----------------------------------------------------
 \node[action, left=1.0cm of ret, text width=3.4cm] (empty)
   {Registra l'errore\\ {\scriptsize la lista resta vuota}};
-\coordinate (railL) at ($(usecfg.west)+(-0.4,0)$);
+\coordinate (railL) at ($(run.west)+(-0.6,0)$);
 \coordinate (railR) at ($(derive.east)+(0.5,0)$);
 \coordinate (railN) at ($(derive.east)+(1.0,0)$);
 % --- Flussi -----------------------------------------------------------------
-\draw[flow] (start) -- (cfg);
-\draw[flow] (cfg.west) -| node[guard, pos=0.25, above] {[sì]} (usecfg);
-\draw[flow] (cfg.east) -| node[guard, pos=0.25, above] {[no]} (usedir);
-\draw[flow] (usecfg) |- (run);
-\draw[flow] (usedir) |- (run);
+\draw[flow] (start) -- (run);
 \draw[flow] (run) -- (ok);
 \draw[flow] (ok) -- node[guard, right] {[sì]} (read);
 \draw[flow] (read.east) -- (more.west);

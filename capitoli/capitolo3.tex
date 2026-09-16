@@ -371,12 +371,14 @@ denominazioni sono tradotte dai nomi ufficiali dei controlli.}
 \label{sec:adapter-checkov}
 
 L'adapter esegue Checkov come processo esterno, con un limite di sessanta
-secondi, chiedendo l'uscita in formato JSON. Se nella directory di lavoro è
-presente il file \path{.checkov.yaml}, lo strumento segue quella
-configurazione --- nel sistema: la directory corrente, con l'esclusione
-dell'ambiente virtuale, dei sorgenti della piattaforma, dei test e delle
-directory di uscita --- altrimenti riceve la directory bersaglio passata a
-\texttt{scan}. L'uscita è un rapporto per ciascun formato riconosciuto nel
+secondi, chiedendo l'uscita in formato JSON e indicando come perimetro della
+scansione la sola directory bersaglio ricevuta da \texttt{scan}. Il file
+\path{.checkov.yaml} della piattaforma, se presente nella directory di
+lavoro, aggiunge unicamente opzioni accessorie --- l'esclusione delle
+cartelle degli strumenti (\path{.git}, \path{.terraform}, \path{.venv}) e
+il formato dell'uscita --- e non può ampliare o spostare il perimetro, perché
+gli argomenti da riga di comando prevalgono su quelli del file. L'uscita è un
+rapporto per ciascun formato riconosciuto nel
 bersaglio (Terraform, Dockerfile, Kubernetes, segreti, e così via), e
 l'adapter li attraversa tutti leggendo i soli controlli falliti. La
 Figura~\ref{fig:uml-attivita} riporta il diagramma di attività.
@@ -607,15 +609,16 @@ quella in evidenza, e il resto è consultabile senza confondersi con essa.
 Al secondo scopo serve crAPI~\cite{owasp2026crapi}, nella revisione 1.1.5
 fissata nel repository, che non contiene manifest Terraform ma è distribuita
 con sette Dockerfile, manifest Kubernetes, un chart Helm e un file Docker
-Compose, tutti formati che Checkov riconosce. Lo scanner produce 237
+Compose, tutti formati che Checkov riconosce. Lo scanner produce 240
 segnalazioni, che la correlazione riduce a 46 voci: 207 sui manifest
 Kubernetes, da 22 controlli distinti su 41 risorse --- fra i più frequenti,
 l'uso dello spazio dei nomi predefinito, contenitori che ammettono
 l'escalation di privilegi o girano come root, filesystem non in sola lettura,
 immagini non fissate a un digest --- 14 sui Dockerfile, dove nessuna immagine
 dichiara un controllo di salute e sei su sette non definiscono un utente non
-privilegiato, 13 dal riconoscitore di segreti e 3 sulla specifica OpenAPI,
-che Checkov lint a sua volta. Fra le 13 segnalazioni di segreti, otto
+privilegiato, 13 dal riconoscitore di segreti e 6 sulla specifica OpenAPI,
+che Checkov lint a sua volta e che nel repository compare due volte, una
+copia essendo inclusa nelle risorse del servizio \emph{chatbot}. Fra le 13 segnalazioni di segreti, otto
 riguardano stringhe ad alta entropia nei \texttt{ConfigMap} e nei file di
 composizione, dove crAPI colloca in chiaro le credenziali dei propri
 database, due i token di sessione presenti nella collezione Postman
@@ -623,7 +626,7 @@ distribuita con il progetto, e due il file di integrazione continua di una
 dipendenza Go inclusa nel repository: queste ultime non riguardano il
 bersaglio ma una libreria terza, e sono falsi positivi rispetto allo scopo
 dell'analisi. Anche qui il catalogo copre ogni controllo per mappatura
-esplicita e separa 15 esposizioni da 222 irrobustimenti: in testa alle 46
+esplicita e separa 17 esposizioni da 223 irrobustimenti: in testa alle 46
 voci, con $6{,}8$, stanno i token di sessione della collezione Postman, le
 credenziali nel file della dipendenza e la specifica OpenAPI con operazioni
 prive di requisiti di sicurezza; seguono le stringhe ad alta entropia, e le
@@ -636,7 +639,7 @@ confrontate con l'identificativo del controllo; poiché gli identificativi di
 Checkov hanno la forma \texttt{CKV\_AWS\_53} e non contengono mai
 \texttt{public}, \texttt{admin} o \texttt{encrypt}, le condizioni che
 elevavano la severità non si verificavano mai, tutte le 86 segnalazioni del
-bersaglio di prova e le 237 di crAPI risultavano \texttt{MEDIUM} con lo
+bersaglio di prova e quelle di crAPI risultavano \texttt{MEDIUM} con lo
 stesso punteggio, e la voce del primo bucket portava il titolo del primo
 controllo incontrato, quello sulle notifiche di evento, con l'ACL pubblica
 nascosta fra i controlli collegati. Il bersaglio di prova da solo non
