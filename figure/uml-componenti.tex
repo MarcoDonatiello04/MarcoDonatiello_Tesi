@@ -27,15 +27,16 @@
 \node[comp] (eng) at (7.65,-2.7)  {\st{component}\\ RiskCorrelation\-Engine};
 \node[comp] (rem) at (10.7,-2.7) {\st{component}\\ Remediation\-Engine};
 % --- Dominio ---------------------------------------------------------------
-\node[domcomp] (finding)   at (1.55,-5.4) {\st{entity}\\ Finding};
-\node[domcomp] (iscanner)  at (4.6,-5.4)  {\st{interface}\\ IScanner};
-\node[domcomp] (ieventbus) at (7.65,-5.4) {\st{interface}\\ IEventBus};
-\node[domcomp] (events)    at (10.7,-5.4) {\st{event}\\ Eventi di dominio};
+\node[domcomp] (finding)   at (1.2,-5.4)   {\st{entity}\\ Finding};
+\node[domcomp] (iscanner)  at (3.575,-5.4) {\st{interface}\\ IScanner};
+\node[domcomp] (ieventbus) at (5.95,-5.4)  {\st{interface}\\ IEventBus};
+\node[domcomp] (illm)      at (8.325,-5.4) {\st{interface}\\ ILlmProvider};
+\node[domcomp] (events)    at (10.7,-5.4)  {\st{event}\\ Eventi di dominio};
 % --- Infrastruttura --------------------------------------------------------
 \node[comp] (checkov)  at (1.55,-8.1) {\st{adapter}\\ Checkov};
 \node[comp] (spectral) at (4.6,-8.1)  {\st{adapter}\\ Spectral};
 \node[comp] (semgrep)  at (7.65,-8.1) {\st{adapter}\\ Semgrep};
-\node[comp] (ollama)   at (10.7,-8.1) {\st{provider}\\ Ollama};
+\node[comp] (ollama)   at (10.7,-8.1) {\st{adapter}\\ Ollama};
 % --- Package (livelli) -----------------------------------------------------
 \begin{scope}[on background layer]
   \node[layer, fit=(dash)(runner)(xL |- dash.north)(xR |- dash.north)]        (pres)  {};
@@ -51,5 +52,4 @@
 \draw[dep]  (pres.south)  -- (app.north);
 \draw[dep]  (app.south)   -- (dom.north);
 \draw[real] (infra.north) -- (dom.south);
-\draw[dep]  (app.west) -- ++(-0.45,0) |- (infra.west);
 \end{tikzpicture}
