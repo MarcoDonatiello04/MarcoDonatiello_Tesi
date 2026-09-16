@@ -242,7 +242,11 @@ di difesa in profondità che da sola non costituisce un accesso; una
 segnalazione può anche restare non classificata. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
 per livello e le dipendenze fra i livelli: la presentazione dipende
 dall'applicazione, l'applicazione dal dominio, e l'infrastruttura realizza le
-interfacce che il dominio dichiara.
+interfacce che il dominio dichiara. Il livello di presentazione offre due vie
+d'accesso alla stessa pipeline: un'interfaccia a riga di comando, che
+registra gli adapter, esegue l'orchestratore e scrive i rapporti su file, e
+un cruscotto web basato su FastAPI, che espone la stessa esecuzione come
+servizio e presenta i risultati in pagine interattive.
 
 \begin{figure}[tbp]
 \centering
