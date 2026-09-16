@@ -493,11 +493,12 @@ pubblica, una \texttt{HIGH} rispettivamente $7{,}4$ e $6{,}8$, una
 segnalazione non classificata \texttt{MEDIUM} $5{,}3$, un irrobustimento
 \texttt{MEDIUM} $4{,}7$ e uno \texttt{LOW} $3{,}2$. Il cruscotto ordina le
 voci per natura e severità, marca ciascuna come esposizione o irrobustimento
-e indica quanti altri controlli sono stati aggregati sulla stessa risorsa e
-quanti di essi siano di irrobustimento.
+e, sotto ogni voce, elenca i controlli aggregati sulla stessa risorsa, ognuno
+espandibile con la propria natura e severità.
 
-Ogni voce dell'inventario è infine corredata di un'indicazione correttiva
-da un motore di remediation, che consulta prima una base di conoscenza
+Ogni voce dell'inventario, e ciascuno dei controlli che vi sono aggregati, è
+infine corredata di un'indicazione correttiva da un motore di remediation,
+che consulta prima una base di conoscenza
 locale indicizzata per identificativo di controllo --- per i controlli
 Checkov vi compaiono, ad esempio, \texttt{CKV\_AWS\_20}, \texttt{CKV\_AWS\_21}
 e \texttt{CKV\_AWS\_53}, ciascuno con descrizione, impatto e passi di
