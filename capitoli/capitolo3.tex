@@ -265,7 +265,7 @@ Semgrep e Spectral, non trattati, realizzano la stessa interfaccia.}
 \label{fig:uml-classi}
 \end{figure}
 
-Il Finding registra la sorgente, la categoria, la severità su quattro livelli
+Il Finding registra la sorgente, la categoria, la severità
 (\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, oltre a
 \texttt{INFO} per le note informative), un grado di confidenza fra $0$ e $1$,
 la posizione nel file, la risorsa infrastrutturale interessata, la regola
@@ -367,27 +367,24 @@ denominazioni sono tradotte dai nomi ufficiali dei controlli.}
 \label{tab:policy-checkov}
 \end{table}
 
-L'adapter esegue Checkov sulla sola directory bersaglio, in formato JSON e
-senza policy scaricate dal produttore, e traduce ogni controllo fallito in un
-Finding, come mostra la Figura~\ref{fig:uml-attivita}. La categoria è derivata
-con parole chiave da identificativo, nome ufficiale e tipo di risorsa;
-natura, severità ed esposizione pubblica provengono da un \emph{catalogo
-delle policy}, un file YAML che è parametro dell'analisi e non costante del
-codice, come richiede il quarto requisito. Il catalogo risolve il controllo
-per mappatura esplicita (99 controlli nella versione corrente), per prefisso
-di famiglia o per parole chiave sul nome ufficiale, con i termini difensivi
-prima di quelli di esposizione, e altrimenti lo lascia non classificato con
-severità \texttt{MEDIUM}, che è anche l'esito di ogni controllo se il file
-manca (Tabella~\ref{tab:catalogo-policy}). Ai controlli marcati come pubblici
-l'adapter allega un contesto di rischio --- risorsa esposta a Internet e
-pubblica --- che il punteggio userà. Il Finding ha confidenza $1$, perché il
-controllo è deterministico rispetto al file; porta il nome ufficiale del
-controllo come titolo, il file con l'intervallo di righe e l'intero record di
-Checkov come dato grezzo; riceve come chiave di correlazione l'ultimo
-segmento del nome della risorsa (\path{bucket_1_public_acl} per
-\path{aws_s3_bucket.bucket_1_public_acl}), cioè il nome scelto dallo
-sviluppatore, con cui la stessa risorsa può essere ritrovata in altre
-segnalazioni.
+L'adapter esegue Checkov sulla sola directory bersaglio richiedendo l'uscita
+in formato JSON, e traduce ciascun controllo fallito in un Finding
+(Figura~\ref{fig:uml-attivita}). La categoria è derivata tramite parole chiave
+da identificativo, nome ufficiale e tipo di risorsa. Natura, severità ed
+esposizione pubblica provengono invece dal \emph{catalogo delle policy}: un file
+YAML esterno che costituisce parametro dell'analisi e non costante del codice,
+in accordo con il quarto requisito. Il catalogo risolve ciascun controllo secondo
+la priorità riassunta nella Tabella~\ref{tab:catalogo-policy} (mappatura
+esplicita su 99 controlli, prefissi o parole chiave, con ripiego predefinito su
+segnalazione non classificata \texttt{MEDIUM}).
+
+Ogni Finding riceve confidenza pari a $1$, trattandosi di un controllo
+deterministico sul file, e include titolo, intervallo di righe e record grezzo.
+Se il controllo è contrassegnato come pubblico, l'adapter vi associa un contesto
+di risorsa esposta a Internet; come chiave di correlazione adotta l'ultimo
+segmento del nome della risorsa (ad esempio \path{bucket_1_public_acl} per
+\path{aws_s3_bucket.bucket_1_public_acl}), consentendo di raggruppare i rilievi
+riferiti alla medesima entità logica definita dallo sviluppatore.
 
 \begin{figure}[!tbp]
 \centering
@@ -443,12 +440,18 @@ prima incontrata. Un controllo di natura inferiore non altera mai la
 severità della rappresentante --- un bucket con ACL pubblica non diventa più
 grave perché gli manca anche il versioning, né meno grave --- e viene
 conservato come sotto-elemento, con la propria natura, in un elenco dei
-controlli aggregati, insieme all'unione dei riferimenti e ai dati grezzi. È
-il secondo requisito reso operativo sul piano statico: più controlli falliti
-sulla stessa risorsa confluiscono in un'unica voce, che porta in evidenza il
-più grave e non ripete la risorsa per ogni policy che l'ha vista. Sul
-bersaglio di prova descritto nella sottosezione seguente, gli 86 controlli
-falliti si riducono così a 24 voci, una per risorsa. Il motore accetta anche
+controlli aggregati, insieme all'unione dei riferimenti e ai dati grezzi.
+Nulla viene scartato: ogni controllo fallito resta nel rapporto, o come
+rappresentante o come sotto-elemento della propria risorsa, con
+identificativo, regola, titolo, severità e natura, e una sola esecuzione
+restituisce l'intero insieme delle condizioni da correggere; ciò che la
+scelta della rappresentante decide è soltanto quale condizione dia il titolo
+alla voce e ne determini il punteggio. È il secondo requisito reso operativo
+sul piano statico: più controlli falliti sulla stessa risorsa confluiscono in
+un'unica voce, che porta in evidenza il più grave e non ripete la risorsa per
+ogni policy che l'ha vista. Sul bersaglio di prova descritto nella
+sottosezione seguente, gli 86 controlli falliti si riducono così a 24 voci,
+una per risorsa, che insieme li contengono tutti. Il motore accetta anche
 un secondo insieme di segnalazioni, riservato ai moduli della piattaforma
 che operano a runtime, che nel perimetro di questa sezione resta vuoto. La
 Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica:
