@@ -330,13 +330,7 @@ cifratura con chiave gestita, replica, ciclo di vita, notifiche --- e che
 lo strumento colloca sullo stesso piano dei primi: la distinzione fra
 esposizione e irrobustimento, che per questo lavoro è essenziale, nel
 catalogo di Checkov non esiste, ed è il sistema a introdurla attraverso un
-catalogo proprio delle policy, descritto nella sottosezione seguente. Il
-secondo scenario dichiarato in perimetro nella
-Sottosezione~\ref{sec:cloud-misconfig}, la direttiva che abilita l'elenco
-delle directory nella configurazione del server web, non ha invece alcun
-controllo corrispondente: Checkov non analizza i file di configurazione dei
-server HTTP, e la condizione resta al di fuori di ciò che lo strumento può
-riconoscere.
+catalogo proprio delle policy, descritto nella sottosezione seguente.
 
 \begin{table}[htbp]
 \centering
@@ -665,8 +659,7 @@ un controllo che non vi compare e non è raggiunto da alcuna parola chiave
 resta non classificato, con la severità intermedia che non dice nulla della
 sua portata. Il terzo riprende i limiti già
 individuati nel capitolo precedente: la copertura, perché ciò che
-non è dichiarato in un manifest non è ispezionabile, e lo scenario
-dell'elenco delle directory ne è l'esempio; la deriva, perché il manifest
+non è dichiarato in un manifest non è ispezionabile; la deriva, perché il manifest
 attesta ciò che è dichiarato e non ciò che è attivo; il contesto, perché un
 bucket pubblico è un difetto per un archivio di dati personali e una scelta
 legittima per un sito statico: il flag di esposizione pubblica del catalogo
