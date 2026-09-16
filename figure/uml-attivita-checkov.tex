@@ -32,9 +32,9 @@
 \node[action, below=0.6cm of more] (derive)
   {Deriva la categoria\\ {\scriptsize parole chiave su identificativo, nome ufficiale e tipo di risorsa}};
 \node[action, below=of derive] (classify)
-  {Classifica con il catalogo delle policy\\ {\scriptsize mappatura per identificativo, prefisso, parole chiave sul nome, predefinito $\rightarrow$ natura, severità, esposizione pubblica}};
+  {Classifica con il catalogo delle policy\\ {\scriptsize mappatura per identificativo, prefisso, parole chiave sul nome, predefinito $\rightarrow$ natura, severità, esposizione pubblica, dati sensibili, confidenza}};
 \node[action, below=of classify] (mk)
-  {Componi il Finding\\ {\scriptsize file e righe; chiave = ultimo segmento del nome della risorsa; confidenza 1; titolo dal controllo; contesto di rischio se pubblica; record grezzo allegato}};
+  {Componi il Finding\\ {\scriptsize file e righe; chiave = ultimo segmento del nome della risorsa; confidenza dalla regola del catalogo; titolo dal controllo; contesto di rischio se pubblica o su dati sensibili; record grezzo allegato}};
 \node[action, below=of mk] (acc) {Accoda alla lista};
 \node[action, below=1.0cm of acc] (ret) {Restituisci la lista di Finding};
 \node[final, below=of ret] (end) {};
