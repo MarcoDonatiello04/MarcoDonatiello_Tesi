@@ -426,35 +426,18 @@ un controllo fallito di Checkov. Le esposizioni hanno severità predefinita
 \subsection{Correlazione e punteggio di rischio}
 \label{sec:correlazione}
 
-Il motore di correlazione riceve le segnalazioni prodotte dagli adapter e le
-unisce in un unico inventario indicizzato per chiave. La chiave è quella
-esplicita quando l'adapter l'ha assegnata, come avviene sempre per le
-segnalazioni infrastrutturali; altrimenti, per le segnalazioni riferite a un
-endpoint, è la coppia formata da metodo e percorso normalizzato, e in ultima
-istanza la coppia file e riga. Le segnalazioni vengono indicizzate una alla
-volta; quando due condividono la chiave vengono fuse in una sola voce, la
-cui rappresentante è scelta per natura e poi per severità: un'esposizione
-precede una segnalazione non classificata, che precede un irrobustimento, e
-a parità di natura prevale la severità maggiore; a parità completa resta la
-prima incontrata. Un controllo di natura inferiore non altera mai la
-severità della rappresentante --- un bucket con ACL pubblica non diventa più
-grave perché gli manca anche il versioning, né meno grave --- e viene
-conservato come sotto-elemento, con la propria natura, in un elenco dei
-controlli aggregati, insieme all'unione dei riferimenti e ai dati grezzi.
-Nulla viene scartato: ogni controllo fallito resta nel rapporto, o come
-rappresentante o come sotto-elemento della propria risorsa, con
-identificativo, regola, titolo, severità e natura, e una sola esecuzione
-restituisce l'intero insieme delle condizioni da correggere; ciò che la
-scelta della rappresentante decide è soltanto quale condizione dia il titolo
-alla voce e ne determini il punteggio. È il secondo requisito reso operativo
-sul piano statico: più controlli falliti sulla stessa risorsa confluiscono in
-un'unica voce, che porta in evidenza il più grave e non ripete la risorsa per
-ogni policy che l'ha vista. Il motore accetta anche
-un secondo insieme di segnalazioni, riservato ai moduli della piattaforma
-che operano a runtime, che nel perimetro di questa sezione resta vuoto. La
-Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica:
-le scansioni, l'evento di completamento, la correlazione e il calcolo del
-punteggio.
+Il motore di correlazione indicizza le segnalazioni per chiave --- per le
+segnalazioni infrastrutturali il nome della risorsa --- e fonde quelle che la
+condividono in un'unica voce. La rappresentante è scelta per natura e poi
+per severità: un'esposizione precede una segnalazione non classificata, che
+precede un irrobustimento; a parità di natura prevale la severità maggiore.
+Un controllo di natura inferiore non altera mai la severità della
+rappresentante e resta come sotto-elemento della voce, con la propria natura
+e severità: nulla viene scartato, e una sola esecuzione restituisce l'intero
+insieme delle condizioni da correggere. Il motore accetta anche un secondo
+insieme di segnalazioni, riservato ai moduli che operano a runtime, che nel
+perimetro di questa sezione resta vuoto. La Figura~\ref{fig:uml-sequenza}
+riporta la sequenza della pipeline statica.
 
 \begin{figure}[tbp]
 \centering
@@ -466,44 +449,28 @@ vuoto.}
 \label{fig:uml-sequenza}
 \end{figure}
 
-Il punteggio di rischio segue una decisione documentata fra le scelte
-architetturali del sistema: un modello pesato proprio, preferito al CVSS
-perché quest'ultimo richiede la composizione di un vettore che nessuno degli
-strumenti integrati produce. Il punteggio è
+Il punteggio di rischio è un modello pesato proprio, preferito al CVSS
+perché quest'ultimo richiede un vettore che nessuno degli strumenti
+integrati produce:
 \begin{equation}
 R = \min\bigl(10,\; 0{,}6\,S + 0{,}2 \cdot 10\,C + 0{,}2\,X\bigr),
 \label{eq:risk-score}
 \end{equation}
 dove $S$ è il valore numerico della severità ($9{,}0$ per \texttt{CRITICAL},
 $7{,}0$ per \texttt{HIGH}, $4{,}5$ per \texttt{MEDIUM}, $2{,}0$ per
-\texttt{LOW}), $C \in [0,1]$ è la confidenza e $X$ è un fattore di contesto
-che somma $4$ punti se la risorsa è esposta a Internet, $4$ se tratta dati
-sensibili e $2$ se è dichiarata pubblica; quando nessuna informazione di
-contesto è disponibile, $X$ vale $6$ per le segnalazioni di autenticazione e
-autorizzazione e $3$ per le altre; per gli irrobustimenti $X$ vale $0$,
-perché una linea di difesa mancante non è un vettore d'accesso e non deve
-ricevere il bonus di esposizione. Pesi e costanti risiedono in un modulo di
-configurazione centrale e non nelle regole, come richiede il quarto
-requisito. Per le segnalazioni infrastrutturali, la cui confidenza è $1$, il
-punteggio dipende soltanto da severità, natura e contesto: un'esposizione
-\texttt{CRITICAL} su risorsa pubblica vale $8{,}6$ e $8{,}0$ se non
-pubblica, una \texttt{HIGH} rispettivamente $7{,}4$ e $6{,}8$, una
-segnalazione non classificata \texttt{MEDIUM} $5{,}3$, un irrobustimento
-\texttt{MEDIUM} $4{,}7$ e uno \texttt{LOW} $3{,}2$. Il cruscotto ordina le
-voci per natura e severità, marca ciascuna come esposizione o irrobustimento
-e, sotto ogni voce, elenca i controlli aggregati sulla stessa risorsa, ognuno
-espandibile con la propria natura e severità.
-
-Ogni voce dell'inventario, e ciascuno dei controlli che vi sono aggregati, è
-infine corredata di un'indicazione correttiva da un motore di remediation,
-che consulta prima una base di conoscenza
-locale indicizzata per identificativo di controllo --- per i controlli
-Checkov vi compaiono, ad esempio, \texttt{CKV\_AWS\_20}, \texttt{CKV\_AWS\_21}
-e \texttt{CKV\_AWS\_53}, ciascuno con descrizione, impatto e passi di
-correzione sul manifest --- poi una cache delle risposte già prodotte e, in
-mancanza di entrambe, un modello linguistico eseguito localmente tramite
-Ollama, senza che alcun frammento della definizione infrastrutturale lasci
-la macchina dell'analista.
+\texttt{LOW}), $C \in [0,1]$ è la confidenza e $X$ è il contesto: $6$ per
+una risorsa esposta a Internet e pubblica, $3$ in assenza di informazioni,
+$0$ per gli irrobustimenti, perché una linea di difesa mancante non è un
+vettore d'accesso. Pesi e costanti sono parametri di configurazione. Per le
+segnalazioni infrastrutturali, con confidenza $1$, un'esposizione
+\texttt{CRITICAL} su risorsa pubblica vale $8{,}6$, una \texttt{HIGH} non
+pubblica $6{,}8$, un irrobustimento \texttt{LOW} $3{,}2$. Il cruscotto ordina
+le voci per natura e severità e, sotto ciascuna, elenca i controlli
+aggregati; ogni voce e ogni controllo aggregato è corredato di
+un'indicazione correttiva da un motore di remediation, che consulta una base
+di conoscenza locale indicizzata per controllo e, in sua assenza, un modello
+linguistico eseguito localmente tramite Ollama, senza che alcun frammento
+della definizione infrastrutturale lasci la macchina dell'analista.
 
 \subsection{Validazione e limiti}
 \label{sec:validazione-misconfig}
@@ -511,53 +478,39 @@ la macchina dell'analista.
 La validazione segue il disegno della
 Sottosezione~\ref{sec:disegno-valutazione}. Al primo scopo serve il
 bersaglio di prova infrastrutturale del repository: due manifest Terraform
-con cinque bucket S3 a protezione crescente --- dall'ACL pubblica con blocco
-dell'accesso disattivato fino al bucket cifrato, versionato e con blocco
-attivo --- più un sesto bucket con policy aperta, un ruolo IAM con
-\texttt{*} su \texttt{*}, una Lambda con chiave cablata, un API gateway senza
-autorizzazione e una tabella DynamoDB difettosa. Il riferimento è noto per
-costruzione e la coppia richiesta dal disegno è data dal contrasto fra i
-primi tre bucket e gli ultimi due. Checkov
-riporta 86 controlli falliti su 24 risorse, e sull'esposizione l'esito
-coincide con il riferimento: ACL pubblica sul solo primo bucket, blocchi
-disattivati dove dichiarati, blocco assente sui bucket esposti e non sui due
-sicuri; ruolo, chiave, metodi e tabella sono riconosciuti. Un solo caso si
-discosta, in silenzio: la policy aperta del secondo bucket non viene valutata
-da \texttt{CKV\_AWS\_70} --- l'attributo \texttt{Resource} è una lista di
-interpolazioni anziché una stringa --- e la risorsa non compare né fra i
-controlli superati né fra i falliti; il bucket resta segnalato per il blocco
-disattivato, non per la condizione che lo definisce difettoso. Il catalogo
-classifica tutti gli 86 controlli (33 esposizioni, 53 irrobustimenti) e le
-24 voci si dispongono nell'ordine che il riferimento prescrive: ACL pubblica
-e policy aperta a $8{,}6$, policy IAM e chiave cablata a $8{,}0$, metodi
-senza autorizzazione a $7{,}4$, blocchi disattivati a $6{,}8$; in coda, a
-$3{,}2$, i due bucket sicuri, per i quali ogni controllo fallito è un
-irrobustimento e la voce lo dichiara.
+con cinque bucket S3 a protezione crescente, dall'ACL pubblica al bucket
+cifrato con blocco dell'accesso attivo, più un sesto bucket con policy
+aperta, un ruolo IAM con \texttt{*} su \texttt{*}, una Lambda con chiave
+cablata e un API gateway senza autorizzazione. Il riferimento è noto per
+costruzione e la coppia del disegno è data dal contrasto fra i primi tre
+bucket e gli ultimi due. Checkov riporta 86 controlli falliti su
+24 risorse e sull'esposizione l'esito coincide con il riferimento; un solo
+caso si discosta, in silenzio: la policy aperta del secondo bucket non viene
+valutata da \texttt{CKV\_AWS\_70}, perché l'attributo \texttt{Resource} è una
+lista di interpolazioni, e non compare né fra i controlli superati né fra i
+falliti. Il catalogo classifica tutti gli 86 controlli (33
+esposizioni, 53 irrobustimenti) e le 24 voci seguono l'ordine del
+riferimento: ACL pubblica e policy aperta a $8{,}6$, policy IAM e
+chiave cablata a $8{,}0$, metodi senza autorizzazione a $7{,}4$, blocchi
+disattivati a $6{,}8$ e, in coda a $3{,}2$, i due bucket sicuri, per i quali
+ogni controllo fallito è un irrobustimento.
 
-Al secondo scopo serve crAPI~\cite{owasp2026crapi}, revisione 1.1.5: niente
-Terraform, ma Dockerfile, manifest Kubernetes, chart Helm e file Compose.
-Checkov produce 240 segnalazioni, ridotte a 46 voci: 207 su Kubernetes
-(contenitori come root o con escalation di privilegi, filesystem scrivibili,
-immagini senza digest), 14 sui Dockerfile, 13 dal riconoscitore di segreti,
-6 sulla specifica OpenAPI. Il catalogo separa 17 esposizioni da 223
-irrobustimenti: in testa, a $6{,}8$, i token di sessione della collezione
-Postman, la specifica senza requisiti di sicurezza e le credenziali nel file
-di integrazione di una dipendenza inclusa nel repository --- un falso
-positivo rispetto al bersaglio --- mentre Kubernetes e Docker chiudono
-l'inventario fra $4{,}7$ e $3{,}2$.
+Al secondo scopo serve crAPI~\cite{owasp2026crapi}, revisione 1.1.5, priva
+di Terraform ma con Dockerfile e manifest Kubernetes: 240 segnalazioni
+ridotte a 46 voci, 17 esposizioni e 223 irrobustimenti. In testa, a $6{,}8$, stanno i token di sessione della
+collezione Postman, la specifica OpenAPI senza requisiti di sicurezza e le
+credenziali di una dipendenza inclusa nel repository, un falso positivo
+rispetto al bersaglio; Kubernetes e Docker chiudono l'inventario fra $4{,}7$
+e $3{,}2$.
 
 La validazione ha inoltre evidenziato che l'adapter Checkov assegnava a ogni
 segnalazione la stessa severità, perché le regole di classificazione
 operavano sull'identificativo opaco del controllo anziché sul suo nome
 ufficiale. Il difetto è stato risolto introducendo il catalogo semantico
 delle policy descritto nella Sottosezione~\ref{sec:checkov}, che distingue i
-controlli di esposizione da quelli di irrobustimento. Restano i limiti dello
-strumento: un controllo che non
-riesce a valutare un'espressione non fallisce e nulla lo dice; il catalogo
-del sistema supplisce a quello di Checkov ma va mantenuto a ogni
-aggiornamento, e lascia non classificato ciò che non copre; ciò che non è in
-un manifest non è ispezionabile, il manifest attesta il dichiarato e non
-l'attivo, e il flag di esposizione dice che una risorsa è raggiungibile da
-chiunque, non se ciò sia voluto. Lo scenario dello storage esposto è
-riconosciuto su ogni bucket che lo presenta e occupa le prime posizioni del
-rapporto, separato dalle segnalazioni di minore portata.
+controlli di esposizione da quelli di irrobustimento. Restano i limiti
+dello strumento: un controllo che non riesce a valutare un'espressione non
+fallisce e nulla lo dice; il catalogo va mantenuto a ogni aggiornamento di
+Checkov; il manifest mostra solo ciò che dichiara, non ciò che è attivo, e il
+flag di esposizione dice che una risorsa è raggiungibile da chiunque, non se
+ciò sia voluto.
