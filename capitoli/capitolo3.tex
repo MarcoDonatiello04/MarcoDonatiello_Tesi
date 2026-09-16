@@ -239,7 +239,10 @@ che l'ha generata, una chiave di correlazione, i dati grezzi dello strumento
 e la \emph{natura} del rischio: esposizione, quando la configurazione apre un
 varco sfruttabile direttamente, oppure irrobustimento, quando manca una linea
 di difesa in profondità che da sola non costituisce un accesso; una
-segnalazione può anche restare non classificata. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
+segnalazione può anche restare non classificata, con natura indefinita
+(modellata come valore nullo nel dominio), quando la regola non consente di
+determinare a priori se si tratti di un varco d'accesso o di un presidio
+difensivo. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
 per livello e le dipendenze fra i livelli: la presentazione dipende
 dall'applicazione, l'applicazione dal dominio, e l'infrastruttura realizza le
 interfacce che il dominio dichiara. Il livello di presentazione offre due vie
@@ -265,9 +268,10 @@ percorso del bersaglio e restituisce una lista di Finding. È implementata dagli
 eseguire lo strumento, leggerne l'uscita e tradurla nel modello di dominio.
 L'adapter di cui si occupa questa sezione è quello di
 Checkov~\cite{checkov2026docs}, che analizza le definizioni
-infrastrutturali; la stessa interfaccia è realizzata dagli adapter di
-Semgrep~\cite{semgrep2026docs} e Spectral~\cite{spectral2026docs}, che
-servono altre categorie e non sono trattati qui. Il diagramma delle classi
+infrastrutturali; la stessa interfaccia ha altre due realizzazioni,
+Semgrep per il codice applicativo e Spectral per la specifica
+dell'interfaccia, che servono altre categorie e restano fuori da questa
+sezione. Il diagramma delle classi
 in Figura~\ref{fig:uml-classi} riporta l'entità Finding con i suoi oggetti
 valore, l'enumerazione della severità, l'interfaccia con l'adapter che la
 realizza e il motore di correlazione. I componenti non si chiamano a
