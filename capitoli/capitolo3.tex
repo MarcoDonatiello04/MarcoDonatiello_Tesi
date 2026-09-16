@@ -546,10 +546,13 @@ di integrazione di una dipendenza inclusa nel repository --- un falso
 positivo rispetto al bersaglio --- mentre Kubernetes e Docker chiudono
 l'inventario fra $4{,}7$ e $3{,}2$.
 
-Il catalogo stesso è un esito della validazione: una prima versione
-dell'adapter applicava le parole chiave all'identificativo del controllo, che
-non le contiene mai, e ogni segnalazione risultava \texttt{MEDIUM} con lo
-stesso punteggio. Restano i limiti dello strumento: un controllo che non
+La validazione ha inoltre evidenziato che l'adapter Checkov assegnava a ogni
+segnalazione la stessa severità, perché le regole di classificazione
+operavano sull'identificativo opaco del controllo anziché sul suo nome
+ufficiale. Il difetto è stato risolto introducendo il catalogo semantico
+delle policy descritto nella Sottosezione~\ref{sec:checkov}, che distingue i
+controlli di esposizione da quelli di irrobustimento. Restano i limiti dello
+strumento: un controllo che non
 riesce a valutare un'espressione non fallisce e nulla lo dice; il catalogo
 del sistema supplisce a quello di Checkov ma va mantenuto a ogni
 aggiornamento, e lascia non classificato ciò che non copre; ciò che non è in
