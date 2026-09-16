@@ -298,7 +298,7 @@ consegnate al motore di correlazione, che le aggrega per chiave e assegna a
 ciascuna un punteggio di rischio. Aggiungere un controllo significa
 registrare un nuovo scanner, senza modificare l'orchestratore.
 
-\subsection{Lo scanner: Checkov e le policy infrastrutturali}
+\subsection{Lo scanner Checkov e la traduzione nel modello di dominio}
 \label{sec:checkov}
 
 Checkov~\cite{checkov2026docs} è un analizzatore statico per
@@ -330,7 +330,7 @@ cifratura con chiave gestita, replica, ciclo di vita, notifiche --- e che
 lo strumento colloca sullo stesso piano dei primi: la distinzione fra
 esposizione e irrobustimento, che per questo lavoro è essenziale, nel
 catalogo di Checkov non esiste, ed è il sistema a introdurla attraverso un
-catalogo proprio delle policy, descritto nella sottosezione seguente.
+catalogo proprio delle policy, descritto nel seguito.
 
 \begin{table}[htbp]
 \centering
@@ -367,21 +367,27 @@ denominazioni sono tradotte dai nomi ufficiali dei controlli.}
 \label{tab:policy-checkov}
 \end{table}
 
-\subsection{L'adapter e la traduzione nel modello di dominio}
-\label{sec:adapter-checkov}
-
-L'adapter esegue Checkov come processo esterno, con un limite di sessanta
-secondi, chiedendo l'uscita in formato JSON e indicando come perimetro della
-scansione la sola directory bersaglio ricevuta da \texttt{scan}. Il file
-\path{.checkov.yaml} della piattaforma, se presente nella directory di
-lavoro, aggiunge unicamente opzioni accessorie --- l'esclusione delle
-cartelle degli strumenti (\path{.git}, \path{.terraform}, \path{.venv}) e
-il formato dell'uscita --- e non può ampliare o spostare il perimetro, perché
-gli argomenti da riga di comando prevalgono su quelli del file. L'uscita è un
-rapporto per ciascun formato riconosciuto nel
-bersaglio (Terraform, Dockerfile, Kubernetes, segreti, e così via), e
-l'adapter li attraversa tutti leggendo i soli controlli falliti. La
-Figura~\ref{fig:uml-attivita} riporta il diagramma di attività.
+L'adapter esegue Checkov sulla sola directory bersaglio, in formato JSON e
+senza policy scaricate dal produttore, e traduce ogni controllo fallito in un
+Finding, come mostra la Figura~\ref{fig:uml-attivita}. La categoria è derivata
+con parole chiave da identificativo, nome ufficiale e tipo di risorsa;
+natura, severità ed esposizione pubblica provengono da un \emph{catalogo
+delle policy}, un file YAML che è parametro dell'analisi e non costante del
+codice, come richiede il quarto requisito. Il catalogo risolve il controllo
+per mappatura esplicita (99 controlli nella versione corrente), per prefisso
+di famiglia o per parole chiave sul nome ufficiale, con i termini difensivi
+prima di quelli di esposizione, e altrimenti lo lascia non classificato con
+severità \texttt{MEDIUM}, che è anche l'esito di ogni controllo se il file
+manca (Tabella~\ref{tab:catalogo-policy}). Ai controlli marcati come pubblici
+l'adapter allega un contesto di rischio --- risorsa esposta a Internet e
+pubblica --- che il punteggio userà. Il Finding ha confidenza $1$, perché il
+controllo è deterministico rispetto al file; porta il nome ufficiale del
+controllo come titolo, il file con l'intervallo di righe e l'intero record di
+Checkov come dato grezzo; riceve come chiave di correlazione l'ultimo
+segmento del nome della risorsa (\path{bucket_1_public_acl} per
+\path{aws_s3_bucket.bucket_1_public_acl}), cioè il nome scelto dallo
+sviluppatore, con cui la stessa risorsa può essere ritrovata in altre
+segnalazioni.
 
 \begin{figure}[!tbp]
 \centering
@@ -394,51 +400,11 @@ catalogo delle policy.}
 \label{fig:uml-attivita}
 \end{figure}
 
-Ogni controllo fallito diventa un Finding attraverso un metodo
-\texttt{build\_finding}, isolato dall'esecuzione dello strumento e quindi
-verificabile da solo. La categoria è derivata con regole a parole chiave
-sull'identificativo del controllo, sul suo nome ufficiale e sul tipo di
-risorsa: gestione delle identità, storage, rete, cifratura, logging, API
-gateway, oppure configurazione generica. Natura e severità provengono
-invece da un \emph{catalogo delle policy}, un file YAML che è parametro
-dell'analisi --- il percorso predefinito può essere sostituito con una
-variabile d'ambiente --- e non costante del codice, come richiede il quarto
-requisito. Il catalogo risolve ogni controllo nell'ordine riassunto nella
-Tabella~\ref{tab:catalogo-policy}: prima una mappatura esplicita per
-identificativo, che nella versione corrente copre 99 controlli su storage,
-identità, API gateway, Lambda, DynamoDB, SNS, rete, Kubernetes, Dockerfile e
-OpenAPI; poi le famiglie riconosciute dal prefisso, come i controlli
-\texttt{CKV\_SECRET\_*} del riconoscitore di segreti; poi gruppi di parole
-chiave confrontate con il nome ufficiale del controllo, in cui i termini
-difensivi (\emph{encrypt}, \emph{kms}, \emph{waf}, \emph{tls}) precedono
-quelli di esposizione (\emph{public}, \emph{0.0.0.0}, \emph{any
-principal}, \emph{hard-coded}), così che un controllo sulla cifratura di un
-segreto non venga letto come segreto esposto; infine l'esito predefinito,
-non classificato con severità \texttt{MEDIUM}. Se il file manca o non è
-leggibile, ogni controllo riceve l'esito predefinito, che coincide con il
-comportamento dell'adapter prima dell'introduzione del catalogo. Le voci
-contrassegnate come pubbliche --- l'ACL in lettura o scrittura pubblica, la
-policy aperta a qualunque principal, il metodo dell'API gateway senza
-autorizzazione, i gruppi di sicurezza aperti a \texttt{0.0.0.0/0} --- fanno
-sì che l'adapter alleghi al Finding un contesto di rischio con la risorsa
-esposta a Internet e pubblica, che il punteggio di rischio userà.
-
-La confidenza è fissata a $1$, perché il controllo è deterministico rispetto
-al file. Il Finding conserva inoltre il nome ufficiale del controllo come
-titolo, il file con l'intervallo di righe, il nome completo della risorsa
-(per esempio \path{aws_s3_bucket.bucket_1_public_acl}), il tipo
-(\path{aws_s3_bucket}) e, come chiave di correlazione, l'ultimo segmento
-del nome (\path{bucket_1_public_acl}): è il nome che lo sviluppatore ha
-assegnato alla risorsa, non il tipo generato dal provider, ed è quindi il
-nome con cui la stessa risorsa può essere ritrovata in altri artefatti e in
-altre segnalazioni. L'intero record di Checkov è allegato come dato grezzo,
-così che nessuna informazione dello strumento vada perduta nella traduzione.
-
 \begin{table}[htbp]
 \centering
 \small
 \linespread{1.0}\selectfont
-\begin{tabularx}{\linewidth}{@{}lXl@{}}
+\begin{tabularx}{\linewidth}{@{}l>{\hsize=1.15\hsize}X>{\hsize=0.85\hsize}X@{}}
 \toprule
 \textbf{Regola} & \textbf{Come risolve il controllo} & \textbf{Esempio} \\
 \midrule
