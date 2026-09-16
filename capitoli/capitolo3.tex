@@ -224,14 +224,48 @@ Sottosezione~\ref{sec:disegno-valutazione} e con i limiti che ne emergono.
 \subsection{Architettura del sistema}
 \label{sec:architettura}
 
+\begin{figure}[!htbp]
+\centering
+\input{figure/uml-componenti}
+\caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti
+del sistema, raggruppati per livello architetturale. Le frecce tratteggiate
+indicano dipendenze; quella con la punta triangolare vuota indica la
+realizzazione delle interfacce di dominio da parte degli adapter.}
+\label{fig:uml-componenti}
+\end{figure}
+
 Il sistema è organizzato secondo i principi della \emph{Clean Architecture}:
 un livello di dominio che definisce le entità e i contratti, un livello
 applicativo che orchestra l'analisi, un livello infrastrutturale che
 incapsula gli strumenti esterni e un livello di presentazione che espone i
-risultati. La separazione risponde direttamente al quinto requisito, la
-tracciabilità: qualunque sia lo strumento che l'ha prodotta, ogni anomalia
-viene ricondotta a un'unica entità di dominio, il \emph{Finding}, che
-registra la sorgente, la categoria, la severità su quattro livelli
+risultati. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
+per livello e le dipendenze fra i livelli: la presentazione dipende
+dall'applicazione, l'applicazione dal dominio, e l'infrastruttura realizza le
+interfacce che il dominio dichiara. Il livello di presentazione offre due vie
+d'accesso alla stessa pipeline: un'interfaccia a riga di comando, che
+registra gli adapter, esegue l'orchestratore e scrive i rapporti su file, e
+un cruscotto web basato su FastAPI, che espone la stessa esecuzione come
+servizio e presenta i risultati in pagine interattive.
+
+La separazione risponde direttamente al quinto requisito, la tracciabilità:
+qualunque sia lo strumento che l'ha prodotta, ogni anomalia viene ricondotta
+a un'unica entità di dominio, il \emph{Finding}, che la
+Figura~\ref{fig:uml-classi} mostra insieme ai suoi oggetti valore, alle
+enumerazioni di severità e natura, all'interfaccia \texttt{IScanner} con
+l'adapter che la realizza e al motore di correlazione.
+
+\begin{figure}[!htbp]
+\centering
+\input{figure/uml-classi}
+\caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma
+UML delle classi del dominio e del motore di correlazione.
+\texttt{Severity} e \texttt{FindingNature} sono enumerazioni;
+\texttt{APIEndpointNormalizer} espone solo metodi di classe. Gli adapter di
+Semgrep e Spectral, non trattati, realizzano la stessa interfaccia.}
+\label{fig:uml-classi}
+\end{figure}
+
+Il Finding registra la sorgente, la categoria, la severità su quattro livelli
 (\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, oltre a
 \texttt{INFO} per le note informative), un grado di confidenza fra $0$ e $1$,
 la posizione nel file, la risorsa infrastrutturale interessata, la regola
@@ -242,24 +276,7 @@ di difesa in profondità che da sola non costituisce un accesso; una
 segnalazione può anche restare non classificata, con natura indefinita
 (modellata come valore nullo nel dominio), quando la regola non consente di
 determinare a priori se si tratti di un varco d'accesso o di un presidio
-difensivo. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
-per livello e le dipendenze fra i livelli: la presentazione dipende
-dall'applicazione, l'applicazione dal dominio, e l'infrastruttura realizza le
-interfacce che il dominio dichiara. Il livello di presentazione offre due vie
-d'accesso alla stessa pipeline: un'interfaccia a riga di comando, che
-registra gli adapter, esegue l'orchestratore e scrive i rapporti su file, e
-un cruscotto web basato su FastAPI, che espone la stessa esecuzione come
-servizio e presenta i risultati in pagine interattive.
-
-\begin{figure}[tbp]
-\centering
-\input{figure/uml-componenti}
-\caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti
-del sistema, raggruppati per livello architetturale. Le frecce tratteggiate
-indicano dipendenze; quella con la punta triangolare vuota indica la
-realizzazione delle interfacce di dominio da parte degli adapter.}
-\label{fig:uml-componenti}
-\end{figure}
+difensivo.
 
 L'interfaccia astratta \texttt{IScanner} formalizza il contratto a cui ogni
 componente di analisi deve conformarsi: un metodo \texttt{scan} che riceve il
@@ -271,10 +288,7 @@ Checkov~\cite{checkov2026docs}, che analizza le definizioni
 infrastrutturali; la stessa interfaccia ha altre due realizzazioni,
 Semgrep per il codice applicativo e Spectral per la specifica
 dell'interfaccia, che servono altre categorie e restano fuori da questa
-sezione. Il diagramma delle classi
-in Figura~\ref{fig:uml-classi} riporta l'entità Finding con i suoi oggetti
-valore, l'enumerazione della severità, l'interfaccia con l'adapter che la
-realizza e il motore di correlazione. I componenti non si chiamano a
+sezione. I componenti non si chiamano a
 vicenda: comunicano attraverso un bus di eventi su cui l'orchestratore
 pubblica il completamento dell'analisi statica e quello della pipeline.
 L'esecuzione procede in fasi: gli scanner registrati vengono eseguiti sul
@@ -283,17 +297,6 @@ dei moduli che vi si sottoscrivono; le segnalazioni raccolte vengono
 consegnate al motore di correlazione, che le aggrega per chiave e assegna a
 ciascuna un punteggio di rischio. Aggiungere un controllo significa
 registrare un nuovo scanner, senza modificare l'orchestratore.
-
-\begin{figure}[tbp]
-\centering
-\input{figure/uml-classi}
-\caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma
-UML delle classi del dominio e del motore di correlazione.
-\texttt{Severity} è un'enumerazione; \texttt{APIEndpointNormalizer} espone
-solo metodi di classe. Gli adapter di Semgrep e Spectral, non trattati,
-realizzano la stessa interfaccia.}
-\label{fig:uml-classi}
-\end{figure}
 
 \subsection{Lo scanner: Checkov e le policy infrastrutturali}
 \label{sec:checkov}
