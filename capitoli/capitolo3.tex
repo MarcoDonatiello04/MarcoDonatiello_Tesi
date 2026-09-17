@@ -18,10 +18,9 @@ ciascuna categoria. Vi sono violazioni che lasciano
 una traccia strutturale negli artefatti di progetto (quali codice applicativo,
 definizioni infrastrutturali e specifica dell'interfaccia) e violazioni il
 cui riconoscimento presuppone di sapere quale uso dell'applicazione sia
-legittimo, informazione che nessun artefatto contiene.
+legittimo, informazione che nessuno di essi contiene.
 
-Questa differenza corrisponde alla distinzione, già presente in letteratura,
-fra \emph{vulnerabilità tecniche} e \emph{vulnerabilità di logica di business}
+Questa differenza corrisponde alla distinzione fra \emph{vulnerabilità tecniche} e \emph{vulnerabilità di logica di business}
 (\emph{logic vulnerabilities})~\cite{felmetsger2010logic,pellegrino2014logic}.
 Le prime violano proprietà strutturali verificabili sugli artefatti di
 progetto; le seconde violano l'intento per cui il flusso applicativo è stato
@@ -33,7 +32,7 @@ codice~\cite{owasp2023api6}.
 
 Il presente lavoro applica sistematicamente tale distinzione alle dieci
 categorie dell'OWASP API Security Top 10 (2023) e ne verifica le conseguenze
-implementative con un'analisi multi-layer degli artefatti di progetto,
+implementative con un'analisi multi-layer dei tre livelli indicati,
 integrata da evidenza dinamica dove la sola ispezione statica non basta. Su
 questa base si formula la domanda di ricerca principale.
 
@@ -73,7 +72,7 @@ della ricerca. Se una categoria è stata ricondotta a una violazione
 strutturale, deve esistere una regola che la riconosca; se è stata esclusa,
 l'assenza del modulo corrispondente è la conseguenza attesa dell'analisi. Si considerano evidenza a sostegno delle domande di ricerca
 soltanto la classificazione secondo il criterio dichiarato, l'esito
-verificato dell'esecuzione dei moduli su artefatti di prova e su un bersaglio
+verificato dell'esecuzione dei moduli su casi di prova e su un bersaglio
 realistico, e la documentazione motivata delle categorie non coperte; la
 presenza di regole nel codice non verificate su casi concreti non conta come
 copertura. Il capitolo formula il criterio di classificazione, ne deriva i
@@ -94,7 +93,7 @@ Una categoria è detta \emph{tecnica} quando esiste un predicato sugli artefatti
 di progetto che sia al tempo stesso necessario e sufficiente a stabilire la
 violazione, una volta fissati i parametri dichiarati dell'analisi. È detta
 \emph{ibrida} quando esiste un predicato necessario ma non sufficiente:
-l'analisi degli artefatti riconosce una condizione senza la quale la
+l'analisi statica riconosce una condizione senza la quale la
 violazione non può sussistere, ma la cui presenza non basta a stabilirla. È
 detta infine \emph{di logica di business} quando non esiste alcun predicato
 necessario esprimibile sugli artefatti, poiché la proprietà violata è
@@ -111,7 +110,7 @@ Il residuo delle categorie ibride non è omogeneo, e distinguerne la natura è
 l'oggetto di \RQ{1.2}. Un residuo è \emph{dinamico} quando la proprietà
 mancante si manifesta nella risposta del sistema a una sollecitazione mirata,
 tipicamente l'invio della stessa richiesta con identità distinte. È \emph{di
-perimetro} quando è colmabile estendendo l'analisi a un tipo di artefatto non
+perimetro} quando è colmabile estendendo l'analisi a un livello non
 ancora esaminato: il limite riguarda l'applicazione dell'analisi statica a un
 solo livello, non l'approccio in sé. È \emph{di dichiarazione} quando
 richiede che qualcuno espliciti la configurazione attesa o il contenuto di un
@@ -137,31 +136,31 @@ Il primo requisito è l'analisi su più livelli. Le proprietà individuate dal
 criterio non risiedono tutte nello stesso luogo: alcune si manifestano nel
 codice applicativo, altre nelle definizioni infrastrutturali, altre nella
 specifica dell'interfaccia, e nessun livello è da solo sufficiente. Uno
-strumento che esamini un solo tipo di artefatto non può quindi coprire il
+strumento che esamini un solo livello non può quindi coprire il
 perimetro, e ciascun livello richiede una rappresentazione e una tecnica di
-ispezione adeguate al tipo di artefatto.
+ispezione proprie.
 
-Il secondo requisito è la correlazione fra i livelli. Alcune condizioni non
-sono osservabili in alcun singolo artefatto, ma nella discrepanza fra due di
+Il secondo è la correlazione fra i livelli. Alcune condizioni non
+sono osservabili in alcun singolo livello, ma nella discrepanza fra due di
 essi: un percorso presente nel codice e assente dal contratto non è una
 violazione in nessuno dei due luoghi, eppure la divergenza segnala una
 superficie esposta e non governata; l'assenza di un limite nel codice
 cambia significato a seconda che le definizioni infrastrutturali ne
 prevedano uno altrove. Lo strumento deve quindi mettere in relazione segnali
 di livelli diversi e derivarne giudizi che nessun livello esprime da solo.
-Questo requisito risponde a \RQ{1.1}.
+Questa capacità risponde a \RQ{1.1}.
 
-Il terzo requisito è la verifica dinamica: per le categorie che richiedono
+Il terzo è la verifica dinamica: per le categorie che richiedono
 un riscontro a runtime, lo strumento deve poter inviare richieste reali
 all'API e analizzarne le risposte. L'analisi del codice rileva infatti solo
 un rischio potenziale, che rimarrebbe incerto senza una conferma attiva.
 
-Il quarto requisito è la configurabilità dei parametri: i valori e le
+Il quarto è la configurabilità dei parametri: i valori e le
 soglie utilizzati dall'analisi devono essere espliciti e modificabili
 dall'utente, per evitare che impostazioni predefinite e cablate nelle
 regole impongano scelte arbitrarie come se fossero vincoli universali.
 
-Il quinto requisito è la tracciabilità: ogni segnalazione deve essere
+Il quinto è la tracciabilità: ogni segnalazione deve essere
 riconducibile alla categoria di cui costituisce evidenza e al livello di
 analisi che l'ha generata, perché una segnalazione priva di tale riconduzione
 può indicare un difetto reale ma non contribuisce a rispondere alle domande
@@ -175,22 +174,22 @@ la condizione per cui è stato scritto, e osservare il comportamento dello
 strumento nel suo insieme su codice che non è stato scritto per essere
 analizzato.
 
-Al primo scopo servono coppie di artefatti di prova, ciascuna formata da una
+Al primo scopo servono coppie di casi di prova, ciascuna formata da una
 versione che contiene la condizione da rilevare e da una che non la contiene:
 il modulo deve segnalare la prima e non la seconda. Le coppie coprono
 tutti e tre i livelli di analisi, così che nessun livello sia esercitato solo
-indirettamente attraverso il bersaglio realistico. Poiché artefatti e regole
+indirettamente attraverso il bersaglio realistico. Poiché casi di prova e regole
 hanno lo stesso autore, questa prova stabilisce che l'implementazione fa ciò
 che si intendeva, non che funzioni su codice reale.
 
 Al secondo scopo serve OWASP crAPI~\cite{owasp2026crapi}, applicazione
-volutamente vulnerabile mantenuta dalla OWASP Foundation e qui fissata a una
+volutamente vulnerabile mantenuta dalla OWASP Foundation e quindi fissata a una
 revisione precisa per rendere i risultati riproducibili. Non essendo scritta
 dall'autore, riduce la circolarità della prima prova; resta però un bersaglio
 didattico, costruito perché le sue vulnerabilità siano riconoscibili, e i
 risultati non si possono estendere senza cautela ad applicazioni reali.
 
-Per gli artefatti di prova il riferimento di verità è noto per costruzione;
+Per i casi di prova il riferimento di verità è noto per costruzione;
 per crAPI è stato ricostruito a mano, individuando nel codice i punti in cui
 si manifestano le vulnerabilità documentate dal progetto, ed è riportato per
 esteso perché i risultati vadano letti rispetto a ciò che si è assunto come
@@ -199,7 +198,7 @@ quando riguarda la stessa categoria OWASP e lo stesso punto di esposizione
 dell'interfaccia, identificato da metodo e percorso normalizzato,
 qualunque sia il livello di analisi che l'ha prodotta; questa convenzione è
 stata fissata prima di osservare i risultati. Su questa base si registra, per
-ogni categoria, se i moduli segnalano gli artefatti che contengono la
+ogni categoria, se i moduli segnalano i casi che contengono la
 condizione e non quelli che ne sono privi, e si distinguono le categorie senza
 segnalazioni in cui ciò discende dalla classificazione da quelle in cui indica
 una copertura mancante.
@@ -210,9 +209,9 @@ una copertura mancante.
 Questa sezione illustra l'applicazione operativa del metodo alla prima delle
 classi in esame: la \emph{IaC misconfiguration}
 (Sottosezione~\ref{sec:cloud-misconfig}). Nel perimetro fissato in tale
-sottosezione rientrano le configurazioni difettose dichiarate in un artefatto
-ispezionabile prima del rilascio. In questo contesto, l'artefatto è costituito
-dalla definizione dell'infrastruttura come codice (i manifest Terraform,
+sottosezione rientrano le configurazioni difettose dichiarate in file
+ispezionabili prima del rilascio. In questo contesto, tali file sono la
+definizione dell'infrastruttura come codice (i manifest Terraform,
 affiancati da Dockerfile e manifest Kubernetes gestiti dal medesimo strumento)
 e l'analisi è interamente statica: nessuna risorsa viene creata né interrogata.
 La sezione
@@ -248,7 +247,8 @@ registra gli adapter, esegue l'orchestratore e scrive i rapporti su file, e
 un cruscotto web basato su FastAPI, che espone la stessa esecuzione come
 servizio e presenta i risultati in pagine interattive.
 
-La separazione risponde direttamente al quinto requisito, la tracciabilità:
+La separazione risponde direttamente alla tracciabilità richiesta nella
+Sottosezione~\ref{sec:requisiti}:
 qualunque sia lo strumento che l'ha prodotta, ogni anomalia viene ricondotta
 a un'unica entità di dominio, il \emph{Finding}, che la
 Figura~\ref{fig:uml-classi} mostra insieme ai suoi oggetti valore, alle
@@ -370,7 +370,8 @@ in formato JSON, e traduce ciascun controllo fallito in un Finding
 da identificativo, nome ufficiale e tipo di risorsa. Natura, severità ed
 esposizione pubblica provengono invece dal \emph{catalogo delle policy}: un file
 YAML esterno che costituisce parametro dell'analisi e non costante del codice,
-in accordo con il quarto requisito. Il catalogo risolve ciascun controllo secondo
+in accordo con la configurabilità richiesta nella
+Sottosezione~\ref{sec:requisiti}. Il catalogo risolve ciascun controllo secondo
 la priorità riassunta nella Tabella~\ref{tab:catalogo-policy} (mappatura
 esplicita su 99 controlli, prefissi o parole chiave, con ripiego predefinito su
 segnalazione non classificata \texttt{MEDIUM}).
