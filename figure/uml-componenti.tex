@@ -23,15 +23,12 @@
 \node[comp, text width=3.1cm] (runner) at (8.6,0)  {\st{component}\\ Riga di comando\\ {\scriptsize \texttt{presentation/cli}}};
 % --- Applicazione ----------------------------------------------------------
 \node[comp] (orc) at (1.55,-2.7)  {\st{component}\\ ScanPipeline\-Orchestrator};
-\node[comp] (bus) at (4.6,-2.7)  {\st{component}\\ EventBus};
-\node[comp] (eng) at (7.65,-2.7)  {\st{component}\\ RiskCorrelation\-Engine};
+\node[comp] (eng) at (6.125,-2.7) {\st{component}\\ RiskCorrelation\-Engine};
 \node[comp] (rem) at (10.7,-2.7) {\st{component}\\ Remediation\-Engine};
 % --- Dominio ---------------------------------------------------------------
-\node[domcomp] (finding)   at (1.2,-5.4)   {\st{entity}\\ Finding};
-\node[domcomp] (iscanner)  at (3.575,-5.4) {\st{interface}\\ IScanner};
-\node[domcomp] (ieventbus) at (5.95,-5.4)  {\st{interface}\\ IEventBus};
-\node[domcomp] (illm)      at (8.325,-5.4) {\st{interface}\\ ILlmProvider};
-\node[domcomp] (events)    at (10.7,-5.4)  {\st{event}\\ Eventi di dominio};
+\node[comp] (finding)  at (1.55,-5.4)  {\st{entity}\\ Finding};
+\node[comp] (iscanner) at (6.125,-5.4) {\st{interface}\\ IScanner};
+\node[comp] (illm)     at (10.7,-5.4)  {\st{interface}\\ ILlmProvider};
 % --- Infrastruttura --------------------------------------------------------
 \node[comp] (checkov)  at (1.55,-8.1) {\st{adapter}\\ Checkov};
 \node[comp] (spectral) at (4.6,-8.1)  {\st{adapter}\\ Spectral};
@@ -41,7 +38,7 @@
 \begin{scope}[on background layer]
   \node[layer, fit=(dash)(runner)(xL |- dash.north)(xR |- dash.north)]        (pres)  {};
   \node[layer, fit=(orc)(rem)(xL |- orc.north)(xR |- orc.north)]               (app)   {};
-  \node[layer, fit=(finding)(events)(xL |- finding.north)(xR |- finding.north)] (dom)   {};
+  \node[layer, fit=(finding)(illm)(xL |- finding.north)(xR |- finding.north)] (dom)   {};
   \node[layer, fit=(checkov)(ollama)(xL |- checkov.north)(xR |- checkov.north)] (infra) {};
 \end{scope}
 \node[layertab] at (pres.north west)  {Presentazione};

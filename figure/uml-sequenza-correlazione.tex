@@ -1,7 +1,7 @@
 % !TEX root = ../main.tex
 % Diagramma UML di sequenza della pipeline statica run_pipeline()
-% dell'orchestratore: scansioni, evento di completamento, correlazione e
-% punteggio. Il secondo argomento di correlate (segnalazioni a runtime) e' vuoto.
+% dell'orchestratore: scansioni, correlazione e punteggio. Il secondo
+% argomento di correlate (segnalazioni a runtime) e' vuoto.
 % NB: \mess usa il testo del messaggio come nome di nodo TikZ: niente
 % parentesi, virgole o macro nel terzo argomento.
 \linespread{1.0}\selectfont
@@ -14,7 +14,6 @@
   \tikzset{every node/.style={font=\footnotesize}}
   \newthread[white]{orc}{Orchestratore}
   \newinst[1.2]{sc}{CheckovScannerAdapter}
-  \newinst[1.4]{bus}{EventBus}
   \newinst[1.6]{eng}{RiskCorrelationEngine}
 %
   \begin{sdblock}{loop}{per ogni scanner registrato}
@@ -22,9 +21,6 @@
     \end{call}
   \end{sdblock}
   \postlevel
-%
-  \begin{call}{orc}{publish(STATIC\_SCAN\_COMPLETED)}{bus}{}
-  \end{call}
 %
   \begin{call}{orc}{correlate(static, [])}{eng}{list[Finding]}
     \begin{callself}[2]{eng}{\shortstack[l]{indicizza per chiave; per ogni risorsa sceglie\\ la rappresentante (natura, poi severità)\\ e aggrega gli altri controlli}}{}
@@ -36,8 +32,5 @@
     \end{call}
   \end{sdblock}
   \postlevel
-%
-  \begin{call}{orc}{publish(PIPELINE\_COMPLETED)}{bus}{}
-  \end{call}
 \end{sequencediagram}%
 }
