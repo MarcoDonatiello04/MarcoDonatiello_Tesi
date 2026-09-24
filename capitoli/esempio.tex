@@ -785,26 +785,7 @@ che avvenga.
 Il traffico non viaggia in una sola direzione: verso servizi interni, archivi
 remoti e risorse indicate da chi interroga il servizio partono richieste che
 l'applicazione stessa emette, ed è su queste che agisce l'attaccante in
-API7:2023. Il difetto
-compare quando un'API recupera una risorsa remota senza validare l'URL fornito
-dall'utente: l'attaccante può allora costringere l'applicazione a inviare una
-richiesta verso una destinazione inattesa, anche se protetta da un firewall o
-da una VPN~\cite{owasp2023api7}. Il server diventa un intermediario
-involontario, che agisce per conto di chi lo interroga ma con i propri
-privilegi di rete; non viola quindi un controllo di accesso applicativo, ne
-annulla uno di rete. MITRE classifica CWE-918 come debolezza \emph{resultant},
-che emerge cioè in presenza di altre~\cite{cwe918}: l'SSRF è raramente il fine
-dell'attacco, quasi sempre il mezzo. A renderla attuale è il contesto in cui le
-API operano: è più comune, perché webhook\footnote{\emph{Webhook}: meccanismo per cui un
-servizio notifica un evento inviando una richiesta HTTP a un URL scelto e
-registrato dall'utente.}, recupero di file da URL e anteprime
-dei collegamenti spingono a raggiungere risorse esterne indicate dall'utente,
-ed è più pericolosa, perché fornitori cloud, Kubernetes e Docker espongono
-canali di gestione su HTTP a percorsi noti, mentre limitare il traffico in
-uscita resta difficile~\cite{owasp2023api7}. Rispetto ad API10:2023, con cui
-condivide il terreno del traffico in uscita e il divieto di seguire ciecamente
-le redirezioni, il criterio di distinzione è chi scelga la destinazione:
-l'attaccante in API7, un fornitore legittimo in API10~\cite{owasp2023api10}.
+API7:2023.
 
 La causa immediata è l'assenza o l'inadeguatezza della validazione dell'URI
 fornito dal client, e sono i modelli di sviluppo moderni a incoraggiare
