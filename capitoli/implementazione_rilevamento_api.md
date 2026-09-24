@@ -227,13 +227,17 @@ Rileva la **Server-Side Request Forgery**: input utente che confluisce in richie
 
 ### 2.9 Modulo API8 — Security Misconfiguration (`src/core/api8_security_misconfig/`)
 
-Rileva misconfiguration a livello applicativo tramite un set di **regole AST/testo** applicate a ogni file sorgente (`detector.analyze()`):
+Rileva misconfiguration a livello applicativo tramite un set di **regole AST/testo e manifest** applicate a file sorgente e target globale (`detector.analyze()`):
 
-- `cors_wildcard` — CORS con `*`;
-- `debug_mode` — debug abilitato;
-- `verbose_error_handler` — gestione errori troppo verbosa (information disclosure);
-- `hardcoded_secret` — segreti cablati;
-- `missing_security_headers` — regola *globale* (SC-004) che valuta il target nel suo insieme.
+- `cors_wildcard` (SC-001) — CORS con `*`;
+- `debug_mode` (SC-002) — debug abilitato in produzione;
+- `verbose_error_handler` (SC-003) — gestione errori troppo verbosa (stack trace disclosure);
+- `missing_security_headers` (SC-004) — regola *globale* su header HTTP mancanti (HSTS, CSP);
+- `hardcoded_secret` (SC-005) — segreti cablati (analisi entropia di Shannon);
+- `missing_cors_policy` (SC-006) — regola *globale* su assenza totale di policy CORS;
+- `vulnerable_dependency` (SC-007) — regola *globale* su manifest con CVE note (database offline);
+- `unrestricted_http_methods` (SC-008) — route mutanti esposte a GET implicito o handler catch-all;
+- `missing_cache_control` (SC-009) — assenza di header `Cache-Control: no-store` su dati privati (Scenario #2 OWASP).
 
 **Filtro di confidenza.** Vengono scartati i finding con `confidence < 0.70`, per contenere i falsi positivi. Output: `MisconfigReport` con `MisconfigFinding`.
 

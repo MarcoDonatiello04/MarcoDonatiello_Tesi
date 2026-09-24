@@ -1267,194 +1267,101 @@ stessa rotta alla voce rappresentativa: una scelta che favorisce la leggibilità
 e la bonifica, al prezzo di non enumerare separatamente ogni difetto coincidente.
 
 \section{Rilevamento della Server-Side Request Forgery}
+
 \label{sec:rilevamento-ssrf}
 
-La \emph{Server-Side Request Forgery}~\cite{owasp2023api7}
-(Sottosezione~\ref{subsubsec:api7}) si verifica quando un dato controllato
-dall'utente determina la destinazione di una richiesta che il server compie per
-proprio conto: l'attaccante non colpisce direttamente un'altra macchina, ma
-induce il server a farlo al posto suo, raggiungendo risorse interne altrimenti
-irraggiungibili, primi fra tutti i servizi di metadati degli ambienti cloud che
-custodiscono le credenziali dell'istanza. La debolezza, ricondotta a
-CWE-918~\cite{cwe918}, ha una forma strutturale netta: un flusso che va da una
-sorgente di input non validata a un \emph{sink} che effettua la chiamata di
-rete. È perciò una categoria \emph{tecnica}, riconoscibile staticamente
-seguendo quel flusso nel codice.
+La \emph{Server-Side Request Forgery} (SSRF)~\cite{owasp2023api7} (Sottosezione~\ref{subsubsec:api7}) si manifesta quando un dato controllato dall'utente influenza la destinazione o i parametri di una richiesta di rete eseguita dal server per proprio conto. In questo scenario l'attaccante non accede direttamente alla risorsa protetta, ma sfrutta il server come intermediario per raggiungerla. Le conseguenze possono essere rilevanti: tra gli scenari più critici rientrano la ricognizione della rete interna mediante \emph{port scanning} di \texttt{localhost}, VPC o container adiacenti, l'esfiltrazione di credenziali temporanee attraverso l'accesso ai servizi di metadati cloud, quali l'\emph{Instance Metadata Service} (IMDS), e l'aggiramento dei controlli di sicurezza mediante catene di reindirizzamento HTTP malevole. La vulnerabilità, classificata come CWE-918~\cite{cwe918}, presenta una struttura riconducibile a un flusso di dati che collega una sorgente di input non sanificata a un \emph{sink} responsabile dell'esecuzione della richiesta di rete. Questa caratteristica la rende particolarmente adatta a tecniche di rilevamento statico basate sull'analisi della propagazione dei dati.
 
-Il modulo che la copre si distingue dai precedenti per una scelta di fondo:
-invece di reimplementare l'analisi del flusso dei dati, la delega a uno
-strumento maturo di analisi statica, Semgrep~\cite{semgrep2026docs}, guidandolo
-con un insieme di regole scritte su misura e traducendone l'esito nel modello di
-dominio. È il punto in cui le due famiglie di misure descritte all'inizio del
-capitolo si incontrano: un modulo proprietario che, per il compito più oneroso,
-si appoggia a un motore esterno anziché duplicarlo. Un secondo livello,
-facoltativo, esamina il contratto dell'interfaccia. L'esposizione tratta prima
-il livello principale e la traduzione dei risultati, poi il livello di contratto
-e la resilienza, infine la validazione.
+Il modulo dedicato, collocato in \path{src/core/api7_ssrf/}, combina due livelli di analisi con finalità complementari. Il primo è costituito da un motore di \emph{Static Application Security Testing} (SAST) basato sulla \emph{Taint Analysis}\footnote{\emph{Taint Analysis} (analisi del flusso di contaminazione): tecnica che traccia il percorso compiuto dai dati di input non fidati (\emph{source}) attraverso le variabili e le funzioni dell'applicazione, verificando se raggiungano operazioni critiche (\emph{sink}) senza opportune bonifiche o controlli (\emph{sanitizer}).}, implementato attraverso Semgrep~\cite{semgrep2026docs}. Il secondo opera invece a livello contrattuale e analizza le specifiche OpenAPI. La natura statica della prima analisi consente di individuare la condizione di rischio prima dell'esecuzione dell'applicazione e indipendentemente dal modo in cui viene gestita la risposta del server remoto: il rilevamento rimane quindi valido sia nel caso di \emph{Basic SSRF}, in cui la risposta viene restituita al client, sia nel caso di \emph{Blind SSRF}, in cui essa viene trattenuta o ignorata. L'analisi del modulo procede pertanto dalla descrizione del motore di \emph{taint}, delle relative regole e delle tecniche di normalizzazione, per estendersi alla verifica contrattuale dell'interfaccia e concludersi con la metodologia di validazione e con i limiti dell'approccio adottato.
 
-\subsection{Le regole di flusso e la normalizzazione}
+\subsection{Il motore di Taint Analysis e la normalizzazione}
+
 \label{sec:ssrf-semgrep}
 
-Il livello principale esegue Semgrep come processo esterno sul codice bersaglio,
-applicando un file di regole dedicato alla SSRF. Ogni regola descrive un flusso
-pericoloso nella forma sorgente$\rightarrow$sink e, aspetto essenziale, esclude
-i casi in cui fra i due compare una validazione: il motore segnala il flusso
-solo quando l'input dell'utente raggiunge la chiamata di rete senza passare per
-un controllo. Cinque regole coprono i casi ricorrenti: un URL preso dai parametri
-o dal corpo di una richiesta e passato ai client HTTP di Python o di
-JavaScript senza validazione; una chiamata che segue i \emph{redirect}, i quali
-consentono di aggirare una lista di indirizzi ammessi rimbalzando da un host
-autorizzato a uno interno; e l'accesso diretto, cablato nel codice, a un
-endpoint di metadati cloud\footnote{\emph{Endpoint di metadati cloud}: un
-indirizzo interno speciale (per esempio \path{169.254.169.254}) che i provider
-espongono alle istanze per fornirne configurazione e credenziali temporanee;
-una SSRF che lo raggiunge può sottrarre quelle credenziali.}, il bersaglio più
-critico perché espone le credenziali dell'istanza.
+Il modulo utilizza la \emph{Taint Analysis} per seguire la propagazione dei dati non fidati all'interno del programma. Un valore proveniente dall'esterno viene marcato come ``contaminato'' (\emph{tainted}) e il motore ne segue il percorso attraverso assegnazioni, trasformazioni e chiamate di funzione fino a determinare se esso raggiunga un'operazione sensibile. Semgrep organizza questo meccanismo attraverso la modalità \texttt{mode: taint}, nella quale vengono distinti tre elementi che corrispondono ai principali punti del flusso analizzato. Le \emph{sources} individuano le sorgenti dei dati non fidati, come i parametri di query, il corpo delle richieste e le intestazioni HTTP, sia in Python sia in Node.js/Express. I \emph{sanitizers} rappresentano invece i controlli che consentono di considerare il dato verificato, per esempio quando un URL viene confrontato con un insieme predefinito di domini autorizzati; una volta attraversato un controllo riconosciuto come sanificatore, il valore non viene più trattato come pericoloso, riducendo così le segnalazioni relative a percorsi già protetti. I \emph{sinks}, infine, corrispondono alle operazioni nelle quali il dato può produrre l'effetto vulnerabile, come le funzioni che effettuano richieste di rete. Quando il valore raggiunge uno di questi punti senza essere passato attraverso un'adeguata sanificazione, il motore genera una segnalazione.
 
-L'uscita grezza di Semgrep viene poi normalizzata in una segnalazione di
-dominio. A ciascun risultato si assegna la debolezza CWE-918, una severità
-derivata dal livello riportato dallo strumento e un grado di confidenza che
-riflette la nitidezza del match: massimo per un flusso diretto dalla sorgente al
-sink, ridotto quando è presente una validazione giudicata comunque
-insufficiente, ancora più prudente per l'accesso a un endpoint di metadati, che
-in rari casi può essere legittimo. La normalizzazione estrae inoltre la
-sorgente, il sink, il tipo di validazione riconosciuta — lista di indirizzi
-ammessi\footnote{\emph{Allowlist} (lista di indirizzi ammessi) e \emph{blocklist}
-(lista di indirizzi vietati): due criteri opposti di filtraggio; la prima
-consente solo le destinazioni elencate ed è più sicura, la seconda vieta quelle
-elencate e lascia passare tutto il resto.} o di indirizzi vietati — e
-l'eventuale inseguimento dei redirect. La Tabella~\ref{tab:regole-ssrf}
-riepiloga le regole.
+Una caratteristica rilevante dell'analisi è la capacità di mantenere la contaminazione anche nei casi di \emph{SSRF parziale} (\emph{Partial SSRF}), nei quali l'input dell'utente non costituisce direttamente l'intero URL ma viene inserito all'interno di una destinazione predefinita. Il \emph{taint} continua a propagarsi attraverso \emph{f-string} (come \path{f"https://api.partner.com/v1/{path}"}), concatenazioni di stringhe, chiamate a \texttt{.format(...)} e sequenze di assegnazioni intermedie. Questa continuità nel tracciamento permette di rilevare situazioni in cui il controllo apparente della destinazione non impedisce all'input di influenzare una parte significativa dell'URL, rendendo possibile, per esempio, lo sfruttamento del \emph{path traversal} o la modifica dell'host all'interno di URL costruiti dinamicamente.
+
+Le regole implementate coprono i principali punti di ingresso verso richieste HTTP e alcuni scenari specifici che aumentano il rischio di SSRF. La regola SS-001 analizza l'utilizzo dei client Python più comuni, in particolare \texttt{requests}, \texttt{httpx} e \texttt{aiohttp}, mentre SS-002 estende il controllo alle funzioni della libreria \texttt{urllib}, tra cui \texttt{urlopen} e \texttt{urlretrieve}. Sul versante Node.js/Express, SS-003 ricerca la propagazione di input provenienti da query o body verso \texttt{fetch} e \texttt{axios}. La regola SS-004 si concentra invece sull'abilitazione del reindirizzamento automatico, rilevando opzioni quali \texttt{allow\_redirects=True} in \texttt{requests} o \texttt{follow\_redirects=True} in \texttt{httpx}. Questo aspetto è significativo perché una validazione iniziale dell'host non garantisce necessariamente la sicurezza dell'intera richiesta: un redirect HTTP di tipo 30x può infatti condurre il client verso una destinazione differente, potenzialmente appartenente all'infrastruttura interna. La regola SS-005 intercetta le chiamate dirette agli endpoint utilizzati dai servizi di metadati cloud, tra cui \path{169.254.169.254} e le infrastrutture di metadati associate a GCP e Alibaba, così da evidenziare il rischio di esposizione di credenziali o token riservati all'istanza. La regola SS-006 opera infine sulla specifica OpenAPI e verifica che i parametri destinati a contenere URL siano accompagnati da vincoli sufficienti a descriverne e limitarne l'uso.
 
 \begin{table}[htbp]
 \centering
 \small
 \linespread{1.0}\selectfont
-\begin{tabularx}{\linewidth}{@{}l >{\hsize=1.5\hsize}X l@{}}
+\begin{tabularx}{\linewidth}{@{}l >{\raggedright\arraybackslash}X l l@{}}
 \toprule
-\textbf{Regola} & \textbf{Flusso pericoloso ricercato} & \textbf{Livello} \\
+\textbf{Regola} & \textbf{Flusso o anomalia ricercata} & \textbf{Ambito} & \textbf{Livello} \\
 \midrule
-SS-001 & URL da input utente ai client HTTP di Python (\texttt{requests}) & codice \\
-SS-002 & URL da input utente alle librerie \texttt{urllib} di Python & codice \\
-SS-003 & URL da input utente a \texttt{fetch}/\texttt{axios} in JavaScript & codice \\
-SS-004 & chiamata che segue i redirect, con possibile aggiramento della lista ammessi & codice \\
-SS-005 & accesso cablato a un endpoint di metadati cloud & codice \\
-SS-006 & parametro d'interfaccia simile a un URL privo di vincoli di validazione & contratto \\
+SS-001 & URL non validato verso \texttt{requests}, \texttt{httpx} o \texttt{aiohttp} & Python & codice \\
+SS-002 & URL non validato verso libreria \texttt{urllib} (\texttt{urlopen}, \texttt{urlretrieve}) & Python & codice \\
+SS-003 & Input query o body inoltrato a \texttt{fetch} o \texttt{axios} & JS/TS & codice \\
+SS-004 & Reindirizzamento abilitato (\texttt{allow\_redirects}, \texttt{follow\_redirects}) & Python & codice \\
+SS-005 & Chiamata a endpoint di metadati cloud (\path{169.254.169.254}, GCP, Alibaba) & Py/JS/TS & codice \\
+SS-006 & Parametro di tipo URL privo di \texttt{format: uri} o di un pattern di \emph{allowlist} & OpenAPI & contratto \\
 \bottomrule
 \end{tabularx}
-\caption[Regole del modulo Server-Side Request Forgery]{Le sei regole del
-modulo. Le prime cinque operano sul codice tramite Semgrep, la sesta sul
-contratto OpenAPI. Tutte sono ricondotte a CWE-918.}
+\caption[Regole del modulo Server-Side Request Forgery]{Le sei regole del modulo. Le prime cinque operano sul codice sorgente mediante Semgrep in \emph{Taint Mode}, mentre la sesta analizza la specifica OpenAPI. Tutte riconducono a CWE-918.}
 \label{tab:regole-ssrf}
 \end{table}
 
-\subsection{Il livello di contratto e la resilienza}
+L'output prodotto da Semgrep viene successivamente elaborato da un normalizzatore, che ricostruisce il percorso seguito dal dato e associa a ciascun reperto un livello di severità e di confidenza in funzione dei controlli di sicurezza individuati. In questa fase viene mantenuta anche la distinzione tra filtri basati su liste di ammissione (\emph{allowlist}) e filtri costruiti mediante liste di esclusione (\emph{blocklist})\footnote{\emph{Allowlist} e \emph{blocklist}: due strategie di validazione opposte; la prima ammette esclusivamente un insieme chiuso e controllato di schemi, host o percorsi ed è considerata la misura d'elezione, la seconda vieta stringhe o pattern noti ma è storicamente soggetta ad aggiramenti tramite codifiche alternative o DNS.}. La differenza è rilevante nella valutazione del rischio, poiché non tutti i controlli sull'input offrono lo stesso grado di restrizione della destinazione. Il normalizzatore tiene conto anche dell'eventuale abilitazione dei reindirizzamenti, integrando tale informazione nella valutazione complessiva del reperto.
+
+\subsection{Analisi contrattuale dell'interfaccia}
+
 \label{sec:ssrf-openapi}
 
-Quando una specifica OpenAPI è disponibile, un secondo livello la esamina alla
-ricerca dei parametri e delle proprietà il cui nome richiama un URL — come
-\texttt{callback}, \texttt{webhook} o \texttt{redirect\_uri} — dichiarati come
-semplici stringhe senza vincoli che ne restringano il valore. La severità
-riflette quanto poco il contratto li protegga: più alta quando manca del tutto
-un formato dichiarato, più bassa quando un formato è presente ma non è
-accompagnato da un'espressione che limiti le destinazioni ammesse. A differenza
-del livello sul codice, questo non osserva un flusso reale ma inferisce il
-rischio dalla forma del contratto, e le sue segnalazioni hanno perciò il valore
-di un avvertimento a livello di progetto.
+L'analisi non si limita al codice sorgente, ma prende in esame anche la specifica OpenAPI, che descrive formalmente parametri e tipi di dati esposti dagli endpoint dell'interfaccia. Questo secondo livello consente di individuare condizioni di rischio già nella definizione del contratto dell'API, prima che la relativa implementazione venga eseguita.
 
-Poiché l'esecuzione di Semgrep su repository estese può richiedere tempo, il
-modulo tratta lo scadere del tempo massimo come un evento previsto: non
-interrompe l'analisi con un errore, ma registra un avviso e restituisce i
-risultati raccolti fino a quel momento. Gli esiti dei due livelli confluiscono
-in un rapporto che riporta la versione di Semgrep impiegata, i segnali di
-copertura delle regole e un riepilogo per severità e per livello di origine.
+La regola SS-006 considera in particolare i parametri destinati a ricevere indirizzi web esterni, una situazione frequente nei campi denominati \texttt{url}, \texttt{webhook}, \texttt{callback} o \texttt{redirect}. In presenza di questo tipo di input, la specifica dovrebbe descrivere con sufficiente precisione quali valori siano ammessi. Un primo problema si verifica quando il parametro è modellato come una generica stringa e non viene associato a \texttt{format: uri}: in questo caso il contratto non esprime neppure il requisito che il valore fornito rappresenti un URL valido. Un secondo problema riguarda l'assenza di vincoli sulla destinazione. Anche qualora il parametro sia formalmente dichiarato come URL, la mancanza di restrizioni sui domini o sui protocolli ammessi, per esempio mediante un'espressione regolare di controllo, lascia la possibilità di specificare destinazioni arbitrarie, comprese risorse interne o endpoint riservati.
+
+La verifica contrattuale consente quindi di intercettare una parte del problema già nella fase di progettazione dell'interfaccia. Il controllo non dimostra da solo che una SSRF sia sfruttabile, ma evidenzia l'assenza di vincoli nel punto in cui l'API definisce il proprio modello di input, rendendo possibile intervenire sul contratto prima che la debolezza venga trasferita all'implementazione e raggiunga l'ambiente di produzione.
 
 \subsection{Validazione e limiti}
+
 \label{sec:validazione-ssrf}
 
-La validazione adotta ancora la coppia di applicazioni gemelle, disponibili sia
-in Python sia in JavaScript. La versione vulnerabile raccoglie i flussi che le
-regole devono riconoscere e quella irrobustita li corregge introducendo la
-validazione mancante e disattivando l'inseguimento dei redirect. Nel ciclo
-registrato, esteso anche all'applicazione realistica crAPI, il modulo ha
-riconosciuto le debolezze attese senza produrre falsi positivi sulla versione
-sicura, con un tasso di veri positivi del cento per cento; l'accesso all'endpoint
-di metadati è stato confermato con una chiamata reale. Una prova ulteriore su un
-bersaglio di codice reale ha riconosciuto il flusso non validato su un endpoint
-di importazione che inoltra un URL fornito dall'utente, lasciando invece
-inalterata la variante che valida l'indirizzo e blocca i redirect.
+L'efficacia del modulo è stata valutata mediante il confronto tra un'applicazione di test intenzionalmente vulnerabile e una versione protetta, nella quale gli URL sono sottoposti a sanificazione rigorosa e i reindirizzamenti risultano disabilitati. La verifica è stata affiancata da un'analisi condotta su un repository reale, così da osservare il comportamento del rilevatore anche al di fuori dell'ambiente controllato utilizzato per i test.
 
-I limiti derivano dall'impianto scelto. Il modulo dipende dalla disponibilità di
-Semgrep e, allo scadere del tempo massimo su repository molto grandi, i suoi
-risultati possono essere parziali. Le regole riconoscono coppie note di sorgenti
-e sink e le forme consuete di validazione: un client HTTP inusuale o un
-validatore scritto in modo non convenzionale possono sfuggire, e un controllo
-non riconosciuto può a sua volta generare una segnalazione a torto. La regola sui
-metadati cloud individua l'accesso cablato a un indirizzo noto, non un URL
-generico controllato dall'utente che finisca per raggiungere lo stesso servizio:
-è un limite di superficie dichiarato, non un difetto della logica. Infine il
-livello di contratto ragiona sui nomi e sui formati dichiarati, non su un flusso
-osservato, e resta perciò un'euristica utile a segnalare parametri a rischio
-prima che l'API entri in funzione, non una prova della vulnerabilità.
+Nei collaudi eseguiti, il rilevatore ha riconosciuto i flussi considerati a rischio e non ha prodotto segnalazioni sui percorsi nei quali erano presenti i controlli previsti. Il risultato riflette tuttavia la natura statica del metodo adottato. L'analisi individua infatti la predisposizione del codice alla SSRF, ma non determina a runtime se la destinazione remota sia effettivamente raggiungibile né può verificare l'esito concreto di una \emph{Blind SSRF}. Quest'ultimo scenario richiederebbe un livello di osservazione dinamica, tipicamente ottenuto mediante strumenti di \emph{Dynamic Application Security Testing} (DAST) e meccanismi di ascolto fuori banda.
+
+La stessa impostazione pone dei limiti rispetto ai sistemi distribuiti. L'analisi opera sul singolo progetto e non ricostruisce flussi di dati che attraversano code asincrone o più microservizi distinti. Una vulnerabilità può quindi dipendere da una catena di propagazione che supera i confini del progetto analizzato e che, in assenza di una correlazione tra i diversi componenti, non è completamente osservabile dal motore statico.
+
 
 \section{Rilevamento della Security Misconfiguration}
 \label{sec:rilevamento-secmisconfig}
 
 La \emph{Security Misconfiguration}~\cite{owasp2023api8}
-(Sottosezione~\ref{subsubsec:api8}) non ha un punto in cui risiedere: la
-configurazione insicura può prodursi a qualunque livello dello stack, dalla rete
-all'applicazione. Questa sezione ne affronta la parte leggibile nel codice
-applicativo, complementare alla IaC misconfiguration già trattata nella
-Sezione~\ref{sec:rilevamento-misconfig}: là l'analisi riguardava i manifest
-dell'infrastruttura, qui riguarda i comportamenti che il sorgente
-dell'applicazione configura direttamente. La distinzione tassonomica ricordata
-nel capitolo precedente guida l'implementazione: la configurazione non è di per
-sé una debolezza, ma il meccanismo attraverso cui una debolezza viene
-introdotta, tanto che MITRE proibisce di mappare le vulnerabilità reali su
-CWE-16 \emph{Configuration} e invita a ricondurle al comportamento che la
-configurazione ha determinato~\cite{cwe16}. Il modulo segue questa indicazione:
-non cerca configurazioni in astratto, ma i comportamenti concreti che ciascuna
-produce, ognuno ricondotto alla debolezza che gli corrisponde. Ne consegue una
-categoria \emph{tecnica} nel senso della Sottosezione~\ref{sec:criterio},
-riconoscibile interamente sugli artefatti, e un rilevatore statico a un solo
-livello: nessuna sollecitazione del sistema in esecuzione.
+(Sottosezione~\ref{subsubsec:api8}) raccoglie errori di configurazione che
+possono verificarsi a diversi livelli, dalla rete fino all'applicazione. Questa
+sezione ne affronta la parte visibile nel codice sorgente e nei file di
+progetto, completando l'analisi infrastrutturale già trattata nella
+Sezione~\ref{sec:rilevamento-misconfig}. Il modulo adotta un approccio statico:
+cerca direttamente nel codice le scelte di configurazione insicure, senza
+richiedere l'avvio o l'esecuzione del software.
 
-\subsection{Regole locali e regola globale}
+\subsection{Regole locali e regole globali}
 \label{sec:secmisconfig-rules}
 
-Un unico scanner attraversa ricorsivamente i file sorgente Python, JavaScript e
-TypeScript, saltando le cartelle non applicative. I file Python vengono
-interpretati con l'analizzatore sintattico della libreria standard, mentre per
-JavaScript e TypeScript, privi di quel supporto, l'analisi ricade su un esame
-testuale. Su ciascun file agiscono quattro regole, e una quinta valuta il
-bersaglio nel suo insieme, come riassume la Tabella~\ref{tab:regole-secmisconfig}.
+Lo scanner analizza i file sorgente in Python, JavaScript e TypeScript, escludendo
+le directory non applicative (come ambienti virtuali o cartelle di build). I
+controlli sono articolati in verifiche locali su ciascun file e verifiche
+globali sul progetto (Tabella~\ref{tab:regole-secmisconfig}).
 
-La prima regola cerca una politica CORS\footnote{CORS (\emph{Cross-Origin
-Resource Sharing}): il meccanismo con cui un server dichiara quali origini
-esterne possono leggere le sue risposte; un valore \emph{wildcard}, ossia il
-carattere jolly \texttt{*} che ammette qualunque origine, apre la risorsa a
-tutti, tanto più se abbinato all'invio delle credenziali.} permissiva, e ne alza
-la confidenza quando il carattere jolly è accompagnato dall'inclusione delle
-credenziali, il caso più pericoloso (CWE-942~\cite{cwe942}). La seconda individua
-la modalità di debug lasciata attiva, che in produzione può aprire all'esecuzione
-di codice (CWE-94~\cite{cwe94}). La terza riconosce i gestori d'errore troppo
-loquaci, che restituiscono al client l'intera traccia dello stack rivelando
-versioni e percorsi interni (CWE-209~\cite{cwe209}). La quinta cerca i segreti
-cablati nel codice, credenziali e chiavi lasciate in chiaro (CWE-798~\cite{cwe798}).
-La quarta è invece globale: non ispeziona un singolo file ma verifica se il
-bersaglio, nel complesso, imposti gli header di
-sicurezza\footnote{\emph{Header di sicurezza}: intestazioni della risposta HTTP
-che istruiscono il browser a comportamenti più prudenti, come
-\texttt{Strict-Transport-Security} (HSTS), che impone il canale cifrato, o
-\texttt{Content-Security-Policy}, che limita le sorgenti di contenuto
-caricabili.} attesi, la cui assenza indebolisce le difese lato client
-(CWE-693~\cite{cwe693}).
+A livello di singolo file, il modulo intercetta i comportamenti a rischio più
+comuni: politiche CORS\footnote{CORS (\emph{Cross-Origin Resource Sharing}): meccanismo con cui un server dichiara quali siti di origine diversa possono leggere le sue risposte dal browser; una configurazione permissiva consente a domini terzi non autorizzati di accedere a dati riservati.} permissive o aperte assieme alle credenziali utente, modalità di
+debug e gestori di errore che espongono la traccia dello stack, segreti cablati
+nel codice individuati tramite entropia di Shannon\footnote{\emph{Entropia di Shannon}: misura del grado di casualità di una stringa; sequenze ad alto disordine indicano chiavi o token reali, distinguendoli dai normali identificatori.} e route prive di restrizioni sui metodi HTTP o delle necessarie direttive \texttt{Cache-Control} a protezione di informazioni riservate (CWE-525~\cite{cwe525}).
+
+A livello globale, tre verifiche valutano l'impostazione complessiva del
+servizio: l'assenza delle intestazioni HTTP difensive raccomandate (come HSTS e
+\texttt{Content-Security-Policy}), la totale mancanza di una politica CORS e la
+presenza di dipendenze con vulnerabilità note censite in un archivio locale.
 
 \begin{table}[htbp]
 \centering
 \small
 \linespread{1.0}\selectfont
-\begin{tabularx}{\linewidth}{@{}l >{\hsize=1.45\hsize}X l l@{}}
+\begin{tabularx}{\linewidth}{@{}l >{\raggedright\arraybackslash}X l l@{}}
 \toprule
 \textbf{Regola} & \textbf{Comportamento ricercato} & \textbf{Ambito} & \textbf{Severità} \\
 \midrule
@@ -1462,67 +1369,29 @@ SC-001 & politica CORS con carattere jolly & file & \texttt{HIGH} \\
 SC-002 & modalità di debug attiva & file & \texttt{HIGH} \\
 SC-003 & gestore d'errore che espone la traccia dello stack & file & \texttt{HIGH} \\
 SC-004 & header di sicurezza mancanti & globale & \texttt{MEDIUM} \\
-SC-005 & segreto cablato nel codice & file & \texttt{CRITICAL} \\
+SC-005 & segreto cablato nel codice (entropia di Shannon) & file & \texttt{CRITICAL} \\
+SC-006 & assenza totale di politica CORS applicativa & globale & \texttt{MEDIUM} \\
+SC-007 & dipendenze applicative con vulnerabilità note & globale & \texttt{HIGH} \\
+SC-008 & metodi HTTP non restritti o route mutanti su GET & file & \texttt{MEDIUM} \\
+SC-009 & assenza di Cache-Control su route con dati sensibili & file & \texttt{MEDIUM} \\
 \bottomrule
 \end{tabularx}
-\caption[Regole del modulo Security Misconfiguration]{Le cinque regole del
-modulo. Quattro operano sul singolo file, la SC-004 valuta il bersaglio nel suo
-insieme.}
+\caption[Regole del modulo Security Misconfiguration]{Il catalogo delle regole
+del modulo di rilevamento applicativo per API8:2023.}
 \label{tab:regole-secmisconfig}
 \end{table}
 
-Il riconoscimento dei segreti merita una nota, perché è il più esposto ai falsi
-allarmi. La regola non si affida al solo nome della variabile, ma pesa anche il
-valore assegnato attraverso la sua entropia di
-Shannon\footnote{\emph{Entropia di Shannon}: misura del grado di disordine di una
-sequenza; un valore alto indica una stringa dall'aspetto casuale, tipico di una
-chiave o di un token reale, mentre un valore basso segnala una stringa
-regolare, più probabilmente un segnaposto.}: un valore ad alta entropia, dall'aspetto
-casuale, accresce la confidenza che si tratti di un segreto autentico, mentre i
-segnaposto ricorrenti e i file di test vengono esclusi a priori.
+\subsection{Limiti del modulo}
+\label{sec:limiti-secmisconfig}
 
-\subsection{Filtro di confidenza}
-\label{sec:secmisconfig-confidence}
-
-Poiché il riconoscimento delle configurazioni insicure è per sua natura incline
-ai falsi positivi, ogni regola accompagna la propria segnalazione con un grado di
-confidenza, e prima di comporre il rapporto il modulo scarta tutte le
-segnalazioni al di sotto di una soglia. Il valore predefinito è una confidenza
-minima di $0{,}70$: è un parametro esplicito dell'analisi, coerente con la
-configurabilità richiesta dalla Sottosezione~\ref{sec:requisiti}, e regola il
-compromesso fra il rumore delle segnalazioni deboli e il rischio di perdere quelle
-autentiche. Le segnalazioni superstiti confluiscono in un rapporto che, accanto
-all'elenco, riporta i segnali di copertura, ossia quali regole si sono attivate,
-e un riepilogo per severità e per categoria, distinguendo le configurazioni
-insicure dai segreti.
-
-\subsection{Validazione e limiti}
-\label{sec:validazione-secmisconfig}
-
-La validazione segue la consueta coppia di applicazioni gemelle, affiancata da
-crAPI~\cite{owasp2026crapi}. Il riferimento di verità richiede che la versione
-vulnerabile faccia scattare tutte e cinque le regole e che quella irrobustita
-non ne faccia scattare nessuna; nei cicli registrati il modulo ha riconosciuto
-ogni debolezza attesa senza produrre falsi positivi, con un tasso di veri
-positivi del cento per cento. Una prova ulteriore su un piccolo bersaglio
-realistico ha inoltre mostrato la capacità del modulo di tacere dove deve: la
-modalità di debug disattivata e alcune variabili di ambiente scambiate per
-segreti non hanno generato segnalazioni, mentre l'assenza degli header di
-sicurezza è stata correttamente rilevata.
-
-I limiti sono coerenti con la scelta di campo. Il catalogo delle regole è
-deliberatamente ristretto a pochi comportamenti riconoscibili nel sorgente,
-laddove la categoria, per ammissione della stessa OWASP, attraversa l'intero
-stack: il modulo copre la porzione applicativa e lascia quella infrastrutturale
-all'analisi della Sezione~\ref{sec:rilevamento-misconfig}, con cui è
-complementare. Il riconoscimento dei segreti resta un'euristica fondata
-sull'entropia e sui nomi, che la soglia di confidenza contiene ma non annulla:
-un valore casuale ma innocuo può ancora sfuggire al filtro, e un segreto dalla
-forma regolare può passare inosservato. L'analisi di JavaScript e TypeScript,
-condotta sul testo anziché sulla struttura sintattica, è meno solida di quella
-su Python. Infine la regola sul CORS cerca un carattere jolly esplicito, e
-perciò un bersaglio che non dichiari alcuna politica non viene segnalato: è un
-limite dichiarato, non una lacuna silenziosa.
+I limiti del modulo dipendono dalla sua natura statica. Non analizzando il
+traffico reale o il comportamento a runtime, lo strumento non può individuare
+problemi legati ai server web o ai proxy intermedi, come la desincronizzazione
+delle richieste HTTP (CWE-444~\cite{cwe444}) o l'abilitazione di metodi
+pericolosi a livello server (come il verbo \texttt{TRACE}, riconducibile a
+CWE-749~\cite{cwe749}). Inoltre, il controllo delle librerie con vulnerabilità
+note (CWE-1395~\cite{cwe1395}) fa riferimento a un archivio locale offline,
+lasciando l'aggiornamento continuo a strumenti dedicati.
 
 \section{Rilevamento dell'Unsafe Consumption of APIs}
 \label{sec:rilevamento-unsafe}
@@ -1582,7 +1451,7 @@ indicate da una terza parte (CWE-601~\cite{cwe601}).
 \centering
 \small
 \linespread{1.0}\selectfont
-\begin{tabularx}{\linewidth}{@{}l >{\hsize=1.5\hsize}X l@{}}
+\begin{tabularx}{\linewidth}{@{}l >{\raggedright\arraybackslash}X l@{}}
 \toprule
 \textbf{Regola} & \textbf{Comportamento ricercato} & \textbf{Severità} \\
 \midrule
@@ -1607,31 +1476,32 @@ categoria.
 
 Sulle due applicazioni gemelle il risultato è netto: le tre regole scattano tutte
 sulla versione vulnerabile e nessuna su quella irrobustita, con il cento per cento
-di veri positivi e nessun falso positivo. Su un bersaglio realistico, invece, il
-modulo non segnala nulla, e per due ragioni distinte che conviene tenere separate.
-Le regole sul canale in chiaro e sulla redirezione cieca (UC-002 e UC-003)
-riconoscono il servizio esterno dal suo indirizzo fisso nel codice, e restano
-perciò silenziose quando quell'indirizzo lo decide l'utente e viene ricostruito a
-ogni richiesta. La regola sui dati non validati (UC-001) non dipende invece
-dall'indirizzo: segue il dato dalla risposta della terza parte fino a dove viene
-riusato, e tace perché quel dato non finisce mai, senza controlli, in un punto
-pericoloso, come una query costruita concatenando stringhe o un oggetto creato da
-un dizionario non filtrato. Qui, insomma, manca il bersaglio dell'iniezione
-differita, non l'indirizzo fisso. Lo stesso codice resta comunque coperto, da
-un'altra angolazione, dal modulo per la Server-Side Request Forgery
+di veri positivi e zero falsi positivi. Il modulo dimostra quindi di rilevare in
+modo affidabile i pattern di consumo insicuro per i quali è stato progettato.
+
+Sull'applicazione realistica le regole non producono segnalazioni, un esito che
+riflette le caratteristiche architetturali del codice esaminato piuttosto che un
+difetto di copertura. Le regole UC-002 e UC-003 identificano il servizio esterno
+a partire da un indirizzo statico presente nel sorgente; nell'applicazione
+realistica, invece, gli endpoint delle terze parti sono definiti solo a runtime,
+perciò non rientrano nel perimetro dell'analisi puramente statica. La regola
+UC-001, che non dipende dall'indirizzo ma segue il flusso del dato dalla risposta
+della terza parte fino al punto di riuso, non genera segnalazioni perché il
+codice esaminato non presenta punti di iniezione non protetti, come query
+costruite per concatenazione o oggetti creati da dizionari non filtrati. In questo
+caso è dunque assente il bersaglio dell'iniezione differita, non la capacità di
+rilevamento del modulo. Lo stesso codice resta inoltre coperto, da un'angolazione
+complementare, dal modulo per la Server-Side Request Forgery
 (Sezione~\ref{sec:rilevamento-ssrf}).
 
-Questo silenzio non è una lacuna, ma il confine naturale di un'analisi statica e
-limitata al solo Python. Leggendo il codice il modulo vede la
-\emph{predisposizione} al consumo insicuro, cioè la validazione che manca, il
-canale in chiaro, la redirezione seguita ciecamente, ma non può vedere se la terza
-parte sia davvero compromessa. Capire se quella predisposizione si traduca in un
-danno concreto richiede di mettere alla prova il sistema in esecuzione contro un
-fornitore ostile e controllato: un banco che osservi il traffico in uscita e
-risponda di proposito con dati malevoli o con una redirezione verso un host
-pericoloso. Il residuo è perciò di natura \emph{dinamica} nel senso di \RQ{1.2}, e
-sono dinamici anche i consumi il cui indirizzo nasce a runtime, di cui si occupa
-l'analisi SSRF. API10 non è quindi un buco di copertura, ma un caso a copertura
-mista --- statica per la predisposizione, affidata al piano dinamico e all'SSRF
-per la verifica vera e propria --- e il suo residuo rientra nella stessa
-tassonomia della \RQ{1.2}.
+I risultati confermano la collocazione naturale del modulo all'interno di
+un'architettura di analisi a più livelli. L'analisi statica individua la
+\emph{predisposizione} al consumo insicuro --- la validazione assente, il canale
+in chiaro, la redirezione seguita ciecamente --- mentre la verifica di
+sfruttabilità effettiva richiede un piano dinamico che metta alla prova il
+sistema in esecuzione contro un fornitore ostile e controllato: un banco che
+osservi il traffico in uscita e risponda di proposito con dati malevoli o con una
+redirezione verso un host pericoloso. API10 presenta dunque una copertura
+\emph{mista} --- statica per la predisposizione, dinamica e integrata con l'SSRF
+per la verifica --- e il residuo non coperto rientra nella tassonomia della
+\RQ{1.2}.

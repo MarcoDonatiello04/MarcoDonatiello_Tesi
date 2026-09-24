@@ -104,6 +104,9 @@ bindingoffset=15mm,marginpar=2cm,headheight=15pt,reversemp]{geometry}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\chaptermark}[1]{\markright{\thechapter\ $\:-\:$ #1}}
 \renewcommand{\sectionmark}[1]{\markright{\thesection\ $\,-\,$ #1}}
+% Spaziatura tra il testo e le note a piè di pagina
+\usepackage[bottom]{footmisc}
+\setlength{\skip\footins}{28pt plus 6pt minus 4pt}
 % abstract
 \newenvironment{abstract} %
 {%\cleardoublepage %\fncyblank 
