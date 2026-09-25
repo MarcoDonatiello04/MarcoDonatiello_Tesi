@@ -1141,130 +1141,238 @@ del limite, non la certezza di un attacco riuscito.
 La \emph{Broken Function Level Authorization}~\cite{owasp2023api5}
 (Sottosezione~\ref{subsubsec:api5}) riguarda le funzioni che un ruolo non
 dovrebbe poter invocare: esportare l'elenco degli utenti, cancellare un account
-altrui, creare un invito con privilegi amministrativi. Si distingue dalla BOLA
-per il livello a cui il controllo cede: non l'oggetto ma la funzione. Il difetto
-è insidioso perché il controllo di autorizzazione a livello di funzione non ha
-un luogo obbligato, e una rotta aggiunta a un controller eredita il routing e
-l'autenticazione ma non l'autorizzazione, nascendo raggiungibile e restando
-tale. La sua parte riconoscibile sugli artefatti è l'assenza, su una funzione
-riservata, del controllo che ne verifichi il ruolo; accertare poi che
-quell'assenza sia davvero sfruttabile da un'utenza ordinaria è un residuo che
-richiederebbe una sollecitazione dinamica, non compiuta da questo modulo. Il
-rilevatore adotta perciò lo stesso impianto statico a tre livelli del modulo
-precedente, con un problema in più da governare: uno stesso endpoint può essere
-segnalato da più regole e da più livelli, e va ricondotto a un'unica voce.
-L'esposizione tratta prima i tre livelli, poi la deduplicazione che li unifica,
-infine la validazione.
+altrui, promuovere sé stessi ad amministratore. Rispetto alla BOLA cambia la
+domanda da porre. La BOLA chiede se un utente possa accedere a un certo oggetto;
+qui si chiede se possa eseguire una certa funzione. Il difetto nasce spesso da
+una semplice dimenticanza: una rotta aggiunta a un controller eredita il routing
+e l'autenticazione, ma non l'autorizzazione, e resta raggiungibile da chiunque
+abbia effettuato l'accesso.
 
-\subsection{I tre livelli e la mappatura degli endpoint}
+Sugli artefatti questo difetto si riconosce come un'assenza: su una funzione
+riservata manca il controllo che verifichi il ruolo del chiamante. Stabilire se
+quell'assenza sia davvero sfruttabile da un utente ordinario richiederebbe di
+invocare la funzione con le sue credenziali, una verifica dinamica che questo
+modulo non compie. Il rilevatore adotta quindi lo stesso impianto statico a tre
+livelli del modulo precedente e affronta un problema in più: lo stesso endpoint
+può essere segnalato da più regole e da più livelli, e va ricondotto a una voce
+sola. Le sottosezioni seguenti descrivono i tre livelli, la regola che segue il
+flusso dei dati, la deduplicazione e la validazione.
+
+\subsection{I tre livelli di analisi}
 \label{sec:bfla-layers}
 
-Il primo livello analizza il codice sorgente e, a differenza degli altri moduli,
-non si limita a cercare i difetti: mappa attivamente ogni funzione all'endpoint
-che espone, ricostruendo il percorso dalle rotte dichiarate nei decoratori e dai
-prefissi dei raggruppamenti di rotte. Su questa mappa sei regole cercano le
-diverse forme in cui il controllo di funzione può mancare o essere aggirato: un
-endpoint privilegiato privo di qualsiasi verifica di ruolo, il caso più grave e
-ricondotto a CWE-285~\cite{cwe285}; un endpoint che autentica il chiamante ma
-non ne verifica i privilegi, ossia autenticazione senza autorizzazione
-(CWE-862~\cite{cwe862}); un verbo HTTP\footnote{\emph{Verbo} (o \emph{metodo})
-\emph{HTTP}: l'azione richiesta su una risorsa, per esempio \texttt{GET} per
-leggere o \texttt{DELETE} per cancellare; lasciarne abilitato uno non presidiato
-riapre l'operazione da una via secondaria.} alternativo lasciato aperto su una
-rotta protetta solo per il verbo consueto (CWE-650~\cite{cwe650}); un percorso
-amministrativo raggiungibile senza restrizioni (CWE-284~\cite{cwe284}); una
-funzione amministrativa collocata fuori dai percorsi riservati, e perciò
-sfuggente a un controllo basato sul solo nome della rotta (CWE-285).
+Il primo livello lavora sul codice sorgente Python e JavaScript/TypeScript, che
+legge attraverso l'albero sintattico prodotto da
+tree-sitter~\cite{treesitter2026docs} anziché con ricerche testuali; in questo
+modo commenti, formattazione e decoratori sovrapposti non alterano il risultato.
+Per prima cosa il livello associa ogni funzione all'endpoint che espone. Nel
+codice Python il percorso si ricava dal decoratore della rotta e dai prefissi dei
+raggruppamenti di rotte (i \emph{Blueprint} di Flask); in Express dalla chiamata
+che registra la rotta, i cui argomenti intermedi sono i middleware in cui
+cercare eventuali controlli di ruolo.
 
-Il secondo livello ispeziona i file di configurazione alla ricerca del principio
-che il capitolo precedente ha indicato come la difesa centrale di questa
-categoria: il \emph{diniego per impostazione
-predefinita}\footnote{\emph{Deny-by-default}: il criterio per cui ogni funzione
-è negata salvo concessione esplicita al ruolo che ne ha diritto; con il criterio
-opposto, il permesso predefinito, una dimenticanza non produce alcun segnale
-d'errore e passa inosservata.}. Una configurazione che conceda accesso per
-impostazione predefinita, anziché negarlo e richiedere permessi espliciti, viene
-segnalata come un default permissivo (CWE-276~\cite{cwe276}).
+Su questa mappa il modulo deve decidere quali endpoint siano privilegiati. Lo fa
+confrontando il percorso, dopo aver sostituito i parametri con un segnaposto,
+con un elenco di schemi tipici delle funzioni riservate, come \texttt{/admin},
+\texttt{/internal}, \texttt{/debug}, \texttt{/config}, \texttt{/export} o
+\texttt{/users/\{id\}/role}. Sono considerate privilegiate anche le
+cancellazioni e le sostituzioni rivolte a un'intera collezione anziché a un
+singolo elemento.
 
-Il terzo livello, presente solo se una specifica OpenAPI è fornita, incrocia i
-risultati dell'analisi del codice con il contratto: cerca gli endpoint
-privilegiati che la specifica dichiara senza uno schema di
+Il secondo passo distingue due tipi di protezione che nel codice appaiono
+simili. Un decoratore come \texttt{login\_required} verifica \emph{chi} è il
+chiamante; uno come \texttt{require\_role("admin")} verifica \emph{che cosa}
+può fare. Solo il secondo è un controllo di funzione. Il modulo mantiene due
+elenchi separati di decoratori e middleware, uno per l'autenticazione e uno per
+l'autorizzazione, e riconosce anche i controlli scritti direttamente nel corpo
+della funzione, come un confronto sul ruolo dell'utente corrente. Questa
+distinzione regge buona parte delle regole.
+
+Le regole del primo livello sono sei. La più grave, BF-001, segnala un endpoint
+privilegiato privo di qualsiasi controllo di ruolo (CWE-285~\cite{cwe285}).
+BF-002 copre il caso in cui l'autenticazione c'è ma l'autorizzazione no: una
+funzione protetta solo dal login compie un'operazione sensibile, come una
+cancellazione, un cambio di ruolo o un rimborso, e resta così alla portata di
+qualunque utente registrato (CWE-862~\cite{cwe862}). BF-003 riguarda il verbo
+HTTP\footnote{\emph{Verbo} (o \emph{metodo}) \emph{HTTP}: l'azione richiesta su
+una risorsa, per esempio \texttt{GET} per leggere o \texttt{DELETE} per
+cancellare.} (CWE-650~\cite{cwe650}): una rotta privilegiata che accetta
+qualsiasi metodo, oppure un'applicazione che rispetta l'intestazione
+\texttt{X-HTTP-Method-Override} senza limitarne i valori, permette di
+raggiungere l'operazione per una via diversa da quella prevista. BF-004 segnala
+le aree amministrative esposte (CWE-284~\cite{cwe284}): un raggruppamento di
+rotte con prefisso \texttt{/admin} che non applica un controllo di ruolo
+comune, oppure una funzione che restituisce dati in blocco, come l'esportazione
+di tutti gli utenti, collocata su un percorso ordinario. BF-006 cerca le
+funzioni \emph{ombra}, cioè endpoint di debug, di test o di popolamento dei
+dati rimasti nel codice di produzione (CWE-285). La severità dipende dalla
+protezione: è alta se l'endpoint è del tutto aperto, media se richiede solo il
+login, bassa se è protetto ma resta un residuo da rimuovere. L'ultima regola,
+BF-007, segue il percorso dei dati dal corpo della richiesta ed è descritta
+nella Sottosezione~\ref{sec:bfla-bf007}.
+
+Il secondo livello esamina i file di configurazione alla ricerca del principio
+che il capitolo precedente ha indicato come difesa centrale di questa categoria,
+il \emph{diniego per impostazione predefinita}\footnote{\emph{Deny-by-default}:
+il criterio per cui ogni funzione è negata salvo concessione esplicita al ruolo
+che ne ha diritto; con il criterio opposto una dimenticanza non produce alcun
+errore e passa inosservata.}. La regola BF-005 (CWE-276~\cite{cwe276}) scatta
+quando un'applicazione Django REST Framework non dichiara una classe di permessi
+predefinita o dichiara quella che consente tutto, quando un'applicazione
+FastAPI non registra dipendenze globali e quando un'applicazione Express non
+monta un middleware di autenticazione prima dei router.
+
+Il terzo livello entra in gioco solo se è disponibile una specifica OpenAPI.
+Da un lato applica al contratto le stesse domande poste al codice: segnala le
+operazioni privilegiate prive di uno schema di
 sicurezza\footnote{\emph{Schema di sicurezza} (\emph{security scheme}): la
 sezione del contratto OpenAPI che dichiara come un endpoint è protetto, per
-esempio tramite token di bearer o chiave API; la sua assenza su una funzione
-riservata segnala che il contratto non prevede alcuna protezione.}, e produce
-segnalazioni che portano l'evidenza congiunta dei due livelli. La
-Tabella~\ref{tab:regole-bfla} riepiloga le sei regole.
+esempio tramite token o chiave API.}, sia locale sia globale, e i percorsi
+amministrativi esposti. Dall'altro confronta il contratto con gli endpoint
+ricavati dal codice. Se la specifica dichiara un'operazione che il codice
+accetta con qualsiasi verbo, la segnalazione BF-003 porta l'evidenza di
+entrambi i livelli. Se invece il codice espone un endpoint di debug o di test
+che il contratto non menziona, il modulo lo segnala come funzione ombra: è il
+caso più affidabile di BF-006, perché l'assenza dal contratto conferma che
+quella funzione non doveva essere pubblica. La
+Tabella~\ref{tab:regole-bfla} riepiloga le sette regole.
 
 \begin{table}[htbp]
 \centering
 \small
 \linespread{1.0}\selectfont
-\begin{tabularx}{\linewidth}{@{}l >{\hsize=1.5\hsize}X l@{}}
+\begin{tabularx}{\linewidth}{@{}l l >{\hsize=1.5\hsize}X l@{}}
 \toprule
-\textbf{Regola} & \textbf{Debolezza ricercata} & \textbf{Severità} \\
+\textbf{Regola} & \textbf{CWE} & \textbf{Debolezza ricercata} & \textbf{Severità} \\
 \midrule
-BF-001 & endpoint privilegiato privo di controllo di ruolo & \texttt{CRITICAL} \\
-BF-002 & autenticazione presente ma autorizzazione assente & \texttt{HIGH} \\
-BF-003 & verbo HTTP alternativo lasciato non presidiato & \texttt{HIGH} \\
-BF-004 & percorso amministrativo esposto senza restrizioni & \texttt{HIGH} \\
-BF-005 & default permissivo anziché di diniego (configurazione) & \texttt{MEDIUM} \\
-BF-006 & funzione amministrativa fuori dai percorsi riservati & \texttt{HIGH} \\
+BF-001 & 285 & endpoint privilegiato privo di controllo di ruolo & \texttt{CRITICAL} \\
+BF-002 & 862 & operazione sensibile protetta solo dall'autenticazione & \texttt{HIGH} \\
+BF-003 & 650 & rotta privilegiata raggiungibile con qualsiasi verbo HTTP & \texttt{HIGH} \\
+BF-004 & 284 & area amministrativa o funzione in blocco esposta & \texttt{HIGH} \\
+BF-005 & 276 & permesso predefinito anziché diniego (configurazione) & \texttt{MEDIUM} \\
+BF-006 & 285 & funzione di debug o di test rimasta esposta & \texttt{HIGH}--\texttt{LOW} \\
+BF-007 & 269 & ruolo scelto dal chiamante nel corpo della richiesta & \texttt{CRITICAL} \\
 \bottomrule
 \end{tabularx}
-\caption[Regole del modulo Broken Function Level Authorization]{Le sei regole
-del modulo. \mbox{BF-005} opera sui file di configurazione, le altre sul codice
-e, quando disponibile, sul contratto OpenAPI.}
+\caption[Regole del modulo Broken Function Level Authorization]{Le sette regole
+del modulo. \mbox{BF-005} opera sui file di configurazione; \mbox{BF-001},
+\mbox{BF-003}, \mbox{BF-004} e \mbox{BF-006} sul codice e sul contratto
+OpenAPI; \mbox{BF-002} e \mbox{BF-007} sul solo codice.}
 \label{tab:regole-bfla}
 \end{table}
+
+\subsection{L'escalation di privilegio tramite il corpo della richiesta}
+\label{sec:bfla-bf007}
+
+Le prime sei regole cercano la presenza o l'assenza di un segnale: un
+decoratore, un percorso, una voce di configurazione. Alcuni difetti però non
+si vedono in un singolo punto del codice, ma nel percorso che un dato compie al
+suo interno. Il caso tipico è una funzione che crea un invito o aggiorna un
+profilo e prende il ruolo da assegnare direttamente dal corpo della richiesta:
+basta inviare \texttt{\{"role": "admin"\}} per ottenere privilegi che nessuno ha
+concesso. La regola BF-007 (CWE-269~\cite{cwe269}) è stata introdotta per
+questo scenario ed è la prima del modulo a seguire un flusso di dati.
+
+L'analisi resta all'interno della singola funzione e ne percorre le istruzioni
+nell'ordine in cui sono scritte. Parte dalle \emph{sorgenti}, cioè i punti da
+cui arriva il contenuto della richiesta: in Python il corpo JSON o i campi del
+modulo, oltre ai parametri FastAPI tipizzati con un modello di dati; in Express
+l'oggetto \texttt{req.body}, anche quando viene scomposto in variabili. Da qui
+il modulo segue le assegnazioni: se una variabile riceve il corpo della
+richiesta, e da questa si legge il campo \texttt{role}, anche la nuova variabile
+è considerata controllata dal chiamante. Se in seguito le viene assegnato un
+valore fisso, il legame si interrompe. I campi presi in esame sono quelli che
+esprimono un privilegio, come \texttt{role}, \texttt{is\_admin},
+\texttt{permissions}, \texttt{group} o \texttt{scope}, e il loro elenco è
+configurabile.
+
+La regola scatta quando uno di questi valori raggiunge un'\emph{assegnazione}:
+un attributo di un oggetto, un argomento passato alla creazione o
+all'aggiornamento di un record, un dizionario salvato nel database o una
+clausola SQL \texttt{UPDATE}. Per contenere i falsi positivi il modulo esclude
+gli usi in sola lettura: un ruolo passato a un filtro o a una ricerca serve a
+selezionare dati, non ad assegnarli. La segnalazione viene inoltre soppressa se
+la funzione verifica il privilegio del chiamante, attraverso un decoratore di
+ruolo oppure una condizione che interroga il ruolo dell'utente corrente prima
+dell'assegnazione. La semplice autenticazione, anche qui, non basta.
 
 \subsection{Deduplicazione per priorità di regola}
 \label{sec:bfla-dedup}
 
-L'analisi a tre livelli comporta un rischio di ridondanza: la mancanza di un
-controllo su una rotta può essere rilevata insieme dall'esame del codice e da
-quello del contratto, e più regole possono colpire lo stesso endpoint da angoli
-diversi. Segnalarli tutti separatamente frammenterebbe il difetto e ne
-gonfierebbe il conteggio. Il modulo riconduce perciò ogni endpoint a un'unica
-voce rappresentativa, scelta attraverso un ordine di priorità fra le regole. La
-priorità non coincide con la severità, ma esprime quale caratterizzazione sia
-più specifica per quell'endpoint: una funzione amministrativa fuori posto o un
-percorso amministrativo esposto descrivono il difetto in modo più puntuale del
-generico endpoint privo di controllo, e prevalgono su di esso. A parità di
-priorità, il modulo preferisce la segnalazione ancorata a una riga di codice
-concreta, prodotta dall'analisi del sorgente, rispetto a quella che rimanda solo
-al contratto: la prima indica dove intervenire, riducendo il lavoro di bonifica.
-Le segnalazioni di configurazione, che non si riferiscono a un singolo endpoint,
-restano fuori da questa competizione e vengono conservate a parte. L'insieme
-così ridotto confluisce in un rapporto con i segnali di copertura e il riepilogo
-per severità, categoria e livello, con la possibilità di annotare il contratto
-OpenAPI in luogo, come per il modulo precedente.
+Con tre livelli e sette regole, lo stesso difetto può comparire più volte. La
+mancanza di un controllo su una rotta può essere rilevata sia nel codice sia nel
+contratto, e più regole possono colpire lo stesso endpoint da angoli diversi.
+Riportare tutte queste segnalazioni frammenterebbe il difetto e ne gonfierebbe
+il conteggio. Il modulo raggruppa quindi le segnalazioni per percorso e ne
+conserva una sola, scelta secondo un ordine di priorità:
+\begin{center}
+BF-006 $>$ BF-004 $>$ BF-003 $>$ BF-002 $>$ BF-001 $>$ BF-005
+\end{center}
+La priorità non misura la gravità ma la precisione della diagnosi. Dire che un
+endpoint è una funzione di debug dimenticata, o che si trova in un'area
+amministrativa senza protezione comune, spiega il difetto meglio del generico
+``manca un controllo di ruolo'', e indica anche il rimedio. A parità di
+priorità prevale la segnalazione ricavata dal codice, che punta a una riga
+precisa, su quella ricavata dal solo contratto. Le segnalazioni di
+configurazione, che non si riferiscono a un endpoint, sono sempre conservate.
+
+BF-007 fa eccezione e non entra nella competizione. Misura infatti un aspetto
+diverso: le altre regole chiedono se il chiamante possa invocare la funzione,
+BF-007 se possa scegliere il valore che la funzione assegna. Sull'endpoint di
+cambio ruolo dell'applicazione vulnerabile le due segnalazioni convivono: BF-002
+indica che la funzione è accessibile a qualsiasi utente autenticato, BF-007 che
+il nuovo ruolo è deciso da chi invia la richiesta. Sopprimere l'una a favore
+dell'altra nasconderebbe metà del problema. Il risultato finale confluisce in un
+rapporto con il riepilogo per severità, categoria e livello e, se richiesto,
+annota il contratto OpenAPI con le segnalazioni, come nel modulo precedente.
 
 \subsection{Validazione e limiti}
 \label{sec:validazione-bfla}
 
 La validazione riprende il disegno a coppia gemella: un'applicazione vulnerabile
-che riunisce le sei debolezze e una versione irrobustita che le corregge tutte.
-Il riferimento di verità richiede che la prima faccia scattare ciascuna delle
-sei regole e che la seconda non ne faccia scattare nessuna. Nel ciclo registrato
-il modulo ha riconosciuto tutte e sei le debolezze sulla versione vulnerabile e
-non ha prodotto alcuna segnalazione su quella irrobustita, con un tasso di veri
-positivi del cento per cento e nessun falso positivo.
+che contiene un esempio per ciascuna delle sette debolezze e una versione
+irrobustita che le corregge. Nella seconda, per esempio, l'endpoint degli inviti
+verifica che il chiamante sia amministratore prima di assegnare un ruolo diverso
+da quello base, mentre un endpoint di ricerca usa il campo \texttt{role} solo
+come filtro, così da mettere alla prova le esclusioni di BF-007. Il modulo ha
+riconosciuto tutte e sette le debolezze e non ha prodotto segnalazioni sulla
+versione irrobustita, con un tasso di veri positivi del cento per cento e
+nessun falso positivo. Le prove d'unità del modulo sono 61, di cui 33 dedicate a
+BF-007, con un caso vulnerabile per ogni tipo di assegnazione e un caso sicuro
+per ogni esclusione. L'introduzione di BF-007 non ha modificato le sei
+segnalazioni già prodotte sull'applicazione vulnerabile.
 
-I limiti discendono dalla natura statica dell'analisi e dalle euristiche che la
-guidano. Il riconoscimento di un endpoint come privilegiato si fonda su parole
-chiave nei percorsi e nei nomi delle funzioni: una funzione riservata con un
-nome anodino può sfuggire, e per converso un endpoint dal nome allarmante ma
-legittimo può essere segnalato a torto. Soprattutto, il modulo verifica la
-presenza del controllo di funzione, non la sua efficacia: accertare che un
-controllo dichiarato blocchi davvero un'utenza ordinaria richiederebbe di
-inviare la richiesta a nome di quell'utenza e osservarne l'esito, la
-sollecitazione dinamica che qui non viene compiuta e che resta il residuo della
-categoria. Il riconoscimento sul codice JavaScript è parziale come nel modulo
-precedente, più solido su Python. Infine la deduplicazione, tenendo un'unica
-regola per endpoint, subordina le debolezze secondarie che insistono sulla
-stessa rotta alla voce rappresentativa: una scelta che favorisce la leggibilità
-e la bonifica, al prezzo di non enumerare separatamente ogni difetto coincidente.
+Il modulo è stato eseguito anche su un repository esterno alla coppia gemella,
+fornito di specifica OpenAPI. Ha prodotto tre segnalazioni BF-006 su endpoint
+che popolano, salvano e ripristinano lo stato dei dati senza richiedere né
+autenticazione né ruolo. Dal punto di vista tecnico sono veri positivi, ma
+quegli endpoint sono voluti: servono alle prove automatiche per preparare e
+ripulire i dati tra un'esecuzione e l'altra. Gli endpoint applicativi, che
+verificano proprietario o ruolo, non hanno prodotto segnalazioni. La stessa
+prova ha fatto emergere un difetto di presentazione: sul codice Python le
+regole BF-004 e BF-006 riportano sempre \texttt{GET} come metodo, anche quando
+la rotta ne usa un altro. Il percorso resta corretto e la deduplicazione non ne
+risente, ma il metodo mostrato può essere sbagliato.
+
+Gli altri limiti discendono dalla natura statica dell'analisi e dalle euristiche
+che la guidano. Il riconoscimento di un endpoint come privilegiato si basa su
+parole chiave nei percorsi e nei nomi delle funzioni: una funzione riservata
+con un nome anonimo può sfuggire, e un percorso dal nome allarmante ma
+legittimo può essere segnalato a torto. Il controllo di ruolo scritto nel corpo
+della funzione è riconosciuto per corrispondenza testuale, quindi anche una
+riga che cita il ruolo senza bloccare l'esecuzione, come un messaggio di log,
+viene scambiata per una protezione. Nel contratto, qualsiasi schema di
+sicurezza basta a sopprimere BF-001, anche quando dichiara solo
+un'autenticazione e non un'autorizzazione. Le viste definite come classi,
+tipiche di Django REST Framework e di NestJS, non sono ancora analizzate, così
+come l'autorizzazione tra gruppi o organizzazioni diverse. BF-007 non segue il
+dato oltre i confini della funzione, per esempio dentro un servizio o un
+serializzatore, e può segnalare a torto un endpoint di registrazione che limita
+i ruoli ammessi a un elenco fisso senza interrogare il chiamante. Il limite
+principale resta però quello indicato in apertura: il modulo verifica che il
+controllo di funzione ci sia, non che funzioni. Per accertarlo servirebbe
+invocare le funzioni privilegiate con le credenziali di un utente ordinario e
+osservarne l'esito, una verifica dinamica che questo modulo non compie.
 
 \section{Rilevamento della Server-Side Request Forgery}
 \label{sec:rilevamento-ssrf}
@@ -1272,9 +1380,9 @@ e la bonifica, al prezzo di non enumerare separatamente ogni difetto coincidente
 \subsection{Metodo di ricerca e sistema di rilevazione}
 \label{sec:metodo-ricerca-rilevazione}
 
-La metodologia adottata per la rilevazione delle vulnerabilità di tipo Server-Side Request Forgery (SSRF) si basa sulla progettazione e implementazione di un modulo di analisi integrato nella piattaforma di rilevamento dei rischi di sicurezza delle API. L'obiettivo del sistema è individuare condizioni di esposizione riconducibili a OWASP API7:2023 e CWE-918, concentrandosi in particolare sui casi in cui un endpoint utilizza dati controllati dall'utente per costruire richieste verso risorse remote senza applicare controlli sufficienti sulla destinazione. Il metodo combina l'analisi del codice sorgente con l'analisi del contratto dell'API, in modo da osservare il problema da due prospettive complementari: il comportamento effettivamente implementato e i vincoli dichiarati nell'interfaccia. Tale scelta permette di non limitare il rilevamento alla presenza di specifiche chiamate di rete, ma di considerare anche il percorso seguito dai dati prima che raggiungano tali operazioni.
+La metodologia adottata per la rilevazione delle vulnerabilità di tipo Server-Side Request Forgery (SSRF) si basa sulla progettazione e implementazione di un modulo di analisi integrato nella piattaforma di rilevamento dei rischi di sicurezza delle API, concentrandosi in particolare sui casi in cui un endpoint utilizza dati controllati dall'utente per costruire richieste verso risorse remote senza applicare controlli sufficienti sulla destinazione. Il metodo combina l'analisi del codice sorgente con l'analisi del contratto dell'API, in modo da osservare il problema da due prospettive complementari: il comportamento effettivamente implementato e i vincoli dichiarati nell'interfaccia. Tale scelta permette di non limitare il rilevamento alla presenza di specifiche chiamate di rete, ma di considerare anche il percorso seguito dai dati prima che raggiungano tali operazioni.
 
-Il sistema è organizzato all'interno del modulo \path{src/core/api7_ssrf/}, che costituisce il componente responsabile dell'analisi relativa alla SSRF. La struttura è suddivisa in più componenti, ciascuno associato a una fase distinta del processo di rilevamento. Il punto di ingresso è rappresentato da \path{detector.py}, che coordina l'esecuzione delle diverse analisi e raccoglie i risultati in un report comune. La gestione dei risultati è affidata ai modelli definiti in \path{models.py}, mentre \path{semgrep_runner.py} si occupa dell'esecuzione controllata del motore Semgrep. L'elaborazione dei risultati prodotti dall'analisi statica è demandata a \path{normalizer.py}, che ricostruisce le informazioni principali del flusso rilevato e le rende omogenee rispetto al modello interno. La componente \path{layer3_openapi.py} completa il processo analizzando le specifiche OpenAPI 3.x. Questa separazione consente di mantenere distinte le responsabilità delle diverse fasi, facilitando sia la gestione dei risultati sia l'estensione del sistema con ulteriori controlli.
+Il sistema è organizzato all'interno del modulo \path{src/core/api7_ssrf/}, in cui il punto di ingresso \path{detector.py} coordina l'esecuzione delle analisi e ne raccoglie i risultati in un report comune, affiancando all'analisi statica la componente \path{layer3_openapi.py} per la verifica delle specifiche OpenAPI 3.x. Questa separazione consente di mantenere distinte le responsabilità delle diverse fasi, facilitando sia la gestione dei risultati sia l'estensione del sistema con ulteriori controlli.
 
 Il nucleo dell'approccio è costituito dall'analisi statica mediante Semgrep, configurata attraverso regole specifiche per il rilevamento della SSRF. A differenza di una ricerca basata esclusivamente sulla presenza di determinate funzioni o stringhe nel codice, il sistema considera la propagazione dei dati attraverso l'applicazione. In particolare, vengono individuate le sorgenti dalle quali possono provenire dati controllati dall'utente, come parametri di query, corpo della richiesta, parametri del percorso e intestazioni HTTP, e viene seguito il loro percorso fino alle operazioni che effettuano richieste di rete. Quando un dato non adeguatamente controllato raggiunge una di queste destinazioni, il flusso viene considerato potenzialmente rischioso. Questo modello permette quindi di mettere in relazione l'origine del dato con il punto in cui esso viene utilizzato, fornendo un'informazione più significativa rispetto alla semplice individuazione di una chiamata HTTP.
 
@@ -1283,12 +1391,9 @@ Nel processo di analisi vengono riconosciuti anche i controlli che possono inter
 A supporto dell'analisi del flusso sono state definite sei regole di rilevamento, identificate come SS-001--SS-006. Le prime quattro riguardano principalmente il codice applicativo e coprono i client HTTP più comuni nei linguaggi considerati. SS-001 analizza l'utilizzo di \texttt{requests}, \texttt{httpx} e \texttt{aiohttp} in Python, mentre SS-002 estende il controllo alle funzioni di \texttt{urllib}. SS-003 riguarda le applicazioni Node.js ed Express e verifica la propagazione degli input provenienti dalla richiesta verso \texttt{fetch} e \texttt{axios}. SS-004 prende invece in considerazione l'abilitazione dei reindirizzamenti automatici nelle richieste HTTP, poiché una destinazione inizialmente verificata può essere modificata attraverso una catena di redirect. La regola SS-005 utilizza un controllo basato su pattern per individuare richieste dirette verso endpoint associati ai servizi di metadati cloud, mentre SS-006 opera a livello di specifica OpenAPI. L'insieme delle regole consente così di coprire differenti modalità attraverso le quali una stessa classe di vulnerabilità può manifestarsi.
 
 Una seconda componente della metodologia riguarda infatti l'analisi contrattuale dell'API. La specifica OpenAPI viene esaminata per individuare parametri e proprietà del corpo delle richieste che possono rappresentare destinazioni URL, con particolare attenzione a campi quali \texttt{webhook}, \texttt{callback\_url}, \texttt{redirect} ed \texttt{endpoint}. La verifica considera la presenza di vincoli che descrivano il valore atteso, come \texttt{format: uri}, e di eventuali pattern utilizzati per limitare le destinazioni ammesse. L'obiettivo non è stabilire direttamente che l'implementazione sia vulnerabile, ma verificare se il contratto dell'interfaccia fornisca indicazioni sufficienti a restringere l'insieme dei valori accettabili. Questa fase permette quindi di individuare una possibile debolezza già a livello progettuale, prima di considerare il comportamento dell'applicazione durante l'esecuzione.
+I risultati dell'analisi vengono normalizzati assegnando a ciascun reperto un indice di confidenza che riflette la precisione del tracciamento e l'eventuale presenza di controlli di validazione intermedi (come \emph{allowlist} o \emph{blocklist}). L'efficacia del modulo è stata validata sia su casi di test sintetici — comprendenti scenari vulnerabili con diversi client HTTP, redirect e accessi ai metadati cloud, contrapposti a varianti opportunamente protette — sia su repository reali, verificando la corretta rilevazione dei flussi insicuri e l'assenza di falsi allarmi in presenza di controlli.
 
-I risultati provenienti dalle diverse fasi vengono successivamente normalizzati in una rappresentazione comune. Il normalizzatore estrae dal risultato di Semgrep le informazioni relative alla sorgente e alla destinazione del flusso e associa al reperto una valutazione della confidenza. Quest'ultima tiene conto della relazione osservata tra input e operazione di rete e della presenza di eventuali controlli intermedi. Il sistema distingue anche le strategie di validazione riconosciute, in particolare i controlli basati su \emph{allowlist}, quelli basati su \emph{blocklist} e i casi nei quali non viene individuata alcuna protezione. Il risultato finale viene raccolto in una struttura di report che conserva, insieme alla segnalazione, le informazioni necessarie per interpretarne l'origine e il livello di affidabilità.
-
-La validazione del metodo è stata condotta utilizzando casi di test appositamente predisposti, distinguendo applicazioni vulnerabili da applicazioni nelle quali erano presenti meccanismi di protezione. I casi vulnerabili comprendono differenti modalità di utilizzo dei client HTTP, richieste asincrone, utilizzo di \texttt{urllib}, redirect attivi e accesso ai servizi di metadati cloud. I casi protetti includono invece controlli sugli URL, verifica dello schema \texttt{https}, restrizioni mediante allowlist degli hostname e disabilitazione dei redirect. Il sistema ha inoltre previsto una verifica su un repository reale, nella quale un endpoint di importazione è stato correttamente individuato come caso positivo mentre una variante protetta dello stesso flusso non ha prodotto una segnalazione. La validazione è quindi stata impostata in modo da considerare sia la capacità del rilevatore di riconoscere i casi vulnerabili sia la capacità di evitare segnalazioni nei percorsi esplicitamente protetti.
-
-Nel complesso, il metodo adottato combina quindi analisi del flusso dei dati, riconoscimento di specifici comportamenti rischiosi e verifica dei vincoli dichiarati a livello di API. La scelta di integrare questi livelli deriva dalla necessità di osservare la SSRF non come una singola istruzione vulnerabile, ma come una condizione che emerge dalla relazione tra input, controlli e destinazione della richiesta. Il sistema mantiene tuttavia i limiti propri di un approccio prevalentemente statico: non può verificare direttamente la raggiungibilità della risorsa a runtime né confermare un'eventuale esfiltrazione fuori banda tipica delle \emph{Blind SSRF}. Restano inoltre fuori dal tracciamento locale i flussi che attraversano componenti distribuiti, come code o broker di messaggi, prima di raggiungere il client HTTP. Questi aspetti rappresentano possibili direzioni di estensione del metodo attraverso tecniche di analisi dinamica e meccanismi di correlazione tra componenti distribuiti.
+Pur integrando il tracciamento del flusso con i vincoli contrattuali delle specifiche OpenAPI, il metodo mantiene i limiti tipici dell'analisi statica: non verifica la reale raggiungibilità della destinazione a runtime, non intercetta esfiltrazioni fuori banda (\emph{Blind SSRF}) e non copre percorsi che attraversano componenti asincroni o broker di messaggi prima di raggiungere il client HTTP.
 
 
 \section{Rilevamento della Security Misconfiguration}
