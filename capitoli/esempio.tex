@@ -103,17 +103,6 @@ riguarda permessi di condivisione predefiniti di un cloud service provider
 lasciati aperti ad altri utenti su Internet, con conseguente esposizione di
 dati sensibili archiviati nello storage cloud.
 
-Fra i quattro scenari, due ricadono nel perimetro del sistema presentato in
-questo lavoro e due ne restano fuori. Rientrano il secondo e il quarto, perché
-in entrambi la configurazione difettosa è dichiarata in un artefatto
-ispezionabile --- la direttiva che abilita il directory listing nella
-configurazione del server, i permessi di condivisione fissati nel manifest della
-risorsa di storage --- e può quindi essere individuata prima del rilascio.
-Restano fuori il primo e il terzo: le applicazioni di esempio dimenticate in
-produzione non compaiono in alcun artefatto del progetto e presuppongono un
-inventario degli host effettivamente in esecuzione, mentre i messaggi di errore
-troppo dettagliati emergono soltanto dalle risposte prodotte a runtime.
-
 \section{API Security Risks}
 \label{sec:api_security_risks}
 
@@ -204,6 +193,7 @@ dettaglio: come si manifesta, da quali cause nasce e con quali misure lo si
 previene.
 
 \subsection{API1:2023 -- Broken Object Level Authorization}
+\label{subsubsec:api1}
 
 \paragraph{Definizione e collocazione}
 
@@ -432,15 +422,8 @@ L'impatto di Broken Authentication è per sua natura sistemico: assumendo il con
 
 La contromisura principale consiste nell'affidarsi a standard industriali consolidati e a librerie verificate, evitando soluzioni ``fai-da-te'' per la gestione di token e password~\cite{nist2025sp80063b}. A livello applicativo e infrastrutturale è indispensabile introdurre politiche di rate limiting dedicate e restrittive sugli endpoint di login, adottare l'autenticazione a più fattori (MFA) dove possibile e imporre una nuova conferma delle credenziali prima di eseguire modifiche critiche sul profilo utente~\cite{owasp2026authentication}.
 
-\paragraph{Rilevabilità}
-
-Sul piano della rilevabilità l'analisi automatica si divide in due direttrici, a seconda della natura del difetto.
-\begin{enumerate}
-\item \textbf{Analisi dei token e della crittografia.} Le debolezze che riguardano i JWT e gli altri formati di sessione dipendono da regole deterministiche e ben definite, come la mancata verifica della firma o l'uso di algoritmi insicuri. Gli strumenti riescono quindi a individuarle con buona affidabilità, sia analizzando staticamente il codice sorgente per intercettare configurazioni errate delle librerie crittografiche, sia generando dinamicamente token manipolati per verificare se il backend li accetti~\cite{yang2025jwteemo,xu2023jwtkey}.
-\item \textbf{Flussi di autenticazione e abusi comportamentali.} L'assenza di rate limiting e l'esposizione a tentativi di accesso massivi richiedono invece un monitoraggio a runtime: più che da un'ispezione sintattica del codice, queste carenze emergono dall'analisi dinamica del traffico o dai registri di sistema, dove si manifestano come picchi anomali di richieste fallite concentrate in brevi finestre temporali~\cite{owasp2026credential}.
-\end{enumerate}
-
 \subsection{API3:2023 -- Broken Object Property Level Authorization}
+\label{subsubsec:api3}
 
 \paragraph{Definizione e collocazione}
 
@@ -492,19 +475,6 @@ La mitigazione di BOPLA richiede che l'autorizzazione venga applicata non soltan
 Per le risposte è preferibile evitare i meccanismi di serializzazione automatica, che restituiscono l'oggetto così com'è rappresentato internamente, e selezionare invece le proprietà necessarie alla singola operazione.
 
 Per le operazioni di scrittura è necessario limitare esplicitamente gli attributi modificabili dal client. Una tecnica comune consiste nell'utilizzare una \textit{whitelist} delle proprietà ammesse, evitando che il payload venga associato automaticamente a tutti gli attributi dell'oggetto.
-
-\paragraph{Rilevabilità}
-
-La rilevazione di BOPLA si articola in due verifiche distinte, corrispondenti alle due direzioni in cui una proprietà può attraversare il confine fra client e server.
-
-La prima riguarda le proprietà esposte in risposta a una richiesta legittima, e si riduce al confronto fra gli attributi effettivamente restituiti e quelli previsti per il ruolo o il contesto dell'utente. È la verifica più diretta, perché l'evidenza è contenuta nella risposta stessa.
-
-La seconda riguarda le proprietà accettate in ingresso, ed è più onerosa perché il server non le dichiara. Individuarle richiede di modificare il payload delle richieste, eventualmente ricorrendo a tecniche di \emph{fuzzing}\footnote{\emph{Fuzzing}: tecnica di collaudo che
-sottopone al sistema grandi quantità di input generati automaticamente, spesso
-malformati o inattesi, per osservarne le reazioni anomale.} per scoprire
-attributi non documentati, e di verificare poi se il server ne recepisca effettivamente il valore.
-
-Le due verifiche non sono sostituibili l'una con l'altra: un'API può accettare in input una proprietà sensibile che non restituisce mai, oppure restituire dati riservati senza consentirne la modifica. Un'analisi che si limitasse a una sola direzione lascerebbe scoperta metà del problema.
 
 \subsection{API4:2023 -- Unrestricted Resource Consumption}
 \label{subsubsec:api4}
@@ -561,7 +531,7 @@ riconosce come anomali.
 Nella mitigazione nessun livello basta da solo: i limiti fisici su memoria, CPU
 e processi sono dichiarati alla piattaforma, mentre all'ingresso dei dati va
 fissata una dimensione massima per ogni parametro e payload, vincolo che il
-contratto OpenAPI rende verificabile da uno strumento. Il rate limiting,
+contratto OpenAPI permette di dichiarare esplicitamente. Il rate limiting,
 segnalato al client con il codice
 \texttt{429}~\cite{rfc6585,polli2026ratelimit}, va tarato per endpoint e
 affiancato da un limite sulle esecuzioni della singola operazione per utente,
@@ -574,34 +544,6 @@ servono timeout e motori a tempo lineare~\cite{staicu2018redos}, per GraphQL
 l'analisi statica del costo di una query prima di
 eseguirla~\cite{cha2020graphql}, per la dimensione economica soglie di spesa o
 allarmi di fatturazione.
-
-Sulla rilevabilità le due fonti primarie sembrano contraddirsi: OWASP la
-giudica facile, perché richieste con parametri di dimensione crescente e
-l'osservazione di stato, tempo e lunghezza della risposta bastano a far
-emergere il problema~\cite{owasp2023api4}, mentre CWE-770 giudica di utilità
-limitata l'analisi statica per le allocazioni prive di limite~\cite{cwe770}. La
-contraddizione è apparente, perché OWASP descrive un tester in \emph{black
-box}\footnote{\emph{Black box}: modalità di analisi che osserva il sistema solo dall'esterno,
-attraverso le risposte alle richieste, senza accesso al codice sorgente; vi si
-contrappone l'analisi \emph{white box}, che legge il codice.} e CWE
-uno strumento che legge il codice. Sul versante dinamico l'evidenza è
-consolidata, dalle tecniche basate sulla generazione di molte richieste in un
-intervallo breve al rilevamento per iniezione di
-carico~\cite{cwe770,antunes2008resource}, e il test differenziale osserva il
-sistema nel suo insieme, vedendo il limite ovunque sia applicato ma solo
-sull'host che interroga. Sul versante statico la letteratura si concentra su
-sottoclassi ben delimitate, il ReDoS e il costo delle query GraphQL, mentre
-manca un corpo di lavori sottoposti a revisione paritaria sul rilevamento
-dell'assenza di rate limiting, timeout o limiti di paginazione nel codice di
-API REST. Se ne ricava la natura del segnale: in una BOLA l'assenza del
-controllo nel gestore coincide con la vulnerabilità, mentre qui l'analisi del
-codice può affermare solo che a un dato livello il limite non c'è, non che il
-difetto esista, perché potrebbe risiedere nel gateway. È un'assenza locale, che
-diventa segnalazione fondata solo quando un secondo segnale la conferma, e lo
-scenario di API9 mostra il caso simmetrico, in cui il limite presente a un
-livello non copre tutti gli host esposti~\cite{owasp2023api9}: la correlazione
-fra segnali eterogenei non è dunque un raffinamento dell'analisi, ma la
-condizione perché un giudizio sia possibile.
 
 \subsection{API5:2023 -- Broken Function Level Authorization}
 \label{subsubsec:api5}
@@ -687,23 +629,9 @@ terza è l'unica con una forma sintattica: i controller amministrativi devono
 ereditare da un controller astratto che applichi il controllo in base a ruolo o
 gruppo, misura che non aggiunge verifiche ma le riposiziona, perché ometterle
 richiede l'atto deliberato di collocare un gestore fuori dalla gerarchia,
-discontinuità visibile in revisione e cercabile da uno strumento. Nessuna delle
+discontinuità visibile in revisione. Nessuna delle
 tre risolve però la copertura, perché il controllo protegge solo la superficie
 servita dal codice che lo contiene~\cite{owasp2023api9,owasp2023api8}.
-
-OWASP giudica facile la rilevabilità, perché le API sono strutturate e il modo
-di raggiungere una funzione è prevedibile~\cite{owasp2023api5}, ma il giudizio
-riguarda metà del problema: formulare la chiamata candidata è facile, stabilire
-se la risposta fosse dovuta non lo è, perché un \texttt{200 OK} attesta che
-l'operazione è stata eseguita, non che fosse legittimo eseguirla. Il contributo
-della letteratura non è ispezionare il codice ma ricostruire la specifica
-mancante, ricavandola dalle pagine raggiungibili da ciascun
-ruolo~\cite{sun2011static}, dalla coerenza con cui i controlli sono applicati
-dentro una partizione per ruolo~\cite{son2011rolecast} o dal contesto di
-autorizzazione~\cite{monshizadeh2014mace}. Un'alternativa rinuncia a inferire e
-scrive regole di sicurezza per le API REST, verificandole con fuzzing
-stateful~\cite{atlidakis2020checking}, mentre un lavoro recente affronta lo
-stesso problema in modalità black box~\cite{liu2025bacscan}.
 
 \subsection{API6:2023 -- Unrestricted Access to Sensitive Business Flows}
 \label{subsubsec:api6}
@@ -765,20 +693,6 @@ rallentare le minacce automatizzate, non per impedirle, e la logica che li
 accomuna è economica: nessuno produce una decisione binaria affidabile, tutti
 spostano il costo dell'attacco fino a superare il profitto atteso.
 
-Il rilevamento automatico si scontra infine con l'assenza di un
-oracolo\footnote{\emph{Oracolo}: in collaudo del software, il criterio che permette di
-stabilire se un dato comportamento osservato sia corretto o difettoso.}: nessun
-artefatto analizzabile, che sia codice, contratto o configurazione, risponde
-alla domanda se un dato flusso in una data azienda vada protetto, e la mancanza
-di una mappatura CWE registra il fatto che non esiste una debolezza del
-software da nominare. Le tecniche note per i difetti di logica applicativa
-cercano deviazioni da un comportamento
-atteso~\cite{felmetsger2010logic,pellegrino2014logic}, mentre qui il flusso
-viene percorso correttamente e l'attacco sta nel ripeterlo. Restano le
-contromisure comportamentali a runtime indicate da OWASP~\cite{owasp2023api6},
-che riconoscono l'automazione durante l'attacco anziché la vulnerabilità prima
-che avvenga.
-
 \subsection{API7:2023 -- Server Side Request Forgery}
 \label{subsubsec:api7}
 
@@ -835,32 +749,6 @@ l'attacco, ma ne degrada l'esito dalla forma con ritorno a quella cieca. Va
 infine registrata un'ammissione che nessun'altra categoria contiene: il rischio
 SSRF non può sempre essere eliminato del tutto~\cite{owasp2023api7}, perché
 funzionalità e vulnerabilità coincidono.
-
-Per la prima volta nel capitolo le due fonti primarie concordano, e a favore
-dell'analisi statica: OWASP giudica facile la rilevabilità, con la sola
-eccezione della forma cieca~\cite{owasp2023api7}, e CWE-918 indica come metodo
-l'analisi statica automatica --- la ricerca dei percorsi che collegano una
-sorgente di input a un \emph{sink}\footnote{\emph{Sorgente} e \emph{sink}: nell'analisi del flusso dei dati,
-la \emph{sorgente} è il punto in cui un valore controllato dall'esterno entra
-nel programma e il \emph{sink} è l'operazione sensibile in cui quel valore
-viene infine usato.} --- dichiarandone alta l'efficacia~\cite{cwe918}.
-Il motivo è che qui l'oracolo è interno al codice: per API4 e API5 lo strumento
-osserva l'assenza di un controllo senza poter sapere se fosse dovuto, mentre
-per API7 la domanda non è se qualcosa manchi, ma se due punti del programma
-siano connessi, proprietà verificabile senza conoscere le intenzioni del
-progettista. La letteratura conferma il quadro e ne segnala i limiti
-ricorrenti, dall'analisi di flusso validata manualmente~\cite{wessels2024ssrf}
-alla potatura dei percorsi non sfruttabili per contenere i falsi
-positivi~\cite{ji2025artemis}, fino al fuzzing affiancato alla marcatura
-dinamica~\cite{wang2024ssrfuzz}. Se ne ricavano tre problemi che anche il
-modulo descritto nella parte sperimentale deve affrontare: l'inventario dei
-sink, la sovra-marcatura delle stringhe contaminate che non producono un URL
-controllabile, e la validazione intermedia, dove distinguere un controllo
-efficace da uno aggirabile richiede di ragionarne la semantica. Nella verifica
-dinamica, infine, la forma con ritorno si conferma puntando l'endpoint verso un
-indirizzo controllato, mentre quella cieca richiede un canale laterale,
-tipicamente una risoluzione DNS: nella pipeline adottata nel seguito la mancata
-conferma non declassa quindi la segnalazione statica.
 
 \subsection{API8:2023 -- Security Misconfiguration}
 \label{subsubsec:api8}
@@ -933,25 +821,6 @@ traffico interno sarebbe fidato, e lo schema dichiarato per le risposte di
 errore non è documentazione, ma un vincolo che a runtime impedisce la fuga di
 informazioni diagnostiche.
 
-OWASP classifica la rilevabilità come facile con una motivazione che, per la
-prima volta nel capitolo, rinvia agli strumenti: ne esistono di automatici per
-individuare e sfruttare configurazioni errate~\cite{owasp2023api8},
-formulazione simmetrica perché gli stessi strumenti servono a chi difende e a
-chi attacca, dato che ciò che cercano è pubblicamente noto. La ragione per cui
-il rilevamento funziona si comprende per contrasto: per l'autorizzazione
-funzionale lo strumento non sapeva se un controllo fosse dovuto e per il
-consumo di risorse non sapeva se un limite fosse applicato altrove, mentre per
-la configurazione l'oracolo è esterno e pubblico --- valori raccomandati,
-predefiniti noti come pericolosi, versioni vulnerabili --- e verificare la
-conformità a un riferimento è un problema di confronto, non di inferenza.
-Restano tre limiti: la copertura, perché ciò che non è dichiarato in un file
-non è ispezionabile prima dell'esecuzione; la deriva, perché un'analisi statica
-attesta ciò che un file dichiara, non ciò che è attivo sul sistema; e il
-contesto, perché una politica CORS che ammette qualunque origine è un difetto
-per un'API a client autenticati e una scelta legittima per un'API pubblica di
-sola lettura, sicché la verifica sintattica stabilisce solo se un'impostazione
-si discosti da un riferimento la cui pertinenza dipende dall'endpoint.
-
 \subsection{API9:2023 -- Improper Inventory Management}
 \label{subsubsec:api9}
 
@@ -1015,26 +884,6 @@ sicurezza esterne a tutte quelle esposte e non alla sola produzione, che è ciò
 che il primo scenario mostra disatteso, e non usare dati di produzione fuori
 dalla produzione.
 
-OWASP giudica media la rilevabilità e non indica un metodo, limitandosi a
-osservare che una documentazione obsoleta rende più difficile individuare e
-correggere le vulnerabilità~\cite{owasp2023api9}: l'osservazione descrive un
-difetto che ostacola il proprio rilevamento, perché l'artefatto che servirebbe
-a trovarlo è quello che manca. Ciò che si può fare per via automatica è un
-confronto fra rappresentazioni: le rotte implementate nel codice ma non
-dichiarate nel contratto sono candidate a essere API ombra, mentre quelle
-dichiarate ma non implementate segnalano documentazione obsoleta, e nessuna
-delle due è una vulnerabilità, ma entrambe misurano la divergenza fra il
-modello e la realtà. Il confronto ha però un limite intrinseco, perché opera
-fra due rappresentazioni della stessa applicazione e non dice nulla sugli host
-su cui essa è distribuita: il primo scenario è precisamente il caso in cui
-codice e contratto coincidono e il difetto sta nella topologia di rete, il che
-richiede ricognizione infrastrutturale e non analisi del software. Per API9 non
-esiste dunque un rilevamento nel senso in cui esiste per le altre categorie,
-cioè l'individuazione di un difetto dentro un artefatto: esiste la misura di
-una divergenza fra rappresentazioni indipendenti dello stesso sistema ---
-contratto, codice, inventario, traffico --- il cui valore non sta nel produrre
-un verdetto, ma nel restituire la visibilità che il difetto sottrae.
-
 \subsection{API10:2023 -- Unsafe Consumption of APIs}
 \label{subsubsec:api10}
 
@@ -1097,24 +946,3 @@ condizioni --- timeout e limiti sulle risposte --- restano però prive di
 contromisura corrispondente; quando il contratto del fornitore è noto, la
 risposta può essere validata rispetto a uno schema, che non intercetta un
 payload conforme ma trasforma la fiducia implicita in un vincolo dichiarato.
-
-OWASP classifica infine la rilevabilità come media senza indicare come
-procedere~\cite{owasp2023api10}. Sul piano statico il problema è di
-configurazione più che di tecnica: l'analisi della contaminazione richiede un
-insieme di sorgenti e uno di destinazioni, e per convenzione consolidata le
-sorgenti sono i punti in cui entra l'input dell'utente, mentre per API10 la
-sorgente è il valore restituito da una chiamata HTTP in uscita, che un motore
-configurato secondo quella convenzione non considera contaminato, sicché un
-flusso dalla risposta di un fornitore a una query SQL non produce segnalazione
-benché sia identico a uno che partisse da un parametro di richiesta. Due dei
-cinque difetti si prestano invece a un rilevamento diretto, perché basta
-osservare la configurazione locale della chiamata: la redirezione seguita per
-impostazione predefinita e il timeout mancante, dove il segnale non è la
-presenza di un'opzione errata ma l'assenza di un'opzione che disattivi il
-predefinito insicuro. Sul piano dinamico la verifica richiede che il fornitore
-restituisca dati malevoli, il che è possibile solo se il servizio consente di
-immettervi contenuti oppure sostituendolo con un doppio in collaudo, che però
-verifica l'applicazione e non l'integrazione reale.
-
-
-

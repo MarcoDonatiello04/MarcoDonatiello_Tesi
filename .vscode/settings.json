@@ -32,5 +32,9 @@
 
   // Il log di questo progetto contiene warning innocui di pdfx: non aprire
   // il pannello dei problemi a ogni build.
-  "latex-workshop.message.badbox.show": false
+  "latex-workshop.message.badbox.show": false,
+
+  // Formatter per i file .tex (Shift+Opt+F): tex-fmt, installato via Homebrew.
+  "latex-workshop.formatting.latex": "tex-fmt",
+  "latex-workshop.formatting.tex-fmt.path": "/opt/homebrew/bin/tex-fmt"
 }
