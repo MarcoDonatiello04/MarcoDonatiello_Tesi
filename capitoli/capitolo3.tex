@@ -624,7 +624,7 @@ risultati presentati modulo per modulo, senza passare per il motore di
 correlazione. La validazione dei moduli e i limiti emersi sono discussi nel
 Capitolo~\ref{cap:risultati}.
 
-\subsection{API1 -- Broken Object Level Authorization}
+\subsection{API1 -- Il legame fra oggetto e chiamante}
 \label{sec:rilevamento-bola}
 
 Una \emph{Broken Object Level Authorization}~\cite{owasp2023api1}
@@ -805,7 +805,7 @@ L'analisi statica indica dove potrebbe trovarsi il difetto e raggiunge anche
 endpoint che il livello dinamico non vede. La verifica dinamica stabilisce se
 il difetto è reale e copre i controlli che sono presenti ma sbagliati.
 
-\subsection{API2 -- Broken Authentication}
+\subsection{API2 -- L'identità del chiamante e la validità dei token}
 \label{sec:rilevamento-broken-auth}
 
 Nella \emph{Broken Authentication}~\cite{owasp2023api2} il difetto riguarda la
@@ -940,7 +940,7 @@ visibile nel sorgente anche quando il sistema non è raggiungibile o non offre u
 punto d'ingresso da provare: la componente statica della categoria rimane
 rilevabile proprio dove quella dinamica non lo è.
 
-\subsection{API3 -- Broken Object Property Level Authorization}
+\subsection{API3 -- Le proprietà protette di un oggetto}
 \label{sec:rilevamento-bopla}
 
 La \emph{Broken Object Property Level Authorization}~\cite{owasp2023api3}
@@ -1049,7 +1049,7 @@ Gli esiti tornano poi sulle segnalazioni statiche, che diventano
 loro proprietà e \emph{non confermate} se la protezione ha retto. Nel
 punteggio di robustezza ogni tipo di prova riuscita sottrae la stessa quota.
 
-\subsection{API5 -- Broken Function Level Authorization}
+\subsection{API5 -- Il ruolo richiesto per invocare una funzione}
 \label{sec:rilevamento-bfla}
 
 La \emph{Broken Function Level Authorization}~\cite{owasp2023api5}
@@ -1212,7 +1212,7 @@ Le categorie raccolte in questa sezione sono quattro: l'Unrestricted Resource
 Consumption (API4), la Server-Side Request Forgery (API7), la Security
 Misconfiguration (API8) e l'Unsafe Consumption of APIs (API10). Secondo il
 criterio della Sottosezione~\ref{sec:criterio} si comportano come categorie
-tecniche: la violazione si riconosce leggendo gli artefatti di progetto, senza
+tecniche: la violazione si riconosce leggendo l'elaborato di progetto, senza
 sollecitare il sistema in esecuzione, e i rilevatori sono statici. È su di esse
 che il sistema cerca una risposta a \RQ{1.1}.
 
@@ -1224,109 +1224,136 @@ chiamata di rete, per la configurazione il confronto con valori di riferimento
 noti, per il consumo di API esterne il modo in cui il codice tratta le risposte
 che riceve. Per questo le quattro categorie sono descritte separatamente.
 
-\subsection{API4 -- Unrestricted Resource Consumption}
+\subsection{API4 -- I limiti sul consumo di risorse, su tre livelli}
+
 \label{sec:rilevamento-resource}
 
-Ogni richiesta a un'API ha un costo: tempo di calcolo, memoria, banda, a volte
-denaro vero, come quando il server invia un SMS o interroga un modello di
-intelligenza artificiale a pagamento. L'\emph{Unrestricted Resource
-Consumption}~\cite{owasp2023api4} (Sottosezione~\ref{subsubsec:api4}) riguarda
-le API che non mettono un tetto a questo costo. In quei casi basta una
-richiesta che chiede un milione di risultati, un file enorme o mille SMS di
-fila per rallentare il servizio o far lievitare la bolletta.
+Ogni richiesta a un'API ha un costo: tempo di calcolo, memoria, banda, a volte denaro vero, come quando il server invia un SMS o interroga un modello di intelligenza artificiale a pagamento. L'\emph{Unrestricted Resource Consumption}~\cite{owasp2023api4} (Sottosezione~\ref{subsubsec:api4}) riguarda le API che non mettono un tetto a questo costo. In quei casi basta una richiesta che chiede un milione di risultati, un file enorme o mille SMS di fila per rallentare il servizio o far lievitare la bolletta.
 
-Rispetto alle categorie di autorizzazione viste finora c'è una differenza
-importante. Un limite mancante si vede leggendo il progetto, senza bisogno di
-attaccare il sistema. Per questo la categoria rientra fra quelle
-\emph{tecniche} della Sottosezione~\ref{sec:criterio} e il modulo lavora solo
-in modo statico. Per questa strada la letteratura offre poco: si concentra su
-sottoclassi ben delimitate, come il ReDoS e il costo delle query
-GraphQL~\cite{staicu2018redos,cha2020graphql}, mentre manca un corpo di lavori
-sottoposti a revisione paritaria sul rilevamento dell'assenza di rate limiting,
-timeout o limiti di paginazione nel codice di API REST.
+Rispetto alle categorie di autorizzazione viste finora c'è una differenza importante. L'assenza di un limite può essere individuata direttamente attraverso l'analisi statica del progetto, verificando nel codice e nella configurazione se sono presenti meccanismi come rate limiting, timeout o limiti di paginazione, senza dover eseguire o attaccare il sistema. Per questo motivo la categoria rientra fra quelle \emph{tecniche} della Sottosezione~\ref{sec:criterio} e il modulo si basa esclusivamente sul rilevamento statico.
 
-Lo stesso limite, però, può trovarsi in posti diversi. Un controllo sulla
-dimensione dei file può essere scritto nel codice, imposto dal proxy che sta
-davanti all'applicazione o dichiarato nel contratto dell'API. Se manca nel
-codice ma il proxy lo applica, il problema non c'è. Guardando un solo livello
-si arriverebbe a conclusioni sbagliate, perché un limite assente dal codice è
-un'assenza locale, che diventa una segnalazione fondata solo quando anche gli
-altri livelli la confermano. Il modulo li esamina quindi tutti e tre e ne
-confronta i risultati, come chiede \RQ{1.1}: qui la correlazione non è un
-raffinamento dell'analisi, ma la condizione perché un giudizio sia possibile.
+Lo stesso limite, però, può essere definito in punti diversi del sistema. Un controllo sulla dimensione dei file può essere presente nel codice dell'applicazione, imposto dal proxy che la precede oppure dichiarato nel contratto dell'API. La sua assenza dal codice, quindi, non è sufficiente per stabilire la presenza della vulnerabilità: il limite potrebbe infatti essere applicato a un livello esterno all'applicazione. Il modulo analizza staticamente tutti e tre i livelli e ne confronta i risultati, come previsto dalla \RQ{1.1}. In questo caso la correlazione tra i livelli non rappresenta un semplice raffinamento dell'analisi, ma è necessaria per distinguere un'assenza locale da una reale assenza del limite nel sistema.
 
 \paragraph{I tre livelli di analisi}
+
 \label{sec:resource-layers}
 
-Nel codice sorgente, Python e JavaScript, il modulo cerca i punti in cui un
-limite servirebbe e manca. Qualche esempio: una paginazione\footnote{\emph{Paginazione}: la suddivisione di una risposta
-  voluminosa in pagine di dimensione limitata, così che una singola richiesta non
-restituisca un'intera collezione.} in cui l'utente
-può alzare a piacere il numero di risultati; un file caricato senza guardarne
-la dimensione; una chiamata verso un altro servizio priva di
-timeout\footnote{\emph{Timeout}: il tempo massimo concesso a un'operazione
-  prima di interromperla; in sua assenza una chiamata lenta può restare appesa a
-tempo indefinito, trattenendo risorse.}, che può restare appesa a lungo; un ciclo che scorre un
-elenco inviato dal client senza controllarne la lunghezza; un servizio a
-pagamento che chiunque può invocare quante volte vuole. Per le API GraphQL
-verifica anche che le query non possano annidarsi senza fine.
+Nel codice sorgente, Python e JavaScript, il modulo cerca i punti in cui un limite servirebbe e manca. Qualche esempio: una paginazione\footnote{\emph{Paginazione}: la suddivisione di una risposta voluminosa in pagine di dimensione limitata, così che una singola richiesta non restituisca un'intera collezione.} in cui l'utente può alzare a piacere il numero di risultati; un file caricato senza guardarne la dimensione; una chiamata verso un altro servizio priva di timeout\footnote{\emph{Timeout}: il tempo massimo concesso a un'operazione prima di interromperla; in sua assenza una chiamata lenta può restare appesa a tempo indefinito, trattenendo risorse.}, che può restare appesa a lungo; un ciclo che scorre un elenco inviato dal client senza controllarne la lunghezza; un servizio a pagamento che chiunque può invocare quante volte vuole.
 
-Nella configurazione controlla che i container abbiano un tetto di memoria, che
-il proxy o l'applicazione fissino una dimensione massima per le richieste e che
-i server definiscano un timeout per quelle troppo lente. Un timeout impostato a
-zero, che di fatto spegne il controllo, pesa più di uno semplicemente
-dimenticato.
+Per le API GraphQL, che permettono al client di costruire query specificando i dati e le relazioni da restituire, verifica anche che le query non possano raggiungere una profondità di annidamento eccessiva, evitando così richieste capaci di consumare una quantità elevata di risorse.
 
-Il contratto OpenAPI, quando c'è, descrive ciò che l'API promette ai suoi
-client. Qui il modulo verifica che i parametri di paginazione abbiano un valore
-massimo, che i caricamenti abbiano una dimensione massima\footnote{Nel
-  contratto OpenAPI i vincoli \texttt{maximum}, \texttt{maxLength} e
-  \texttt{maxItems} dichiarano rispettivamente il valore, la lunghezza e il numero
-di elementi massimi ammessi per un campo.}, che le operazioni
-\emph{batch}\footnote{\emph{Operazione batch}: una singola richiesta che
-trasporta un elenco di elementi da elaborare insieme.} fissino quanti elementi
-possono ricevere e che gli endpoint costosi siano protetti. Capire quali endpoint siano costosi è
-la parte più delicata. Il nome aiuta, perché \texttt{/sms} o \texttt{/export}
-fanno pensare a un lavoro pesante, ma da solo può ingannare: leggere una
-fattura già emessa non costa nulla, emetterla sì. Il modulo guarda perciò anche
-a cosa fa l'operazione e a cosa riceve. Un numero di telefono accompagnato da
-un testo, un importo con la sua valuta o un \emph{prompt} sono indizi più
-affidabili del nome.
+Nella configurazione controlla che i container abbiano un tetto di memoria, che il proxy o l'applicazione fissino una dimensione massima per le richieste e che i server definiscano un timeout per quelle troppo lente. Un timeout impostato a zero, che di fatto spegne il controllo, pesa più di uno semplicemente dimenticato.
 
-Ogni segnalazione indica la regola violata, la debolezza CWE, la severità e la
-difesa che ci si aspettava di trovare, così chi legge sa subito cosa aggiungere.
+Il contratto OpenAPI, quando c'è, descrive ciò che l'API promette ai suoi client. Qui il modulo verifica che i parametri di paginazione abbiano un valore massimo, che i caricamenti abbiano una dimensione massima\footnote{Nel contratto OpenAPI i vincoli \texttt{maximum}, \texttt{maxLength} e \texttt{maxItems} dichiarano rispettivamente il valore, la lunghezza e il numero di elementi massimi ammessi per un campo.}, che le operazioni \emph{batch}\footnote{\emph{Operazione batch}: una singola richiesta che trasporta un elenco di elementi da elaborare insieme.} fissino quanti elementi possono ricevere e che gli endpoint costosi siano protetti.
 
-L'ultimo passo mette a confronto i tre livelli. Il modulo risale da ogni
-segnalazione nel codice alla rotta che la contiene e la accosta all'operazione
-corrispondente del contratto. Quando lo stesso limite manca in entrambi, come
-un parametro \texttt{limit} senza tetto nel codice e nel contratto, le due
-segnalazioni vengono collegate e acquistano credibilità. Quando invece un altro
-livello copre il buco, per esempio un proxy che rifiuta i file troppo grandi,
-la segnalazione resta nel rapporto ma scende a semplice informazione, con il
-riferimento alla difesa che la compensa. Il codice, infine, può chiarire un
-dubbio che il contratto lascia aperto. Se una rotta chiama un servizio a
-pagamento è costosa anche quando ha un nome innocuo, e il modulo la segnala se
-il contratto non prevede alcuna protezione.
+Capire quali endpoint siano costosi è la parte più delicata e rimane necessariamente un'euristica. Il nome aiuta, perché \texttt{/sms} o \texttt{/export} fanno pensare a un lavoro pesante, ma da solo può ingannare: leggere una fattura già emessa non costa nulla, emetterla sì. Il modulo guarda perciò anche a cosa fa l'operazione e a cosa riceve. Un numero di telefono accompagnato da un testo, un importo con la sua valuta o un \emph{prompt}, cioè una richiesta inviata a un modello di intelligenza artificiale, sono indizi più affidabili del solo nome dell'endpoint. Questa valutazione resta comunque basata su euristiche e può quindi produrre casi che richiedono una verifica ulteriore.
 
-\subsection{API7 -- Server-Side Request Forgery}
+Ogni segnalazione indica la regola violata, la debolezza CWE, la severità e la difesa che ci si aspettava di trovare, così chi legge sa subito cosa aggiungere.
+
+L'ultimo passo mette a confronto i tre livelli. Il modulo risale da ogni segnalazione nel codice alla rotta che la contiene e la accosta all'operazione corrispondente del contratto. Quando lo stesso limite manca in entrambi, come un parametro \texttt{limit} senza tetto nel codice e nel contratto, le due segnalazioni vengono collegate e aumenta la confidenza associata alla rilevazione. Quando invece un altro livello copre il buco, per esempio un proxy che rifiuta i file troppo grandi, la segnalazione resta nel rapporto ma la sua severità viene impostata a \texttt{INFO}, con il riferimento alla difesa che la compensa.
+
+Il codice, infine, può chiarire un dubbio che il contratto lascia aperto. Se una rotta chiama un servizio a pagamento è costosa anche quando ha un nome innocuo, e il modulo la segnala se il contratto non prevede alcuna protezione.
+
+\subsection{API7 -- Dall'input dell'utente alla chiamata di rete}
 \label{sec:rilevamento-ssrf}
 \label{sec:metodo-ricerca-rilevazione}
 
-La metodologia adottata per la rilevazione delle vulnerabilità di tipo Server-Side Request Forgery (SSRF) si basa sulla progettazione e implementazione di un modulo di analisi integrato nella piattaforma di rilevamento dei rischi di sicurezza delle API, concentrandosi in particolare sui casi in cui un endpoint utilizza dati controllati dall'utente per costruire richieste verso risorse remote senza applicare controlli sufficienti sulla destinazione. Il metodo combina l'analisi del codice sorgente con l'analisi del contratto dell'API, in modo da osservare il problema da due prospettive complementari: il comportamento effettivamente implementato e i vincoli dichiarati nell'interfaccia. Tale scelta permette di non limitare il rilevamento alla presenza di specifiche chiamate di rete, ma di considerare anche il percorso seguito dai dati prima che raggiungano tali operazioni.
+La \emph{Server-Side Request Forgery}~\cite{owasp2023api7}
+(Sottosezione~\ref{subsubsec:api7}) si ha quando un endpoint usa un dato
+fornito dall'utente per decidere verso quale indirizzo il server debba inviare
+una richiesta, senza controllare la destinazione. Un servizio che scarica
+l'immagine di profilo da un URL indicato dall'utente, per esempio, può essere
+indotto a interrogare indirizzi della rete interna, che dall'esterno non
+sarebbero raggiungibili. Il caso più grave riguarda il servizio di metadati
+delle macchine cloud, un indirizzo interno da cui ogni istanza legge la propria
+configurazione e, spesso, le proprie credenziali temporanee: chi riesce a farlo
+interrogare dal server può impossessarsene.
 
-La prevalenza dell'analisi statica trova sostegno nelle fonti primarie: OWASP giudica facile la rilevabilità della categoria, con la sola eccezione della forma cieca~\cite{owasp2023api7}, e CWE-918 indica come metodo proprio l'analisi statica automatica, cioè la ricerca dei percorsi che collegano una sorgente di input a un \emph{sink}\footnote{\emph{Sorgente} e \emph{sink}: nell'analisi del flusso dei dati, la \emph{sorgente} è il punto in cui un valore controllato dall'esterno entra nel programma e il \emph{sink} è l'operazione sensibile in cui quel valore viene infine usato.}, dichiarandone alta l'efficacia~\cite{cwe918}. Il motivo è che qui l'oracolo\footnote{\emph{Oracolo}: in collaudo del software, il criterio che permette di stabilire se un dato comportamento osservato sia corretto o difettoso.} è interno al codice: per API4 e API5 uno strumento osserva l'assenza di un controllo senza poter sapere se fosse dovuto, mentre per API7 la domanda è se due punti del programma siano connessi, proprietà verificabile senza conoscere le intenzioni del progettista. La letteratura ne segnala anche i limiti ricorrenti, dall'analisi di flusso validata manualmente~\cite{wessels2024ssrf} alla potatura dei percorsi non sfruttabili per contenere i falsi positivi~\cite{ji2025artemis}, fino al fuzzing affiancato alla marcatura dinamica~\cite{wang2024ssrfuzz}. Ne derivano tre problemi che il modulo deve affrontare: l'inventario dei sink, la sovra-marcatura delle stringhe contaminate che non producono un URL controllabile e la validazione intermedia, dove distinguere un controllo efficace da uno aggirabile richiede di ragionarne la semantica.
+Il modulo è statico, e le fonti primarie sostengono questa scelta. OWASP giudica
+facile la rilevabilità della categoria, con la sola eccezione della forma
+cieca, in cui il server invia la richiesta ma non ne restituisce la
+risposta~\cite{owasp2023api7}; la CWE-918 indica come metodo più efficace
+l'analisi statica automatica~\cite{cwe918}. Il motivo è che qui la domanda è
+una proprietà del codice: un dato dell'utente arriva o non arriva a una
+chiamata di rete, e lo si può stabilire senza conoscere le intenzioni di chi ha
+scritto il programma. Gli studi sull'argomento ne mostrano anche i limiti,
+dalla necessità di verificare a mano i risultati~\cite{wessels2024ssrf} ai
+percorsi segnalati ma non sfruttabili~\cite{ji2025artemis}, fino al ricorso a
+tecniche dinamiche~\cite{wang2024ssrfuzz}. Per il modulo ne derivano tre
+difficoltà: conoscere tutte le funzioni che inviano richieste di rete, non
+segnalare i dati dell'utente che finiscono in una richiesta senza influire
+sull'indirizzo, e riconoscere i controlli sull'URL posti lungo il percorso. I
+paragrafi che seguono mostrano come vengono affrontate.
 
-Il sistema è organizzato all'interno del modulo \path{src/core/api7_ssrf/}, in cui il punto di ingresso \path{detector.py} coordina l'esecuzione delle analisi e ne raccoglie i risultati in un report comune, affiancando all'analisi statica la componente \path{layer3_openapi.py} per la verifica delle specifiche OpenAPI 3.x. Questa separazione consente di mantenere distinte le responsabilità delle diverse fasi, facilitando sia la gestione dei risultati sia l'estensione del sistema con ulteriori controlli.
+\paragraph{Il flusso dei dati}
+Il modulo usa Semgrep, uno strumento di analisi statica che cerca nel codice
+schemi descritti da regole, in modalità di \emph{analisi della
+contaminazione}\footnote{\emph{Analisi della contaminazione} (\emph{taint
+analysis}): tecnica che marca come ``contaminati'' i valori provenienti da una
+\emph{sorgente} esterna, cioè il punto in cui un dato controllato dall'esterno
+entra nel programma, e ne segue la propagazione fino a un \emph{sink},
+l'operazione sensibile in cui il valore viene infine usato.}. Le sorgenti sono
+i punti in cui entra l'input dell'utente: parametri della query, corpo della
+richiesta, campi di un modulo, intestazioni HTTP e, nelle applicazioni Node.js,
+parametri del percorso. I sink sono le funzioni dei principali client HTTP di
+Python e di JavaScript. La segnalazione scatta solo quando il dato contaminato
+finisce nell'indirizzo della richiesta, non in un altro argomento, e questo
+risponde alla seconda difficoltà. L'indirizzo può essere anche solo in parte
+controllato dall'utente, per esempio quando l'input viene concatenato a un URL
+di base fisso: anche così può spostare la richiesta su un percorso diverso da
+quello previsto, e il modulo segue il dato attraverso concatenazioni e
+formattazioni di stringhe.
 
-Il nucleo dell'approccio è costituito dall'analisi statica mediante Semgrep, configurata attraverso regole specifiche per il rilevamento della SSRF. A differenza di una ricerca basata esclusivamente sulla presenza di determinate funzioni o stringhe nel codice, il sistema considera la propagazione dei dati attraverso l'applicazione. In particolare, vengono individuate le sorgenti dalle quali possono provenire dati controllati dall'utente, come parametri di query, corpo della richiesta, parametri del percorso e intestazioni HTTP, e viene seguito il loro percorso fino alle operazioni che effettuano richieste di rete. Quando un dato non adeguatamente controllato raggiunge una di queste destinazioni, il flusso viene considerato potenzialmente rischioso. Questo modello permette quindi di mettere in relazione l'origine del dato con il punto in cui esso viene utilizzato, fornendo un'informazione più significativa rispetto alla semplice individuazione di una chiamata HTTP.
+La terza difficoltà riguarda i controlli. Il flusso si interrompe quando il
+dato passa per una funzione di validazione dell'URL o per un controllo che
+verifica che la destinazione appartenga a un elenco di host autorizzati, e la
+chiamata protetta da quel controllo non viene segnalata. La prima difficoltà,
+infine, si traduce nell'elenco delle regole, che coprono i client HTTP più
+diffusi nei due linguaggi (Tabella~\ref{tab:regole-ssrf}).
 
-Nel processo di analisi vengono riconosciuti anche i controlli che possono interrompere il flusso di contaminazione. Il sistema considera, ad esempio, funzioni utilizzate per verificare la validità di un URL o per controllare che la destinazione appartenga a un insieme di host autorizzati. La presenza di tali controlli viene utilizzata per distinguere un flusso non protetto da uno nel quale sono state introdotte misure di validazione. Questa distinzione è rilevante per limitare le segnalazioni non necessarie e, allo stesso tempo, per fornire una descrizione più precisa della condizione individuata. L'analisi tiene conto anche dei casi in cui il valore controllato dall'utente costituisce soltanto una parte dell'URL finale, ad esempio quando viene inserito all'interno di una stringa predefinita mediante concatenazioni, \emph{f-string} o formattazione di stringhe. In questo modo il rilevatore può considerare anche scenari di \emph{Partial SSRF}, nei quali la destinazione non è interamente determinata dall'input ma quest'ultimo mantiene comunque un'influenza sul percorso della richiesta.
+\begin{table}[htbp]
+  \centering
+  \small
+  \linespread{1.0}\selectfont
+  \begin{tabularx}{\linewidth}{@{}lXl@{}}
+    \toprule
+    \textbf{Regola} & \textbf{Cosa segnala} & \textbf{Livello} \\
+    \midrule
+    SS-001 & dato dell'utente nell'URL di una chiamata HTTP, in Python & codice \\
+    SS-002 & lo stesso, con le funzioni di rete della libreria standard di Python & codice \\
+    SS-003 & lo stesso, nelle applicazioni Node.js & codice \\
+    SS-004 & chiamata con URL dell'utente che segue le redirezioni in automatico & codice \\
+    SS-005 & chiamata verso l'indirizzo del servizio di metadati cloud & codice \\
+    SS-006 & parametro che rappresenta un URL senza vincoli sul formato o sulle
+    destinazioni ammesse & contratto \\
+    \bottomrule
+  \end{tabularx}
+  \caption[Regole del modulo Server-Side Request Forgery]{Le sei regole del
+    modulo: cinque sul codice sorgente e una sul contratto OpenAPI.}
+  \label{tab:regole-ssrf}
+\end{table}
 
-A supporto dell'analisi del flusso sono state definite sei regole di rilevamento, identificate come SS-001--SS-006. Le prime quattro riguardano principalmente il codice applicativo e coprono i client HTTP più comuni nei linguaggi considerati. SS-001 analizza l'utilizzo di \texttt{requests}, \texttt{httpx} e \texttt{aiohttp} in Python, mentre SS-002 estende il controllo alle funzioni di \texttt{urllib}. SS-003 riguarda le applicazioni Node.js ed Express e verifica la propagazione degli input provenienti dalla richiesta verso \texttt{fetch} e \texttt{axios}. SS-004 prende invece in considerazione l'abilitazione dei reindirizzamenti automatici nelle richieste HTTP, poiché una destinazione inizialmente verificata può essere modificata attraverso una catena di redirect. La regola SS-005 utilizza un controllo basato su pattern per individuare richieste dirette verso endpoint associati ai servizi di metadati cloud, mentre SS-006 opera a livello di specifica OpenAPI. L'insieme delle regole consente così di coprire differenti modalità attraverso le quali una stessa classe di vulnerabilità può manifestarsi.
+Due regole guardano oltre il semplice flusso. SS-004 segnala le chiamate che
+seguono le redirezioni in automatico, perché un indirizzo autorizzato può
+rimandare il server verso uno interno dopo che il controllo è già stato
+superato. SS-005 non segue un flusso, ma cerca nel codice gli indirizzi dei
+servizi di metadati dei principali provider cloud.
 
-Una seconda componente della metodologia riguarda infatti l'analisi contrattuale dell'API. La specifica OpenAPI viene esaminata per individuare parametri e proprietà del corpo delle richieste che possono rappresentare destinazioni URL, con particolare attenzione a campi quali \texttt{webhook}, \texttt{callback\_url}, \texttt{redirect} ed \texttt{endpoint}. La verifica considera la presenza di vincoli che descrivano il valore atteso, come \texttt{format: uri}, e di eventuali pattern utilizzati per limitare le destinazioni ammesse. L'obiettivo non è stabilire direttamente che l'implementazione sia vulnerabile, ma verificare se il contratto dell'interfaccia fornisca indicazioni sufficienti a restringere l'insieme dei valori accettabili. Questa fase permette quindi di individuare una possibile debolezza già a livello progettuale, prima di considerare il comportamento dell'applicazione durante l'esecuzione.
+\paragraph{Il contratto}
+SS-006 lavora sulla specifica OpenAPI. Individua i parametri e i campi del
+corpo che rappresentano una destinazione, come \texttt{webhook} o
+\texttt{callback\_url}, e verifica che il contratto ne vincoli il valore: un
+formato URL dichiarato (\texttt{format: uri}) e un'espressione regolare che
+limiti le destinazioni ammesse. Se mancano entrambi la segnalazione è grave, se
+manca solo la seconda è lieve. Il contratto non dice se l'implementazione sia
+vulnerabile, ma mostra se l'interfaccia lascia aperta la porta già in fase di
+progetto.
 
-\subsection{API8 -- Security Misconfiguration}
+Resta fuori dalla portata del modulo la forma cieca, l'unica che OWASP
+considera difficile da rilevare: accertarla richiede di osservare le richieste
+che il server invia davvero, e quindi un sistema in esecuzione.
+
+\subsection{API8 -- La configurazione confrontata con i valori di riferimento}
 \label{sec:rilevamento-secmisconfig}
 
 La \emph{Security Misconfiguration}~\cite{owasp2023api8}
@@ -1338,33 +1365,44 @@ Sezione~\ref{sec:rilevamento-misconfig}. Il modulo adotta un approccio statico:
 cerca direttamente nel codice le scelte di configurazione insicure, senza
 richiedere l'avvio o l'esecuzione del software.
 
-Rispetto alle categorie di autorizzazione il rilevamento statico parte qui
-avvantaggiato. Là uno strumento non sa se un controllo fosse dovuto, e per il
-consumo di risorse non sa se un limite sia applicato altrove; per la
-configurazione, invece, l'oracolo è esterno e pubblico --- valori raccomandati,
-predefiniti noti come pericolosi, versioni vulnerabili --- e verificare la
-conformità a un riferimento è un problema di confronto, non di inferenza. È
-anche la ragione per cui OWASP giudica facile la rilevabilità della categoria,
-rinviando agli strumenti automatici, che servono tanto a chi difende quanto a
-chi attacca~\cite{owasp2023api8}.
+Qui il rilevamento statico parte avvantaggiato. Nelle categorie di
+autorizzazione uno strumento non sa se un controllo fosse dovuto, e per il
+consumo di risorse non sa se un limite sia applicato altrove. Per la
+configurazione, invece, esiste un riferimento pubblico: valori raccomandati,
+impostazioni predefinite note per essere insicure, versioni di librerie con
+vulnerabilità note. Basta confrontare il progetto con quel riferimento, senza
+dover dedurre le intenzioni di chi lo ha scritto. Per questo OWASP giudica
+facile la rilevabilità della categoria e rinvia agli strumenti
+automatici~\cite{owasp2023api8}.
 
 \paragraph{Regole locali e regole globali}
 \label{sec:secmisconfig-rules}
 
-Lo scanner analizza i file sorgente in Python, JavaScript e TypeScript, escludendo
-le directory non applicative (come ambienti virtuali o cartelle di build). I
+Il modulo analizza la struttura sintattica dei file Python ed esegue controlli
+testuali su quelli JavaScript e TypeScript, escludendo le directory non
+applicative (come ambienti virtuali o cartelle di build). I
 controlli sono articolati in verifiche locali su ciascun file e verifiche
 globali sul progetto (Tabella~\ref{tab:regole-secmisconfig}).
 
 A livello di singolo file, il modulo intercetta i comportamenti a rischio più
 comuni: politiche CORS\footnote{CORS (\emph{Cross-Origin Resource Sharing}): meccanismo con cui un server dichiara quali siti di origine diversa possono leggere le sue risposte dal browser; una configurazione permissiva consente a domini terzi non autorizzati di accedere a dati riservati.} permissive o aperte assieme alle credenziali utente, modalità di
-debug e gestori di errore che espongono la traccia dello stack, segreti cablati
-nel codice individuati tramite entropia di Shannon\footnote{\emph{Entropia di Shannon}: misura del grado di casualità di una stringa; sequenze ad alto disordine indicano chiavi o token reali, distinguendoli dai normali identificatori.} e route prive di restrizioni sui metodi HTTP o delle necessarie direttive \texttt{Cache-Control}.
+debug e gestori di errore che espongono la traccia dello
+stack\footnote{\emph{Traccia dello stack} (\emph{stack trace}): l'elenco delle
+chiamate di funzione attive nel momento dell'errore; mostrata al client rivela
+percorsi, librerie e struttura interna dell'applicazione.}, segreti cablati
+nel codice individuati tramite entropia di Shannon\footnote{\emph{Entropia di Shannon}: misura del grado di casualità di una stringa; sequenze ad alto disordine indicano chiavi o token reali, distinguendoli dai normali identificatori.} e rotte prive di restrizioni sui metodi HTTP o dell'intestazione
+\texttt{Cache-Control}\footnote{\texttt{Cache-Control}: intestazione HTTP che
+indica a browser e proxy se e per quanto tempo possono conservare una copia
+della risposta; se manca, dati riservati possono restare in una cache
+condivisa.}.
 
 A livello globale, tre verifiche valutano l'impostazione complessiva del
 servizio: l'assenza delle intestazioni HTTP difensive raccomandate (come HSTS e
 \texttt{Content-Security-Policy}), la totale mancanza di una politica CORS e la
-presenza di dipendenze con vulnerabilità note censite in un archivio locale.
+presenza di dipendenze con vulnerabilità note, individuate confrontando le
+versioni dichiarate con un elenco di versioni vulnerabili. Ogni segnalazione
+porta con sé un grado di confidenza, e quelle sotto la soglia di $0{,}70$
+vengono scartate prima di comporre il rapporto.
 
 \begin{table}[htbp]
   \centering
@@ -1381,8 +1419,8 @@ presenza di dipendenze con vulnerabilità note censite in un archivio locale.
     SC-005 & segreto cablato nel codice (entropia di Shannon) & file & \texttt{CRITICAL} \\
     SC-006 & assenza totale di politica CORS applicativa & globale & \texttt{MEDIUM} \\
     SC-007 & dipendenze applicative con vulnerabilità note & globale & \texttt{HIGH} \\
-    SC-008 & metodi HTTP non restritti o route mutanti su GET & file & \texttt{MEDIUM} \\
-    SC-009 & assenza di Cache-Control su route con dati sensibili & file & \texttt{MEDIUM} \\
+    SC-008 & metodi HTTP non ristretti o operazioni che modificano dati esposte tramite GET & file & \texttt{MEDIUM} \\
+    SC-009 & assenza di \texttt{Cache-Control} su rotte con dati sensibili & file & \texttt{MEDIUM} \\
     \bottomrule
   \end{tabularx}
   \caption[Regole del modulo Security Misconfiguration]{Il catalogo delle regole
@@ -1390,10 +1428,11 @@ presenza di dipendenze con vulnerabilità note censite in un archivio locale.
   \label{tab:regole-secmisconfig}
 \end{table}
 
-\subsection{API10 -- Unsafe Consumption of APIs}
+\subsection{API10 -- La fiducia nelle risposte dei servizi esterni}
 \label{sec:rilevamento-unsafe}
 
-Le categorie viste finora guardano ai dati che l'API riceve dai suoi utenti.
+Nella maggior parte delle categorie viste finora il pericolo arriva dai dati
+che l'API riceve dai suoi utenti.
 L'\emph{Unsafe Consumption of APIs}~\cite{owasp2023api10}
 (Sottosezione~\ref{subsubsec:api10}) ribalta il punto di vista: qui il pericolo
 arriva dai servizi di terze parti da cui l'applicazione stessa dipende, come un
@@ -1406,26 +1445,26 @@ fiducia\footnote{\emph{Confine di fiducia} (\emph{trust boundary}): la linea che
 dati che provengono in realtà dall'esterno.} che spesso nessuno sorveglia. OWASP
 elenca cinque forme di questa fiducia mal riposta: canale non cifrato, dati non
 validati, redirezioni seguite ciecamente, risorse senza limiti e timeout
-assenti; per almeno tre di esse si è osservato che ricadono già in altre
-categorie~\cite{owasp2023apiissue80}.
+assenti. Nel repository del progetto OWASP è stato segnalato che alcune di
+queste forme si sovrappongono ad altre categorie della stessa
+lista~\cite{owasp2023apiissue80}.
 
-Il modulo si occupa delle tre forme tipiche del consumo insicuro (canale in
-chiaro, dati non validati e redirezioni cieche) e lascia le altre due, l'assenza
+Il modulo si occupa di tre forme (canale in chiaro, dati non validati e
+redirezioni cieche) e lascia le altre due, l'assenza
 di limiti e di timeout, al modulo dell'Unrestricted Resource Consumption
 (Sottosezione~\ref{sec:rilevamento-resource}), che ne è la sede naturale; così lo
 stesso difetto non viene contato due volte, come chiede il criterio della
-Sottosezione~\ref{sec:criterio}. Le tre forme rimaste si leggono direttamente nel
-codice: nella parte che lo strumento accerta la categoria si comporta come una
-\emph{tecnica}, e il rilevatore è statico, lavora a un solo livello e analizza
-sorgenti Python. Ciò che sfugge all'analisi statica, ossia se la predisposizione
-al consumo insicuro sfoci in una compromissione reale, resta però un residuo di
-natura \emph{dinamica} nel senso di \RQ{1.2}, ripreso nel
-Capitolo~\ref{cap:risultati}.
+Sottosezione~\ref{sec:criterio}. Queste tre forme si riconoscono direttamente
+nel codice, e per questa parte la categoria si comporta come una categoria
+\emph{tecnica}: il rilevatore è statico e lavora sui sorgenti Python. Resta
+fuori ciò che il codice non può dire, cioè se la fiducia mal riposta porti
+davvero a una compromissione: è un residuo di natura \emph{dinamica} nel senso
+di \RQ{1.2}, ripreso nel Capitolo~\ref{cap:risultati}.
 
 \paragraph{Le tre regole}
 \label{sec:unsafe-rules}
 
-Uno scanner percorre i file Python del bersaglio, li legge con l'analizzatore
+Il modulo percorre i file Python del bersaglio, li legge con l'analizzatore
 sintattico della libreria standard e applica tre regole, riassunte nella
 Tabella~\ref{tab:regole-unsafe}. La prima insegue il dato che arriva da un
 servizio esterno e viene poi accettato, salvato o passato ad altri componenti
@@ -1463,18 +1502,20 @@ indicate da una terza parte (CWE-601~\cite{cwe601}).
   \label{tab:regole-unsafe}
 \end{table}
 
-Le tre regole non pongono lo stesso problema. Per la prima la difficoltà è di
-configurazione più che di tecnica: l'analisi della contaminazione richiede un
-insieme di sorgenti e uno di destinazioni, e per convenzione consolidata le
-sorgenti sono i punti in cui entra l'input dell'utente, mentre qui la sorgente
-è il valore restituito da una chiamata HTTP in uscita, che un motore
-configurato secondo quella convenzione non considera contaminato. La
-redirezione seguita ciecamente si presta invece a un rilevamento diretto,
-perché basta osservare la configurazione locale della chiamata: il segnale non
-è la presenza di un'opzione errata, ma l'assenza di un'opzione che disattivi il
-predefinito insicuro.
+Le tre regole cercano segnali di natura diversa. La prima segue un dato. Di
+solito l'analisi del flusso dei dati parte dall'input dell'utente, mentre qui
+il dato da sorvegliare è la risposta di un servizio esterno: la regola prende
+quindi come punto di partenza il contenuto restituito da una chiamata HTTP in
+uscita, per esempio il risultato di \texttt{requests.get(\dots).json()}, e ne
+segue l'uso fino al punto in cui viene salvato o passato ad altri componenti
+senza controlli. La seconda guarda un valore: l'indirizzo del servizio
+chiamato, che non deve cominciare con \texttt{http://}. La terza guarda
+un'opzione che manca: \texttt{requests}, per esempio, segue le redirezioni in
+automatico a meno che la chiamata non contenga \texttt{allow\_redirects=False},
+e la regola segnala le chiamate verso terze parti in cui quell'opzione è
+assente.
 
-Come nel modulo precedente, ogni segnalazione porta con sé un grado di confidenza:
-quelle sotto la soglia predefinita di $0{,}70$ vengono scartate prima di comporre
-il rapporto, che riunisce i segnali di copertura e il riepilogo per severità e
-categoria.
+Come nel modulo precedente, ogni segnalazione porta con sé un grado di
+confidenza, e quelle sotto la soglia di $0{,}70$ non entrano nel rapporto. Il
+rapporto indica, per ciascuna regola, se ha prodotto almeno una segnalazione e
+riassume i risultati per severità e categoria.
