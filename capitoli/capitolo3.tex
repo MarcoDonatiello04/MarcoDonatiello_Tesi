@@ -957,10 +957,7 @@ sfuggire il modulo deve quindi dedurre da sé quali proprietà siano protette.
 \paragraph{Inventario e proprietà protette}
 L'inventario degli oggetti e delle loro proprietà nasce da due fonti. Dal
 codice, in Python, JavaScript, TypeScript e Go, il modulo estrae le classi che
-modellano i dati, come gli oggetti di trasporto\footnote{\emph{DTO}
-  (\emph{Data Transfer Object}): oggetto usato per trasferire dati fra il
-  client e il server, spesso una proiezione parziale dell'entità memorizzata
-nel database.} e le entità
+modellano i dati, come gli oggetti di trasporto e le entità
 di persistenza; dal contratto OpenAPI legge gli schemi di richiesta e risposta
 di ciascuna operazione. Per confrontare le due fonti, i nomi vengono ricondotti
 a una forma comune: le classi \path{UserDTO} o \path{UserEntity} nel codice e il
@@ -984,16 +981,10 @@ per cui un campo di sola lettura che compare in una risposta non è un difetto.
 \paragraph{Regole statiche e verifica per proprietà}
 Individuate le proprietà protette, quattro regole statiche cercano i punti in
 cui la protezione può essere aggirata (Tabella~\ref{tab:regole-bopla}). La
-regola S01 cerca il \emph{mass assignment}\footnote{\emph{Mass assignment}:
-  l'assegnazione automatica dei campi ricevuti dal client agli attributi di un
-  oggetto applicativo; se il server non filtra i campi ammessi, il client può
-valorizzare attributi interni non previsti dal flusso normale.}, cioè il corpo
+regola S01 cerca il \emph{mass assignment}, cioè il corpo
 della richiesta copiato per intero su un oggetto, per esempio con un ciclo su
 tutti i campi ricevuti. Se il codice accetta solo i campi di
-un'\emph{allowlist}\footnote{\emph{Allowlist} e \emph{denylist}: elenco dei
-  valori ammessi e, rispettivamente, dei valori esclusi. Filtrare i campi con
-  un'allowlist blocca tutto ciò che non è previsto; una denylist lascia passare
-qualunque campo non elencato, compresi quelli aggiunti in seguito.} la segnalazione cade; se ne esclude
+un'\emph{allowlist} la segnalazione cade; se ne esclude
 alcuni con una denylist resta, perché ogni altro campo rimane scrivibile. La
 regola S02 cerca il caso opposto, un oggetto con proprietà protette serializzato
 e restituito così com'è fuori da un controllo di ruolo. Le regole S03 e S04
@@ -1087,9 +1078,7 @@ privilegiato privo di qualsiasi controllo di ruolo (CWE-285~\cite{cwe285}).
 BF-002 riguarda una funzione protetta solo dal login che compie un'operazione
 sensibile, come una cancellazione, un cambio di ruolo o un rimborso, e resta
 alla portata di qualunque utente registrato (CWE-862~\cite{cwe862}).
-BF-003 riguarda il verbo HTTP\footnote{\emph{Verbo}
-  (o \emph{metodo}) \emph{HTTP}: l'azione richiesta su una risorsa, per
-esempio \texttt{GET} per leggere o \texttt{DELETE} per cancellare.} (CWE-650~\cite{cwe650}): una
+BF-003 riguarda il verbo HTTP (CWE-650~\cite{cwe650}): una
 rotta privilegiata che accetta qualsiasi metodo, oppure un'applicazione che
 rispetta l'intestazione \texttt{X-HTTP-Method-Override} senza limitarne i
 valori, permette di raggiungere l'operazione per una via diversa da quella
@@ -1106,10 +1095,7 @@ avanti.
 
 \paragraph{Configurazione e contratto}
 Nei file di configurazione il modulo cerca il \emph{diniego per impostazione
-predefinita}\footnote{\emph{Deny-by-default}:
-  il criterio per cui ogni funzione è negata salvo concessione esplicita al
-  ruolo che ne ha diritto; con il criterio opposto una dimenticanza non produce
-alcun errore e passa inosservata.}, che il capitolo precedente ha indicato come
+predefinita}, che il capitolo precedente ha indicato come
 difesa centrale della categoria. La regola BF-005 (CWE-276~\cite{cwe276})
 scatta quando un'applicazione Django REST Framework non dichiara una classe di
 permessi predefinita o dichiara quella che consente tutto, quando
@@ -1118,9 +1104,7 @@ un'applicazione Express non monta un middleware di autenticazione prima dei
 router.
 
 Nel contratto il modulo segnala le operazioni privilegiate prive di uno schema
-di sicurezza\footnote{\emph{Schema di sicurezza} (\emph{security scheme}): la
-  sezione del contratto OpenAPI che dichiara come un endpoint è protetto, per
-esempio tramite token o chiave API.}, locale o globale, e i percorsi
+di sicurezza, locale o globale, e i percorsi
 amministrativi esposti. Il confronto con il codice produce due casi propri di
 questo modulo. Un'operazione dichiarata nella specifica e accettata dal codice con
 qualsiasi verbo produce una segnalazione BF-003 con l'evidenza di entrambi i
@@ -1238,13 +1222,13 @@ Lo stesso limite, però, può essere definito in punti diversi del sistema. Un c
 
 \label{sec:resource-layers}
 
-Nel codice sorgente, Python e JavaScript, il modulo cerca i punti in cui un limite servirebbe e manca. Qualche esempio: una paginazione\footnote{\emph{Paginazione}: la suddivisione di una risposta voluminosa in pagine di dimensione limitata, così che una singola richiesta non restituisca un'intera collezione.} in cui l'utente può alzare a piacere il numero di risultati; un file caricato senza guardarne la dimensione; una chiamata verso un altro servizio priva di timeout\footnote{\emph{Timeout}: il tempo massimo concesso a un'operazione prima di interromperla; in sua assenza una chiamata lenta può restare appesa a tempo indefinito, trattenendo risorse.}, che può restare appesa a lungo; un ciclo che scorre un elenco inviato dal client senza controllarne la lunghezza; un servizio a pagamento che chiunque può invocare quante volte vuole.
+Nel codice sorgente, Python e JavaScript, il modulo cerca i punti in cui un limite servirebbe e manca. Qualche esempio: una paginazione in cui l'utente può alzare a piacere il numero di risultati; un file caricato senza guardarne la dimensione; una chiamata verso un altro servizio priva di timeout, che può restare appesa a lungo; un ciclo che scorre un elenco inviato dal client senza controllarne la lunghezza; un servizio a pagamento che chiunque può invocare quante volte vuole.
 
 Per le API GraphQL, che permettono al client di costruire query specificando i dati e le relazioni da restituire, verifica anche che le query non possano raggiungere una profondità di annidamento eccessiva, evitando così richieste capaci di consumare una quantità elevata di risorse.
 
 Nella configurazione controlla che i container abbiano un tetto di memoria, che il proxy o l'applicazione fissino una dimensione massima per le richieste e che i server definiscano un timeout per quelle troppo lente. Un timeout impostato a zero, che di fatto spegne il controllo, pesa più di uno semplicemente dimenticato.
 
-Il contratto OpenAPI, quando c'è, descrive ciò che l'API promette ai suoi client. Qui il modulo verifica che i parametri di paginazione abbiano un valore massimo, che i caricamenti abbiano una dimensione massima\footnote{Nel contratto OpenAPI i vincoli \texttt{maximum}, \texttt{maxLength} e \texttt{maxItems} dichiarano rispettivamente il valore, la lunghezza e il numero di elementi massimi ammessi per un campo.}, che le operazioni \emph{batch}\footnote{\emph{Operazione batch}: una singola richiesta che trasporta un elenco di elementi da elaborare insieme.} fissino quanti elementi possono ricevere e che gli endpoint costosi siano protetti.
+Il contratto OpenAPI, quando c'è, descrive ciò che l'API promette ai suoi client. Qui il modulo verifica che i parametri di paginazione abbiano un valore massimo, che i caricamenti abbiano una dimensione massima\footnote{Nel contratto OpenAPI i vincoli \texttt{maximum}, \texttt{maxLength} e \texttt{maxItems} dichiarano rispettivamente il valore, la lunghezza e il numero di elementi massimi ammessi per un campo.}, che le operazioni \emph{batch} fissino quanti elementi possono ricevere e che gli endpoint costosi siano protetti.
 
 Capire quali endpoint siano costosi è la parte più delicata e rimane necessariamente un'euristica. Il nome aiuta, perché \texttt{/sms} o \texttt{/export} fanno pensare a un lavoro pesante, ma da solo può ingannare: leggere una fattura già emessa non costa nulla, emetterla sì. Il modulo guarda perciò anche a cosa fa l'operazione e a cosa riceve. Un numero di telefono accompagnato da un testo, un importo con la sua valuta o un \emph{prompt}, cioè una richiesta inviata a un modello di intelligenza artificiale, sono indizi più affidabili del solo nome dell'endpoint. Questa valutazione resta comunque basata su euristiche e può quindi produrre casi che richiedono una verifica ulteriore.
 
@@ -1288,11 +1272,7 @@ paragrafi che seguono mostrano come vengono affrontate.
 \paragraph{Il flusso dei dati}
 Il modulo usa Semgrep, uno strumento di analisi statica che cerca nel codice
 schemi descritti da regole, in modalità di \emph{analisi della
-contaminazione}\footnote{\emph{Analisi della contaminazione} (\emph{taint
-analysis}): tecnica che marca come ``contaminati'' i valori provenienti da una
-\emph{sorgente} esterna, cioè il punto in cui un dato controllato dall'esterno
-entra nel programma, e ne segue la propagazione fino a un \emph{sink},
-l'operazione sensibile in cui il valore viene infine usato.}. Le sorgenti sono
+contaminazione}. Le sorgenti sono
 i punti in cui entra l'input dell'utente: parametri della query, corpo della
 richiesta, campi di un modulo, intestazioni HTTP e, nelle applicazioni Node.js,
 parametri del percorso. I sink sono le funzioni dei principali client HTTP di
@@ -1385,16 +1365,11 @@ controlli sono articolati in verifiche locali su ciascun file e verifiche
 globali sul progetto (Tabella~\ref{tab:regole-secmisconfig}).
 
 A livello di singolo file, il modulo intercetta i comportamenti a rischio più
-comuni: politiche CORS\footnote{CORS (\emph{Cross-Origin Resource Sharing}): meccanismo con cui un server dichiara quali siti di origine diversa possono leggere le sue risposte dal browser; una configurazione permissiva consente a domini terzi non autorizzati di accedere a dati riservati.} permissive o aperte assieme alle credenziali utente, modalità di
+comuni: politiche CORS permissive o aperte assieme alle credenziali utente, modalità di
 debug e gestori di errore che espongono la traccia dello
-stack\footnote{\emph{Traccia dello stack} (\emph{stack trace}): l'elenco delle
-chiamate di funzione attive nel momento dell'errore; mostrata al client rivela
-percorsi, librerie e struttura interna dell'applicazione.}, segreti cablati
-nel codice individuati tramite entropia di Shannon\footnote{\emph{Entropia di Shannon}: misura del grado di casualità di una stringa; sequenze ad alto disordine indicano chiavi o token reali, distinguendoli dai normali identificatori.} e rotte prive di restrizioni sui metodi HTTP o dell'intestazione
-\texttt{Cache-Control}\footnote{\texttt{Cache-Control}: intestazione HTTP che
-indica a browser e proxy se e per quanto tempo possono conservare una copia
-della risposta; se manca, dati riservati possono restare in una cache
-condivisa.}.
+stack, segreti cablati
+nel codice individuati tramite entropia di Shannon e rotte prive di restrizioni sui metodi HTTP o dell'intestazione
+\texttt{Cache-Control}.
 
 A livello globale, tre verifiche valutano l'impostazione complessiva del
 servizio: l'assenza delle intestazioni HTTP difensive raccomandate (come HSTS e
@@ -1439,10 +1414,7 @@ arriva dai servizi di terze parti da cui l'applicazione stessa dipende, come un
 gateway di pagamento o un fornitore di dati esterni. Avendoli scelti e
 configurati, l'applicazione tende a fidarsi delle loro risposte senza troppe
 domande; ma quelle risposte attraversano pur sempre un confine di
-fiducia\footnote{\emph{Confine di fiducia} (\emph{trust boundary}): la linea che
-  separa la parte di un sistema di cui ci si fida da quella che va invece
-  verificata; collocarlo nel punto sbagliato significa accettare senza controlli
-dati che provengono in realtà dall'esterno.} che spesso nessuno sorveglia. OWASP
+fiducia che spesso nessuno sorveglia. OWASP
 elenca cinque forme di questa fiducia mal riposta: canale non cifrato, dati non
 validati, redirezioni seguite ciecamente, risorse senza limiti e timeout
 assenti. Nel repository del progetto OWASP è stato segnalato che alcune di
@@ -1472,15 +1444,10 @@ senza alcun controllo: è l'iniezione differita, dove un contenuto malevolo entr
 dal canale, ritenuto fidato, di una terza parte e fa danni più tardi, quando
 l'applicazione lo rilegge e lo usa (CWE-20~\cite{cwe20}). La seconda cerca le
 chiamate che raggiungono un servizio esterno su canale in
-chiaro\footnote{\emph{In chiaro} (\emph{cleartext}): senza cifratura; un URL
-  \texttt{http://} anziché \texttt{https://} espone i dati in transito a chi
-intercetta il traffico, l'attacco \emph{man-in-the-middle}.}, cioè con
+chiaro, cioè con
 \texttt{http} invece di \texttt{https} (CWE-319~\cite{cwe319}). La terza individua
 i client che seguono ciecamente le
-redirezioni\footnote{\emph{Redirezione} (\emph{redirect}): la risposta con cui un
-  server rimanda il client a un altro indirizzo; seguirla in automatico, con
-  l'opzione \texttt{allow\_redirects} attiva, consente a un fornitore compromesso
-di dirottare la richiesta, dati sensibili compresi, verso un server ostile.}
+redirezioni
 indicate da una terza parte (CWE-601~\cite{cwe601}).
 
 \begin{table}[htbp]

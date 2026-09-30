@@ -1,0 +1,119 @@
+%!TEX root = ../main.tex
+\chapter*{Glossario}
+\addcontentsline{toc}{chapter}{Glossario}
+
+I termini tecnici ricorrenti nella tesi sono definiti qui una volta sola, in
+ordine alfabetico.
+
+\begin{description}
+  \item[Allowlist e denylist] Elenco dei valori ammessi e, rispettivamente, dei
+  valori esclusi. Filtrare con un'allowlist blocca tutto ciò che non è
+  previsto; una denylist lascia passare qualunque valore non elencato, compresi
+  quelli aggiunti in seguito.
+
+  \item[Analisi della contaminazione] (\emph{taint analysis}) Tecnica che marca
+  come ``contaminati'' i valori provenienti da una \emph{sorgente} esterna, cioè
+  il punto in cui un dato controllato dall'esterno entra nel programma, e ne
+  segue la propagazione fino a un \emph{sink}, l'operazione sensibile in cui il
+  valore viene infine usato.
+
+  \item[Black box] Modalità di analisi che osserva il sistema solo dall'esterno,
+  attraverso le risposte alle richieste, senza accesso al codice sorgente; vi si
+  contrappone l'analisi \emph{white box}, che legge il codice.
+
+  \item[\texttt{Cache-Control}] Intestazione HTTP che indica a browser e proxy se
+  e per quanto tempo possono conservare una copia della risposta; se manca, dati
+  riservati possono restare in una cache condivisa.
+
+  \item[Confine di fiducia] (\emph{trust boundary}) La linea che separa la parte
+  di un sistema di cui ci si fida da quella che va invece verificata;
+  collocarlo nel punto sbagliato significa accettare senza controlli dati che
+  provengono in realtà dall'esterno.
+
+  \item[CORS] (\emph{Cross-Origin Resource Sharing}) Meccanismo con cui un server
+  dichiara quali siti di origine diversa possono leggere le sue risposte dal
+  browser; una configurazione permissiva consente a domini terzi non
+  autorizzati di accedere a dati riservati.
+
+  \item[CWE] (\emph{Common Weakness Enumeration}) Il catalogo pubblico delle
+  debolezze software mantenuto da MITRE; ogni voce, indicata dalla sigla CWE
+  seguita da un numero, descrive una classe di difetto indipendentemente dal
+  prodotto in cui compare.
+
+  \item[Deny-by-default] (diniego per impostazione predefinita) Il criterio per cui ogni funzione è negata salvo
+  concessione esplicita al ruolo che ne ha diritto; con il criterio opposto una
+  dimenticanza non produce alcun errore e passa inosservata.
+
+  \item[DTO] (\emph{Data Transfer Object}, oggetto di trasporto) Oggetto usato per trasferire dati fra
+  il client e il server, spesso una proiezione parziale dell'entità memorizzata
+  nel database.
+
+  \item[Endpoint] Il singolo punto di accesso di un'API, identificato da un URL e
+  da un metodo HTTP, che espone una specifica operazione su una risorsa.
+
+  \item[Entropia di Shannon] Misura del grado di casualità di una stringa;
+  sequenze ad alto disordine indicano chiavi o token reali, distinguendoli dai
+  normali identificatori.
+
+  \item[Gateway] Componente posto davanti ai servizi applicativi che riceve
+  tutte le chiamate esterne e vi applica funzioni comuni quali autenticazione,
+  instradamento e limiti di frequenza.
+
+  \item[GraphQL] Linguaggio di interrogazione per API in cui il client, anziché
+  richiamare endpoint predefiniti, descrive in una sola richiesta l'esatto
+  insieme di dati che desidera ricevere.
+
+  \item[Hardening] Insieme delle operazioni con cui si riduce la superficie di
+  attacco di un sistema: disattivazione di funzioni e servizi non necessari,
+  rimozione delle credenziali predefinite, applicazione delle impostazioni
+  consigliate.
+
+  \item[IaC] (\emph{Infrastructure as Code}) Pratica per cui le risorse
+  infrastrutturali (reti, istanze, storage, permessi) sono dichiarate in file
+  versionati che uno strumento di provisioning traduce nello stato reale; il
+  file diventa così un artefatto ispezionabile prima che la risorsa esista.
+
+  \item[In chiaro] (\emph{cleartext}) Senza cifratura; un URL \texttt{http://}
+  anziché \texttt{https://} espone i dati in transito a chi intercetta il
+  traffico, l'attacco \emph{man-in-the-middle}.
+
+  \item[Mass assignment] L'assegnazione automatica dei campi ricevuti dal client
+  agli attributi di un oggetto applicativo; se il server non filtra i campi
+  ammessi, il client può valorizzare attributi interni non previsti dal flusso
+  normale.
+
+  \item[Metodo HTTP] (o \emph{verbo HTTP}) L'azione richiesta su una risorsa, per
+  esempio \texttt{GET} per leggere o \texttt{DELETE} per cancellare.
+
+  \item[Operazione batch] Una singola richiesta che trasporta un elenco di
+  elementi da elaborare insieme.
+
+  \item[Paginazione] La suddivisione di una risposta voluminosa in pagine di
+  dimensione limitata, così che una singola richiesta non restituisca
+  un'intera collezione.
+
+  \item[ReDoS] (\emph{Regular expression Denial of Service}) Un input costruito
+  ad arte che fa degenerare il tempo di valutazione di un'espressione regolare,
+  saturando la CPU con una richiesta sola.
+
+  \item[Redirezione] (\emph{redirect}) La risposta con cui un server rimanda il
+  client a un altro indirizzo; seguirla in automatico consente a un fornitore
+  compromesso di dirottare la richiesta, dati sensibili compresi, verso un
+  server ostile.
+
+  \item[Schema di sicurezza] (\emph{security scheme}) La sezione del contratto
+  OpenAPI che dichiara come un endpoint è protetto, per esempio tramite token o
+  chiave API.
+
+  \item[Timeout] Il tempo massimo concesso a un'operazione prima di
+  interromperla; in sua assenza una chiamata lenta può restare appesa a tempo
+  indefinito, trattenendo risorse.
+
+  \item[TLS] (\emph{Transport Layer Security}) Il protocollo che cifra e
+  autentica il canale di comunicazione su cui viaggia il traffico HTTP.
+
+  \item[Traccia dello stack] (\emph{stack trace}) L'elenco delle chiamate di
+  funzione attive nel momento dell'errore; mostrata al client rivela percorsi,
+  librerie e struttura interna dell'applicazione.
+\end{description}
+\clearpage
