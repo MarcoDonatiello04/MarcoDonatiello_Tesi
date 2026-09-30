@@ -26,11 +26,7 @@ Il portale AppSecMaster ha elaborato una propria classificazione dei dieci risch
     
 \end{enumerate}
 
-Tra le problematiche elencate, il presente lavoro si concentra sulla prima, indicata nel seguito come IaC misconfiguration\footnote{IaC (\emph{Infrastructure as Code}):
-pratica per cui le risorse infrastrutturali --- reti, istanze, storage,
-permessi --- sono dichiarate in file versionati che uno strumento di
-provisioning traduce nello stato reale; il file diventa così un artefatto
-ispezionabile prima che la risorsa esista.}, e sulla componente di esposizione delle API della sesta, Insecure Deserialization / API Exposure: sono le due voci più direttamente legate agli obiettivi del sistema sviluppato e quelle che ricorrono con maggiore frequenza negli scenari di autorizzazione tipici delle architetture basate su API. La prima è approfondita nella sottosezione seguente; la seconda nella Sezione~\ref{sec:api_security_risks}, dove la classificazione OWASP dedicata alle API la articola in dieci categorie distinte.
+Tra le problematiche elencate, il presente lavoro si concentra sulla prima, indicata nel seguito come IaC misconfiguration, e sulla componente di esposizione delle API della sesta, Insecure Deserialization / API Exposure: sono le due voci più direttamente legate agli obiettivi del sistema sviluppato e quelle che ricorrono con maggiore frequenza negli scenari di autorizzazione tipici delle architetture basate su API. La prima è approfondita nella sottosezione seguente; la seconda nella Sezione~\ref{sec:api_security_risks}, dove la classificazione OWASP dedicata alle API la articola in dieci categorie distinte.
 
 \subsection{IaC misconfiguration}
 \label{sec:cloud-misconfig}
@@ -110,9 +106,7 @@ Le API oggi fanno gran parte del lavoro che una volta faceva il sito web
 stesso: non restituiscono una pagina pensata per essere letta da una
 persona, ma dati grezzi destinati a un'altra app, a un altro servizio, a un
 sistema che poi decide cosa farne. Lo schema delle richieste è prevedibile,
-gli endpoint\footnote{\emph{Endpoint}: il singolo punto di accesso di
-un'API, identificato da un URL e da un metodo HTTP, che espone una specifica
-operazione su una risorsa.} espongono operazioni precise su risorse precise. Per un
+gli endpoint espongono operazioni precise su risorse precise. Per un
 attaccante questo significa meno lavoro di interpretazione: non deve capire
 un'interfaccia grafica, gli basta osservare come sono costruite le chiamate.
 
@@ -166,10 +160,7 @@ secondo OWASP~\cite{owasp2023apitop10}:
   dall'esterno.
 
   \item \textbf{API8:2023 -- Security Misconfiguration} — header di
-  sicurezza mancanti, CORS\footnote{CORS (\emph{Cross-Origin Resource Sharing}): il
-  meccanismo con cui un server dichiara quali siti di origine diversa possono
-  leggere le sue risposte dal browser. Una politica permissiva le rende
-  leggibili a qualunque origine.} troppo permissivo, ambienti di debug ancora
+  sicurezza mancanti, CORS troppo permissivo, ambienti di debug ancora
   attivi in produzione: stessa famiglia di errori vista nel capitolo
   precedente, qui applicata allo strato applicativo.
 
@@ -218,10 +209,7 @@ alla relazione specifica tra quell'utente e quell'oggetto.
 
 \paragraph{Funzionamento delle API e ruolo degli identificatori di risorsa}
 
-Le API REST, e in misura diversa quelle basate su GraphQL\footnote{\emph{GraphQL}: linguaggio
-di interrogazione per API in cui il client, anziché richiamare endpoint
-predefiniti, descrive in una sola richiesta l'esatto insieme di dati che
-desidera ricevere.}, espongono le risorse attraverso
+Le API REST, e in misura diversa quelle basate su GraphQL, espongono le risorse attraverso
 identificatori che compaiono nel percorso della richiesta, nei parametri di query, nel corpo del
 messaggio o negli header. Un endpoint come \texttt{GET /api/orders/482} restituisce, nella maggior
 parte delle implementazioni, l'oggetto ordine identificato dal valore 482, indipendentemente dal
@@ -507,24 +495,16 @@ richiesta sufficiente a congelare il processo~\cite{staicu2018redos}. Vi si
 aggiunge la causa che l'edizione 2023 porta in primo piano, l'assenza di soglie
 di spesa verso i fornitori esterni, dove la risorsa non è computazionale ma
 economica. Che limiti tanto semplici manchino dipende da due fatti: possono
-risiedere nel framework, nel proxy, nel gateway\footnote{\emph{Gateway}: componente posto
-davanti ai servizi applicativi che riceve tutte le chiamate esterne e vi
-applica funzioni comuni quali autenticazione, instradamento e limiti di
-frequenza.} o presso il fornitore cloud, e
+risiedere nel framework, nel proxy, nel gateway o presso il fornitore cloud, e
 quando ogni livello presume che se ne occupi un altro non se ne occupa nessuno;
 e la loro assenza non produce errori, sicché un endpoint privo di limiti supera
 ogni test funzionale.
 
 L'esito immediato è il denial of service per esaurimento, che
-CWE-770\footnote{CWE (\emph{Common Weakness Enumeration}): il catalogo pubblico
-delle debolezze software mantenuto da MITRE; ogni voce, indicata dalla sigla
-CWE seguita da un numero, descrive una classe di difetto indipendentemente dal
-prodotto in cui compare.} enumera
+CWE-770 enumera
 come conseguenza principale sulla disponibilità~\cite{cwe770}, ma il punto di
 rottura è la logica applicativa anziché la banda: una sola richiesta
-ReDoS\footnote{ReDoS (\emph{Regular expression Denial of Service}): un input costruito
-ad arte che fa degenerare il tempo di valutazione di un'espressione regolare,
-saturando la CPU con una richiesta sola.} o un
+ReDoS o un
 solo batch GraphQL bastano, e nessuna difesa perimetrale basata sul volume li
 riconosce come anomali.
 
@@ -757,13 +737,8 @@ Un controllo che manca, un limite non impostato, un URL non validato: ciascuna
 delle categorie precedenti indica un punto preciso in cui il difetto risiede.
 La Security Misconfiguration non ha un punto: OWASP dichiara che la configurazione insicura può
 verificarsi a qualunque livello dello stack, dalla rete all'applicazione, e i suoi otto
-indicatori attraversano tutti quei livelli, dall'hardening\footnote{\emph{Hardening}: insieme
-delle operazioni con cui si riduce la superficie di attacco di un sistema:
-disattivazione di funzioni e servizi non necessari, rimozione delle credenziali
-predefinite, applicazione delle impostazioni consigliate.} assente ai verbi
-HTTP lasciati abilitati, dal TLS\footnote{TLS (\emph{Transport Layer Security}): il
-protocollo che cifra e autentica il canale di comunicazione su cui viaggia il
-traffico HTTP.} mancante ai messaggi di errore che espongono
+indicatori attraversano tutti quei livelli, dall'hardening assente ai verbi
+HTTP lasciati abilitati, dal TLS mancante ai messaggi di errore che espongono
 tracce dello stack~\cite{owasp2023api8}. Hanno una sola cosa in comune: nessuno
 è un errore di logica applicativa, perché il codice fa quello che deve ed è
 l'ambiente in cui gira a produrre l'esposizione. Lo conferma la particolarità
