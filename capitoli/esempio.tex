@@ -946,3 +946,39 @@ condizioni --- timeout e limiti sulle risposte --- restano però prive di
 contromisura corrispondente; quando il contratto del fornitore è noto, la
 risposta può essere validata rispetto a uno schema, che non intercetta un
 payload conforme ma trasforma la fiducia implicita in un vincolo dichiarato.
+
+\section{Sintesi: dove si trova il difetto}
+\label{sec:sintesi-stato-arte}
+
+Lette una accanto all'altra, le categorie descritte in questo capitolo si
+distinguono meno per il tema che per il luogo in cui il difetto lascia una
+traccia. Per alcune il difetto è scritto negli artefatti di progetto: una
+configurazione insicura sta nel file che dichiara la risorsa, come nella IaC
+misconfiguration e in API8; un limite mancante sta nel codice, nel proxy o nel
+contratto (API4); un URL fornito dall'utente finisce in una chiamata di rete
+(API7); la risposta di un servizio esterno viene usata senza essere validata
+(API10). Per queste categorie le fonti indicano già contromisure verificabili,
+dagli strumenti automatici per le configurazioni all'analisi statica del costo
+di una query~\cite{cha2020graphql}.
+
+Per le categorie di autenticazione e di autorizzazione (API1, API2, API3 e
+API5) gli artefatti mostrano solo una parte del problema. Si vede se un
+controllo manca, per esempio un oggetto recuperato senza legarlo al chiamante
+o una funzione riservata priva di verifica del ruolo, ma non se un controllo
+presente decida correttamente. La stessa tassonomia CWE distingue il controllo
+assente da quello che esiste ma decide male~\cite{cwe285}, e solo il primo
+lascia nel codice una traccia certa.
+
+Per due categorie, infine, il difetto non è negli artefatti. In API6 lo stesso
+endpoint è sicuro in un contesto e vulnerabile in un altro, e a deciderlo è il
+modello di business che gli sta dietro~\cite{owasp2023api6}; in API9 il
+difetto è l'assenza di un inventario, che non è un comportamento del
+software~\cite{cwe1059}.
+
+Le fonti esaminate descrivono ciascuna categoria con precisione, ma una alla
+volta. Nessuna stabilisce, per l'intera lista, quali categorie si possano
+accertare leggendo gli artefatti, quali richiedano di osservare il sistema in
+esecuzione e quali dipendano da conoscenze che gli artefatti non contengono. È
+da questa domanda che parte il Capitolo~\ref{cap:metodo}, che trasforma la
+distinzione in un criterio di classificazione e ne verifica le conseguenze
+costruendo uno strumento di rilevazione.
