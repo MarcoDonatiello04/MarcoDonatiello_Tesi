@@ -530,7 +530,7 @@ perché spesso sono decoratori o middleware applicati alla stessa rotta:
 l'autenticazione stabilisce chi è il chiamante, il controllo di proprietà se
 l'oggetto richiesto gli appartiene, il controllo di ruolo che cosa gli è
 permesso fare. Ogni modulo cerca quello pertinente alla propria categoria (il
-legame fra oggetto e chiamante per la BOLA, il ruolo attorno a una proprietà
+  legame fra oggetto e chiamante per la BOLA, il ruolo attorno a una proprietà
 per la BOPLA, il ruolo sulla funzione per la BFLA), mentre il modulo della
 Broken Authentication esamina il meccanismo stesso che riconosce il chiamante.
 Per le categorie di autorizzazione la sola autenticazione non vale mai come
@@ -628,194 +628,190 @@ Capitolo~\ref{cap:risultati}.
 \label{sec:rilevamento-bola}
 
 Una \emph{Broken Object Level Authorization}~\cite{owasp2023api1}
-(Sottosezione~\ref{subsubsec:api1}) si ha quando un endpoint riconosce
-correttamente chi lo invoca, ma recupera o modifica un oggetto a partire
-dall'identificativo inviato dal client senza controllare che quell'oggetto
-appartenga al chiamante; la debolezza corrispondente è la
-CWE-639~\cite{cwe639}. Su un endpoint come \texttt{GET /api/orders/\{id\}},
-legittimo e protetto dal login, basta sostituire nel percorso l'identificativo
-del proprio ordine con quello di un ordine altrui per leggerne il contenuto. La
-condizione che il modulo cerca negli artefatti è l'assenza di un legame fra
-l'oggetto richiesto e l'identità del chiamante. Se il legame c'è, il codice non
-dice se sia quello giusto: il campo usato potrebbe non esprimere davvero
-l'appartenenza, il confronto potrebbe essere scritto nel verso sbagliato,
-oppure il proprietario potrebbe essere un valore che il client è in grado di
-falsificare. Per questo all'analisi statica si affianca un livello dinamico
-completo, e i due comunicano attraverso una chiave comune.
+(Sottosezione~\ref{subsubsec:api1}) si verifica quando un endpoint riconosce chi
+lo invoca, ma non controlla che l'oggetto richiesto appartenga a quell'utente. Un esempio tipico è un
+endpoint come \texttt{GET /api/orders/\{id\}}: è protetto dal login, ma a un
+utente basta sostituire nel percorso l'identificativo del proprio ordine con
+quello di un ordine altrui per leggerne il contenuto.
 
-\paragraph{I fatti di ownership}
-Il livello statico copre applicazioni Flask, FastAPI ed Express. Fra i
-parametri di percorso considera riferimenti a oggetti quelli tipizzati come
-interi e quelli il cui nome richiama un identificativo (\texttt{id},
-\texttt{order\_id}, \texttt{uuid}, \texttt{slug} e simili), con la stessa
-euristica usata a runtime dalla fase di discovery, e ignora quindi parametri
-come il termine di una ricerca. Il corpo di ogni handler, ripulito da commenti
-e docstring, viene letto istruzione per istruzione per ricavarne i \emph{fatti
-di ownership}: dove un identificativo del percorso serve a leggere o modificare
-un oggetto, anche attraverso una variabile intermedia, dove si legge l'identità
-del chiamante (per esempio \texttt{current\_user} in Flask o \texttt{req.user}
-in Express) e quali legami uniscono le due cose. Un legame può essere una query
-filtrata anche sull'identità, un confronto fra il proprietario dell'oggetto e
-l'utente corrente, la chiamata a una funzione di verifica della proprietà
-oppure un decoratore dedicato.
+Il modulo implemntato lavora su due livelli : Il livello statico cerca nel codice gli
+handler che accedono a un oggetto senza legarlo all'identità del chiamante.
+Quando questo legame manca, il difetto è facilmente verificabile. Quando
+invece c'è, il codice non basta a dire se sia corretto, infatti il campo usato potrebbe
+non esprimere davvero l'appartenenza, il confronto potrebbe essere scritto nel
+verso sbagliato, oppure il proprietario potrebbe essere un valore che il client
+è in grado di falsificare. Per questo il modulo comprende anche un livello
+dinamico, che invia richieste reali con identità diverse e ne osserva le
+risposte. I due livelli comunicano attraverso una chiave comune, formata dal
+metodo e dal percorso normalizzato dell'endpoint.
 
-Tre accorgimenti rendono questi fatti affidabili. Le condizioni composte sono
-spezzate nelle singole clausole, perché una condizione che cita identità e
-identificativo senza metterli in relazione non passi per un controllo. Nei
-percorsi annidati contano anche i legami fra identificativi: un task cercato
-all'interno di un progetto già validato è protetto, uno cercato per solo
-identificativo no. Le funzioni di supporto definite nello stesso file
-sono riassunte e il loro comportamento è attribuito all'handler che le chiama,
-dato che spesso sono loro a recuperare l'oggetto e a controllarne il
-proprietario.
+\paragraph{Il livello statico}
+Il livello statico analizza applicazioni Flask, FastAPI ed Express. Per prima
+cosa stabilisce quali parametri di percorso fanno riferimento a un oggetto:
+sono quelli tipizzati come interi e quelli il cui nome richiama un
+identificativo, come \texttt{id}, \texttt{order\_id}, \texttt{uuid} o
+\texttt{slug}. È la stessa euristica usata a runtime dalla fase di discovery, e
+permette di ignorare i parametri che non indicano un oggetto, come il termine
+di una ricerca.
 
-\begin{table}[htbp]
-  \centering
-  \small
-  \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l>{\hsize=1.5\hsize}X l l@{}}
-    \toprule
-    \textbf{Regola} & \textbf{Debolezza ricercata} & \textbf{Severità} & \textbf{Confidenza} \\
-    \midrule
-    OA-001 & handler autenticato che accede all'oggetto con il solo identificativo del client & \texttt{HIGH} & 0,75 \\
-    OA-002 & come OA-001, ma senza alcun contesto di identità & \texttt{HIGH} & 0,70 \\
-    OA-003 & stessa risorsa legata al chiamante in un metodo e non in un altro & \texttt{HIGH} & 0,85 \\
-    OA-004 & identificativo annidato non legato all'oggetto già validato & \texttt{HIGH} & 0,70 \\
-    OA-005 & identificativo numerico usato senza autenticazione & \texttt{MEDIUM} & 0,60 \\
-    \bottomrule
-  \end{tabularx}
-  \caption[Regole statiche del modulo Broken Object Level Authorization]{Le
-    cinque regole statiche del modulo, tutte ricondotte a CWE-639. La confidenza
-  indicata è quella di partenza, prima del confronto con il contratto OpenAPI.}
-  \label{tab:regole-bola}
-\end{table}
+Poi legge istruzione per istruzione il corpo di ogni handler, ripulito da
+commenti e docstring, e ne ricava i \emph{fatti di ownership}. Questi fatti
+rispondono a tre domande: dove un identificativo del percorso viene usato per
+leggere o modificare un oggetto, anche passando per una variabile intermedia;
+dove viene letta l'identità del chiamante, per esempio \texttt{current\_user}
+in Flask o \texttt{req.user} in Express; quali legami collegano l'oggetto a
+quell'identità. Un legame può essere una query che filtra anche sull'identità,
+un confronto fra il proprietario dell'oggetto e l'utente corrente, la chiamata
+a una funzione che verifica la proprietà oppure un decoratore dedicato.
 
-Su questi fatti operano le cinque regole della Tabella~\ref{tab:regole-bola}.
-OA-001 e OA-002 coprono il caso fondamentale, distinguendo un handler
-autenticato da uno privo di qualsiasi contesto di identità. OA-003 confronta
-handler diversi della stessa risorsa e ha la confidenza più alta, perché se un
-metodo filtra sul proprietario e un altro no è il codice stesso a mostrare che
-il controllo era un requisito noto. OA-004 riguarda i riferimenti annidati,
-mentre OA-005 misura un aspetto diverso, la prevedibilità di un identificativo
-numerico esposto senza autenticazione, che descrive l'identificativo e non il
-controllo e resta perciò fuori dalla deduplicazione. Per le altre la priorità
-segue l'ordine OA-003 $>$ OA-004 $>$ OA-001 $>$ OA-002: una cancellazione non
-protetta, che soddisfa sia OA-003 sia OA-001, è riportata come OA-003, con
-OA-001 conservata come riferimento nella segnalazione superstite. A differenza
-della BFLA, le segnalazioni sono raggruppate per file oltre che per chiave di
-correlazione, perché due servizi dello stesso repository possono esporre lo
-stesso percorso con implementazioni distinte, che non sono duplicati.
+Per questi controlli sono state definite 3 euristiche : il primo riguarda le
+condizioni composte, che vengono spezzate nelle singole clausole: così una
+condizione che nomina sia l'identità sia l'identificativo, senza però metterli
+in relazione, non viene scambiata per un controllo. Il secondo riguarda i
+percorsi annidati, dove contano anche i legami fra identificativi: un task
+cercato all'interno di un progetto già validato è protetto, un task cercato con
+il solo identificativo no. Il terzo riguarda le funzioni di supporto definite
+nello stesso file. Spesso sono proprio loro a recuperare l'oggetto e a
+controllarne il proprietario, perciò il modulo ne riassume il comportamento e
+lo attribuisce all'handler che le chiama.
 
-Con la specifica OpenAPI ogni segnalazione viene confrontata con il requisito
-di sicurezza, locale o globale, dell'operazione corrispondente. Il caso più
-interessante è un'operazione che il contratto dichiara autenticata e il cui
-codice non lega l'oggetto al chiamante. La regola di
-Spectral~\cite{spectral2026docs} dedicata ad API1 verifica soltanto che le
-operazioni su un identificativo dichiarino un requisito di sicurezza, e qui non
-segnala nulla: il livello statico ne copre esattamente il punto cieco, e la
-confidenza cresce di $0{,}10$ perché il codice smentisce una garanzia del
-contratto. Se anche il contratto è privo di protezione, la segnalazione si
-somma a quella di Spectral sulla stessa chiave; se l'handler non compare affatto
-nel contratto, si tratta di un possibile endpoint non documentato, che il
-livello dinamico non attaccherebbe perché costruisce il proprio inventario
+\paragraph{Le regole statiche}
+Sui fatti di ownership operano le cinque regole:OA-001 e OA-002 coprono il caso di base, cioè un
+handler che accede all'oggetto con il solo identificativo inviato dal client:
+la prima si applica agli handler autenticati, la seconda a quelli privi di
+qualsiasi contesto di identità. OA-003 confronta fra loro gli handler della
+stessa risorsa. Se un metodo filtra sul proprietario e un altro no, è il codice
+stesso a mostrare che il controllo era un requisito noto, ed è per questo che
+la regola ha la confidenza più alta. OA-004 si occupa dei riferimenti annidati.
+OA-005, infine, segnala un identificativo numerico, e quindi prevedibile,
+esposto senza autenticazione.
+
+Più regole possono scattare sullo stesso endpoint. In questo caso sopravvive la
+segnalazione della regola più precisa, secondo l'ordine OA-003 $>$ OA-004 $>$
+OA-001 $>$ OA-002. Una cancellazione non protetta, per esempio, soddisfa sia
+OA-003 sia OA-001: viene riportata come OA-003, e OA-001 resta come riferimento
+all'interno della segnalazione. OA-005 non partecipa a questa selezione, perché
+descrive l'identificativo e non il controllo, e si affianca alle altre
+segnalazioni. A differenza della BFLA, le segnalazioni sono raggruppate per
+file oltre che per chiave di correlazione: due servizi dello stesso repository
+possono esporre lo stesso percorso con implementazioni diverse, e in quel caso
+non si tratta di duplicati.
+
+\paragraph{Il confronto con il contratto}
+Quando è disponibile la specifica OpenAPI, ogni segnalazione viene confrontata
+con il requisito di sicurezza, locale o globale, dell'operazione
+corrispondente. I casi possibili sono tre. Nel primo, il più interessante, il
+contratto dichiara l'operazione autenticata ma il codice non lega l'oggetto al
+chiamante. La regola di Spectral~\cite{spectral2026docs} dedicata ad API1
+controlla che le operazioni su un identificativo dichiarino un
+requisito di sicurezza. Il livello statico
+copre esattamente questo punto cieco, e la confidenza della segnalazione cresce
+di $0{,}10$ perché il codice smentisce una garanzia del contratto. Nel secondo
+caso anche il contratto è privo di protezione, e la segnalazione si aggiunge a
+quella di Spectral sulla stessa chiave. Nel terzo l'handler non compare affatto
+nel contratto: si tratta di un possibile endpoint non documentato, che il
+livello dinamico non attaccherebbe, perché costruisce il proprio inventario
 dalla specifica.
 
-\paragraph{La verifica differenziale}
-Il livello dinamico applica il \emph{differential testing} con tre identità:
-una \emph{vittima} con ruolo ordinario, un \emph{pari} con lo stesso ruolo e
-un'identità \emph{privilegiata} con ruolo amministrativo. Un file di
-configurazione, che fa da contratto con l'applicazione in prova, descrive come
+\paragraph{Il livello dinamico}
+Il livello dinamico applica il \emph{differential testing}: invia la stessa
+richiesta con identità diverse e ne confronta le risposte. Le identità sono
+tre: una \emph{vittima} con ruolo ordinario, un \emph{pari} con lo stesso ruolo
+e un'identità \emph{privilegiata} con ruolo amministrativo. Un file di
+configurazione, che fa da contratto con l'applicazione in prova, indica come
 ottenerle, insieme all'indirizzo del bersaglio e agli endpoint di supporto. I
 token possono essere richiesti a un identity provider come
 Keycloak~\cite{keycloak2026docs}, forniti come valori statici o ricavati dal
-traffico, mentre le credenziali vengono lette solo da variabili d'ambiente.
-Tutte le richieste passano attraverso OWASP ZAP~\cite{zap2026docs}, usato come
-proxy, che su ogni esito vulnerabile avvia anche una scansione attiva dell'URL
+traffico; le credenziali, invece, vengono lette solo da variabili d'ambiente.
+Tutte le richieste passano per OWASP ZAP~\cite{zap2026docs}, usato come proxy,
+che per ogni esito vulnerabile avvia anche una scansione attiva dell'URL
 coinvolto.
 
-L'inventario degli endpoint arriva dalla pipeline oppure viene ricavato dalla
-specifica OpenAPI: i parametri di percorso sono normalizzati in un segnaposto
-\texttt{\{id\}}, si conservano gli endpoint che ne contengono almeno uno e nei
-percorsi annidati, come \texttt{/projects/\{id\}/tasks/\{id\}}, il bersaglio è
-l'ultimo identificativo. L'eventuale traffico catturato aggiunge endpoint e
-riferimenti a oggetti presenti nel percorso, nella query o nel corpo. I dati di
-prova si preparano in due modalità. In \emph{Lab Mode} il bersaglio collabora
-ed espone alcuni endpoint di prova, con cui il modulo crea risorse per ciascuna
-identità e salva e ripristina lo stato attorno a ogni metodo che lo modifica
-(\texttt{POST}, \texttt{PUT}, \texttt{PATCH}, \texttt{DELETE}), così che un
-attacco riuscito, come una cancellazione, non alteri le prove successive. In
-\emph{Assessment Mode} il bersaglio non collabora: identità, ruoli e risorse
-possedute si deducono dal traffico osservato, decodificando i token JWT senza
-verificarne la firma perché si tratta di traffico già avvenuto, e i metodi che
-modificano i dati sono esclusi salvo autorizzazione esplicita, dato che lo
-stato non può essere ripristinato.
+L'elenco degli endpoint da provare arriva dalla pipeline oppure viene ricavato
+dalla specifica OpenAPI. I parametri di percorso sono normalizzati nel
+segnaposto \texttt{\{id\}} e si tengono solo gli endpoint che ne contengono
+almeno uno. Nei percorsi annidati, come \texttt{/projects/\{id\}/tasks/\{id\}},
+il bersaglio è l'ultimo identificativo. L'eventuale traffico catturato aggiunge
+altri endpoint e altri riferimenti a oggetti, presenti nel percorso, nella
+query o nel corpo.
 
-Per ogni endpoint e metodo l'attacco esercita tre scenari: la BOLA
-\emph{orizzontale}, in cui il pari tenta di accedere a una risorsa della
-vittima, la BOLA \emph{verticale}, in cui la vittima tenta di accedere a una
-risorsa dell'identità privilegiata, e un accesso di controllo
-dell'amministratore alla risorsa della vittima, che il sistema dovrebbe
-consentire. In ciascuno partono tre richieste: quella del proprietario, che
-fornisce la risposta di riferimento, quella dell'attaccante, che usa il proprio
-token sulla risorsa altrui, e una richiesta anonima. Gli identificativi sono
-sostituiti ovunque compaiano, nel percorso, nella query e nel corpo.
+Per attaccare servono risorse che appartengano a ciascuna identità, e il modulo
+le prepara in due modalità. In \emph{Lab Mode} il bersaglio collabora: espone
+alcuni endpoint di prova, con cui il modulo crea le risorse di ogni identità.
+Attorno a ogni metodo che modifica i dati (\texttt{POST}, \texttt{PUT},
+\texttt{PATCH}, \texttt{DELETE}) il modulo salva lo stato e poi lo ripristina,
+così che un attacco riuscito, per esempio una cancellazione, non alteri le
+prove successive. In \emph{Assessment Mode} il bersaglio non collabora.
+Identità, ruoli e risorse possedute si ricavano dal traffico osservato, e i
+token JWT vengono decodificati senza verificarne la firma, perché si tratta di
+traffico già avvenuto. I metodi che modificano i dati sono esclusi, salvo
+autorizzazione esplicita, perché in questa modalità lo stato non può essere
+ripristinato.
 
-Molte applicazioni rifiutano un accesso senza usare il codice di stato
-appropriato. Per questo la richiesta dell'attaccante è considerata bloccata non
-solo quando riceve \texttt{401}, \texttt{403} o un'altra risposta di errore, ma
-anche quando riceve una risposta di successo che contiene un messaggio di
-rifiuto come \emph{access denied} o \emph{non autorizzato}, un blocco
-mascherato. Se non è stata bloccata, l'attacco ha successo tecnico quando il
-corpo della risposta coincide con quello ricevuto dal proprietario, al netto dei
-campi che cambiano a ogni chiamata come le date di aggiornamento, oppure quando
-contiene l'identificativo della risorsa della vittima. Il confronto avviene
-sulla struttura JSON e non sulla lunghezza della risposta, e l'elenco dei campi
+Per ogni endpoint e metodo il modulo prova tre scenari. Nella BOLA
+\emph{orizzontale} il pari tenta di accedere a una risorsa della vittima. Nella
+BOLA \emph{verticale} la vittima tenta di accedere a una risorsa dell'identità
+privilegiata. Il terzo scenario è un accesso di controllo: l'amministratore
+accede alla risorsa della vittima, cosa che il sistema dovrebbe consentire. In
+ciascuno scenario partono tre richieste: quella del proprietario, che fornisce
+la risposta di riferimento; quella dell'attaccante, che usa il proprio token
+sulla risorsa altrui; una richiesta anonima, senza credenziali. Gli
+identificativi vengono sostituiti ovunque compaiano, cioè nel percorso, nella
+query e nel corpo.
+
+\paragraph{Il verdetto}
+La risposta ricevuta dall'attaccante viene valutata in due passi. Il primo
+stabilisce se la richiesta è stata bloccata. Lo è quando riceve \texttt{401},
+\texttt{403} o un'altra risposta di errore. Molte applicazioni, però,
+rifiutano l'accesso senza usare il codice di stato appropriato, per cui conta
+come bloccata anche una risposta di successo che contiene un messaggio di
+rifiuto, come \emph{access denied} o \emph{non autorizzato}: in questo caso si
+parla di \emph{blocco mascherato}. Il secondo passo, se la richiesta non è
+stata bloccata, stabilisce se l'attaccante ha davvero ottenuto la risorsa. Si
+ha un \emph{successo tecnico} quando il corpo della risposta coincide con
+quello ricevuto dal proprietario, al netto dei campi volatili che cambiano a
+ogni chiamata, come le date di aggiornamento, oppure quando contiene
+l'identificativo della risorsa della vittima. Il confronto avviene sulla
+struttura JSON e non sulla lunghezza della risposta, e l'elenco dei campi
 volatili è configurabile.
 
-Un successo tecnico non è ancora una vulnerabilità: l'amministratore che legge
-l'ordine di un utente ottiene la stessa risposta del proprietario, ma ne ha il
-diritto. Il verdetto spetta a una matrice dei privilegi che assegna a ogni ruolo
-il rango dichiarato nel file di configurazione. L'accesso da un rango superiore
-a uno inferiore è legittimo, quello fra ranghi uguali è una BOLA orizzontale e
-quello da un rango inferiore a uno superiore una BOLA verticale; un ruolo non
-censito è trattato, con un avviso, come il più basso. Ogni esito diventa una
-segnalazione di runtime, una vulnerabilità confermata con severità
-\texttt{HIGH} oppure un esito sicuro di severità informativa. La richiesta
-anonima serve invece a un controllo collaterale: se la risorsa viene restituita
-anche senza credenziali, il modulo segnala un difetto di autenticazione sullo
-stesso endpoint.
+Un successo tecnico, però, non è ancora una vulnerabilità. L'amministratore che
+legge l'ordine di un utente ottiene la stessa risposta del proprietario, ma ne
+ha il diritto. Il verdetto finale spetta quindi a una matrice dei privilegi,
+che assegna a ogni ruolo il rango dichiarato nel file di configurazione.
+L'accesso da un rango superiore a uno inferiore è legittimo; quello fra ranghi
+uguali è una BOLA orizzontale; quello da un rango inferiore a uno superiore è
+una BOLA verticale. Un ruolo assente dalla configurazione viene trattato come
+il più basso, e il modulo emette un avviso. Ogni esito diventa una segnalazione
+di runtime: una vulnerabilità confermata, con severità \texttt{HIGH}, oppure un
+esito sicuro, con severità informativa. La richiesta anonima serve infine a un
+controllo in più: se la risorsa viene restituita anche senza credenziali, il
+modulo segnala un difetto di autenticazione sullo stesso endpoint.
 
 \paragraph{Conferma e smentita}
-Sulla chiave comune, che lega anche la segnalazione di Spectral, il motore di
-correlazione riunisce ipotesi statica ed esiti di runtime in un'unica voce, ma
-tratta in modo diverso conferme e smentite. Quando
+Il motore di correlazione usa la chiave comune, alla quale è legata anche la
+segnalazione di Spectral, per riunire in un'unica voce l'ipotesi statica e gli
+esiti di runtime. Conferme e smentite, però, sono trattate in modo diverso. Se
 l'attacco riesce, la voce conserva la segnalazione statica, che indica la riga
-da correggere, ne porta la severità a \texttt{CRITICAL} e la confidenza a $1$ e
-allega l'esito dinamico come evidenza. Quando l'attacco viene bloccato, la
-severità resta invariata, la confidenza viene dimezzata una sola volta anche in
-presenza di più smentite e la voce è contrassegnata come smentita, senza
-evidenza di runtime. Se sulla stessa chiave arrivano sia una conferma sia una
-smentita, prevale la conferma, qualunque sia l'ordine di arrivo.
+da correggere, ne porta la severità a \texttt{CRITICAL} e la confidenza a $1$,
+e allega l'esito dinamico come evidenza. Se l'attacco viene bloccato, la
+severità resta invariata, la confidenza viene dimezzata e la voce è
+contrassegnata come smentita, senza evidenza di runtime; il dimezzamento
+avviene una sola volta, anche quando le smentite sono più di una. Se sulla
+stessa chiave arrivano sia una conferma sia una smentita, prevale la conferma,
+qualunque sia l'ordine di arrivo.
 
-La distinzione nasce da un difetto della prima versione, che trattava ogni
-esito di runtime come una conferma. Poiché il livello dinamico produce un esito
-sicuro per ogni attacco bloccato, e sempre per lo scenario di privilegio
-legittimo, una falsa segnalazione statica smentita dall'attacco usciva dalla
-pipeline come vulnerabilità critica con confidenza massima. Con la regola
-attuale i due livelli si completano: l'analisi statica indica dove potrebbe
-trovarsi il difetto e raggiunge anche endpoint che il livello dinamico non
-vede, la verifica dinamica stabilisce se il difetto è reale e copre i controlli
-presenti ma sbagliati.
+L'analisi statica indica dove potrebbe trovarsi il difetto e raggiunge anche
+endpoint che il livello dinamico non vede. La verifica dinamica stabilisce se
+il difetto è reale e copre i controlli che sono presenti ma sbagliati.
 
 \subsection{API2 -- Broken Authentication}
 \label{sec:rilevamento-broken-auth}
 
 Nella \emph{Broken Authentication}~\cite{owasp2023api2} il difetto riguarda la
-capacità del sistema di stabilire chi sia il chiamante. Dal codice il modulo
-ricostruisce per intero il sistema di autenticazione, cioè le librerie
-adottate, gli endpoint di accesso, i middleware e i decoratori a protezione
-delle rotte e i claim inclusi nei token, e a volte vi trova anche un difetto
-evidente, come un payload usato senza verificarne la firma. Il codice non dice
+capacità del sistema di stabilire chi sia il chiamante. Dal codice il modulo ricostruisce un idea
+del sistema di autenticazione, attraverso l'analisi delle librerie adottate, le funzioni di accesso,
+i middleware e i decoratori a protezione delle rotte e i claim inclusi nei token. Il codice non dice
 però come il meccanismo reagisce: se rifiuta un token falso o scaduto, se chiude
 la sessione dopo il logout, se frena i tentativi di accesso ripetuti. La
 divisione ricalca quella della letteratura: le debolezze che riguardano la firma
@@ -868,36 +864,46 @@ debolezza distinta e conclusa con un esito \texttt{PASS}, \texttt{FAIL} o
 Tabella~\ref{tab:test-auth} le raggruppa per l'aspetto dell'autenticazione che
 mettono alla prova.
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
   \centering
   \small
   \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l>{\hsize=1.35\hsize}X>{\hsize=0.65\hsize}X@{}}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.3\linewidth}lX@{}}
     \toprule
-    \textbf{Aspetto verificato} & \textbf{Debolezza sollecitata} & \textbf{Prove} \\
+    \textbf{Aspetto} & \textbf{Prova} & \textbf{Debolezza sollecitata} \\
     \midrule
-    Firma e validazione dei token & manipolazione del token, accettazione di un
-    token scaduto, confusione di algoritmo (RS256$\rightarrow$HS256), iniezione di
-    header JWKS & T01, T02, T07, T17 \\
-    Gestione di sessione e token & riuso dopo il logout, session fixation, riuso e
-    mancata rotazione del refresh token, durata illimitata, abuso in parallelo &
-    T05, T06, T12--T15 \\
-    Flussi e credenziali & replay del token su un'altra audience, escalation di
-    privilegio dai claim, protezioni dei flussi OAuth2/OIDC (state, PKCE),
-    credenziali non basate su token & T04, T08, T18, T19 \\
-    Forza bruta e limitazione & assenza di freni sul login, aggiramento del limite
-    tramite spoofing dell'header IP & T03, T20 \\
-    Autenticazione a più fattori & aggiramento dell'MFA e debolezza dell'OTP & T21 \\
-    Flussi SAML/SSO & manomissione della firma delle asserzioni & T22 \\
-    Comportamento e riservatezza & flag di sicurezza dei cookie, informazioni
-    sensibili negli errori, enumerazione degli utenti, reset password debole &
-    T09, T10, T11, T16 \\
+    Firma e validazione dei token & T01 & token manipolato accettato \\
+    & T02 & token scaduto accettato \\
+    & T07 & confusione di algoritmo (RS256$\rightarrow$HS256) \\
+    & T17 & iniezione di header JWKS \\
+    \midrule
+    Gestione di sessione e token & T05 & token ancora valido dopo il logout \\
+    & T06 & session fixation \\
+    & T12 & refresh token riutilizzabile \\
+    & T13 & refresh token non ruotato \\
+    & T14 & refresh token a durata illimitata \\
+    & T15 & refresh token usato in parallelo \\
+    \midrule
+    Flussi e credenziali & T04 & token riusato su un'altra audience \\
+    & T08 & escalation di privilegio tramite i claim \\
+    & T18 & flussi OAuth2/OIDC senza protezioni (state, PKCE) \\
+    & T19 & credenziali non basate su token \\
+    \midrule
+    Forza bruta e limitazione & T03 & login senza limite ai tentativi \\
+    & T20 & limite aggirato con lo spoofing dell'header IP \\
+    \midrule
+    Autenticazione a più fattori e SSO & T21 & MFA aggirabile od OTP debole \\
+    & T22 & firma delle asserzioni SAML manomessa \\
+    \midrule
+    Comportamento e riservatezza & T09 & cookie senza flag di sicurezza \\
+    & T10 & informazioni sensibili nei messaggi di errore \\
+    & T11 & enumerazione degli utenti \\
+    & T16 & reset della password debole \\
     \bottomrule
   \end{tabularx}
-  \caption[Batteria di prove dinamiche della Broken Authentication]{Prove
-    dinamiche del modulo, raggruppate per aspetto dell'autenticazione. La regola
-    statica S01, descritta più avanti, affianca la prima riga per il caso in cui
-  il bersaglio non è interrogabile.}
+  \caption[Batteria di prove dinamiche della Broken Authentication]{Le prove
+    dinamiche del modulo, una per riga e raggruppate per aspetto
+  dell'autenticazione.}
   \label{tab:test-auth}
 \end{table}
 
@@ -929,8 +935,7 @@ separati da punti, decodifica il payload in Base64 e lo interpreta come JSON
 senza mai invocare una libreria di verifica della firma. È un ripiego insicuro
 tipico: in mancanza della validazione crittografica il codice si fida comunque
 del contenuto del token, e un attaccante può forgiarne uno con qualsiasi
-identità. Il difetto è ricondotto alla CWE-347, relativa alla verifica
-impropria delle firme crittografiche. La lettura non sicura del payload resta
+identità. La lettura non sicura del payload resta
 visibile nel sorgente anche quando il sistema non è raggiungibile o non offre un
 punto d'ingresso da provare: la componente statica della categoria rimane
 rilevabile proprio dove quella dinamica non lo è.
@@ -1055,7 +1060,7 @@ domanda non è più se un utente possa accedere a un certo oggetto, ma se possa
 eseguire una certa funzione. Il difetto nasce spesso da una dimenticanza: una
 rotta aggiunta a un controller eredita il routing e l'autenticazione, ma non
 l'autorizzazione, e resta raggiungibile da chiunque abbia effettuato l'accesso.
-Negli artefatti si riconosce quindi come un'assenza, quella del controllo sul
+L'implementazione riconosce la mancanza del controllo sul
 ruolo del chiamante in una funzione riservata. Per stabilire se l'assenza sia
 davvero sfruttabile servirebbe invocare la funzione con le credenziali di un
 utente ordinario, una verifica dinamica che il modulo non compie. Il rilevatore
@@ -1084,7 +1089,7 @@ sensibile, come una cancellazione, un cambio di ruolo o un rimborso, e resta
 alla portata di qualunque utente registrato (CWE-862~\cite{cwe862}).
 BF-003 riguarda il verbo HTTP\footnote{\emph{Verbo}
   (o \emph{metodo}) \emph{HTTP}: l'azione richiesta su una risorsa, per
-  esempio \texttt{GET} per leggere o \texttt{DELETE} per cancellare.} (CWE-650~\cite{cwe650}): una
+esempio \texttt{GET} per leggere o \texttt{DELETE} per cancellare.} (CWE-650~\cite{cwe650}): una
 rotta privilegiata che accetta qualsiasi metodo, oppure un'applicazione che
 rispetta l'intestazione \texttt{X-HTTP-Method-Override} senza limitarne i
 valori, permette di raggiungere l'operazione per una via diversa da quella
@@ -1200,7 +1205,26 @@ indicare che la funzione è accessibile a qualsiasi utente autenticato e BF-007
 per indicare che il nuovo ruolo lo decide chi invia la richiesta, e sopprimerne
 una nasconderebbe metà del problema.
 
-\section{Rilevamento dell'Unrestricted Resource Consumption}
+\section{Categorie tecniche: un metodo per categoria}
+\label{sec:categorie-tecniche}
+
+Le categorie raccolte in questa sezione sono quattro: l'Unrestricted Resource
+Consumption (API4), la Server-Side Request Forgery (API7), la Security
+Misconfiguration (API8) e l'Unsafe Consumption of APIs (API10). Secondo il
+criterio della Sottosezione~\ref{sec:criterio} si comportano come categorie
+tecniche: la violazione si riconosce leggendo gli artefatti di progetto, senza
+sollecitare il sistema in esecuzione, e i rilevatori sono statici. È su di esse
+che il sistema cerca una risposta a \RQ{1.1}.
+
+A differenza delle categorie ibride, però, non hanno una forma comune da
+descrivere una volta sola. Ciascuna richiede un metodo proprio: per il consumo
+di risorse un limite va cercato su tre livelli e ne vanno confrontati i
+risultati, per la SSRF conta il percorso del dato dall'input dell'utente alla
+chiamata di rete, per la configurazione il confronto con valori di riferimento
+noti, per il consumo di API esterne il modo in cui il codice tratta le risposte
+che riceve. Per questo le quattro categorie sono descritte separatamente.
+
+\subsection{API4 -- Unrestricted Resource Consumption}
 \label{sec:rilevamento-resource}
 
 Ogni richiesta a un'API ha un costo: tempo di calcolo, memoria, banda, a volte
@@ -1231,7 +1255,7 @@ altri livelli la confermano. Il modulo li esamina quindi tutti e tre e ne
 confronta i risultati, come chiede \RQ{1.1}: qui la correlazione non è un
 raffinamento dell'analisi, ma la condizione perché un giudizio sia possibile.
 
-\subsection{I tre livelli di analisi}
+\paragraph{I tre livelli di analisi}
 \label{sec:resource-layers}
 
 Nel codice sorgente, Python e JavaScript, il modulo cerca i punti in cui un
@@ -1284,10 +1308,8 @@ dubbio che il contratto lascia aperto. Se una rotta chiama un servizio a
 pagamento è costosa anche quando ha un nome innocuo, e il modulo la segnala se
 il contratto non prevede alcuna protezione.
 
-\section{Rilevamento della Server-Side Request Forgery}
+\subsection{API7 -- Server-Side Request Forgery}
 \label{sec:rilevamento-ssrf}
-
-\subsection{Metodo di ricerca e sistema di rilevazione}
 \label{sec:metodo-ricerca-rilevazione}
 
 La metodologia adottata per la rilevazione delle vulnerabilità di tipo Server-Side Request Forgery (SSRF) si basa sulla progettazione e implementazione di un modulo di analisi integrato nella piattaforma di rilevamento dei rischi di sicurezza delle API, concentrandosi in particolare sui casi in cui un endpoint utilizza dati controllati dall'utente per costruire richieste verso risorse remote senza applicare controlli sufficienti sulla destinazione. Il metodo combina l'analisi del codice sorgente con l'analisi del contratto dell'API, in modo da osservare il problema da due prospettive complementari: il comportamento effettivamente implementato e i vincoli dichiarati nell'interfaccia. Tale scelta permette di non limitare il rilevamento alla presenza di specifiche chiamate di rete, ma di considerare anche il percorso seguito dai dati prima che raggiungano tali operazioni.
@@ -1304,13 +1326,13 @@ A supporto dell'analisi del flusso sono state definite sei regole di rilevamento
 
 Una seconda componente della metodologia riguarda infatti l'analisi contrattuale dell'API. La specifica OpenAPI viene esaminata per individuare parametri e proprietà del corpo delle richieste che possono rappresentare destinazioni URL, con particolare attenzione a campi quali \texttt{webhook}, \texttt{callback\_url}, \texttt{redirect} ed \texttt{endpoint}. La verifica considera la presenza di vincoli che descrivano il valore atteso, come \texttt{format: uri}, e di eventuali pattern utilizzati per limitare le destinazioni ammesse. L'obiettivo non è stabilire direttamente che l'implementazione sia vulnerabile, ma verificare se il contratto dell'interfaccia fornisca indicazioni sufficienti a restringere l'insieme dei valori accettabili. Questa fase permette quindi di individuare una possibile debolezza già a livello progettuale, prima di considerare il comportamento dell'applicazione durante l'esecuzione.
 
-\section{Rilevamento della Security Misconfiguration}
+\subsection{API8 -- Security Misconfiguration}
 \label{sec:rilevamento-secmisconfig}
 
 La \emph{Security Misconfiguration}~\cite{owasp2023api8}
 (Sottosezione~\ref{subsubsec:api8}) raccoglie errori di configurazione che
 possono verificarsi a diversi livelli, dalla rete fino all'applicazione. Questa
-sezione ne affronta la parte visibile nel codice sorgente e nei file di
+sottosezione ne affronta la parte visibile nel codice sorgente e nei file di
 progetto, completando l'analisi infrastrutturale già trattata nella
 Sezione~\ref{sec:rilevamento-misconfig}. Il modulo adotta un approccio statico:
 cerca direttamente nel codice le scelte di configurazione insicure, senza
@@ -1326,7 +1348,7 @@ anche la ragione per cui OWASP giudica facile la rilevabilità della categoria,
 rinviando agli strumenti automatici, che servono tanto a chi difende quanto a
 chi attacca~\cite{owasp2023api8}.
 
-\subsection{Regole locali e regole globali}
+\paragraph{Regole locali e regole globali}
 \label{sec:secmisconfig-rules}
 
 Lo scanner analizza i file sorgente in Python, JavaScript e TypeScript, escludendo
@@ -1368,7 +1390,7 @@ presenza di dipendenze con vulnerabilità note censite in un archivio locale.
   \label{tab:regole-secmisconfig}
 \end{table}
 
-\section{Rilevamento dell'Unsafe Consumption of APIs}
+\subsection{API10 -- Unsafe Consumption of APIs}
 \label{sec:rilevamento-unsafe}
 
 Le categorie viste finora guardano ai dati che l'API riceve dai suoi utenti.
@@ -1390,7 +1412,7 @@ categorie~\cite{owasp2023apiissue80}.
 Il modulo si occupa delle tre forme tipiche del consumo insicuro (canale in
 chiaro, dati non validati e redirezioni cieche) e lascia le altre due, l'assenza
 di limiti e di timeout, al modulo dell'Unrestricted Resource Consumption
-(Sezione~\ref{sec:rilevamento-resource}), che ne è la sede naturale; così lo
+(Sottosezione~\ref{sec:rilevamento-resource}), che ne è la sede naturale; così lo
 stesso difetto non viene contato due volte, come chiede il criterio della
 Sottosezione~\ref{sec:criterio}. Le tre forme rimaste si leggono direttamente nel
 codice: nella parte che lo strumento accerta la categoria si comporta come una
@@ -1400,7 +1422,7 @@ al consumo insicuro sfoci in una compromissione reale, resta però un residuo di
 natura \emph{dinamica} nel senso di \RQ{1.2}, ripreso nel
 Capitolo~\ref{cap:risultati}.
 
-\subsection{Le tre regole}
+\paragraph{Le tre regole}
 \label{sec:unsafe-rules}
 
 Uno scanner percorre i file Python del bersaglio, li legge con l'analizzatore
@@ -1437,7 +1459,7 @@ indicate da una terza parte (CWE-601~\cite{cwe601}).
   \end{tabularx}
   \caption[Regole del modulo Unsafe Consumption of APIs]{Le tre regole del modulo,
     corrispondenti alle condizioni di consumo insicuro non già coperte dalla
-  Sezione~\ref{sec:rilevamento-resource}.}
+  Sottosezione~\ref{sec:rilevamento-resource}.}
   \label{tab:regole-unsafe}
 \end{table}
 
