@@ -12,18 +12,18 @@
 
 Il portale AppSecMaster ha elaborato una propria classificazione dei dieci rischi più comuni e di maggiore impatto nei moderni ambienti cloud, ispirandosi ai principi promossi da OWASP in materia di sicurezza applicativa, che vanno dall'infrastruttura mal configurata alla scarsa visibilità delle risorse in esecuzione. Di seguito è riportata la lista delle principali problematiche individuate:
 \begin{enumerate}
-    \item \textbf{Security Misconfiguration} — Bucket di storage lasciati con permessi troppo permissivi o istanze di calcolo distribuite senza le dovute restrizioni restano tra le cause più frequenti di violazione dei dati in ambienti cloud.
-    \item \textbf{Identity / Access Mismanagement} — Ruoli IAM assegnati con privilegi superiori a quelli effettivamente necessari, e mai rivisti dopo la configurazione iniziale, espongono i sistemi a un concreto rischio di escalation dei permessi.
-    \item \textbf{Improper Secrets/Key Management} - Se chiavi API e credenziali vengono salvate in chiaro o incorporate nel codice sorgente, la loro compromissione può aprire un accesso laterale a più servizi collegati.
-    \item \textbf{Insecure Network Segmentation} — Senza una reale separazione tra reti e ambienti diversi, un attaccante che viola un singolo componente può muoversi liberamente verso risorse più sensibili.
-    \item \textbf{Injection / Input Validation Flaws in Cloud Services} — Le classiche vulnerabilità di injection assumono forme nuove nei contesti cloud-native, colpendo funzioni serverless, code di messaggi e gateway API dove i controlli sugli input non sono sempre applicati in modo uniforme.
-    \item \textbf{Insecure Deserialization / API Exposure} — La gestione non sicura di dati serializzati, unita ad API interne prive di adeguati controlli di autenticazione o versionamento, costituisce un punto d'ingresso sfruttabile per eseguire codice non autorizzato.
-    \item \textbf{Vulnerable Third-Party/Container Dependencies} — Librerie open source e immagini container non aggiornate accumulano vulnerabilità note, soprattutto quando le stesse basi vengono riutilizzate tra più progetti senza verifiche periodiche.
-    \item \textbf{Improper Asset Inventory / Visibility} — Risorse cloud dimenticate o mai tracciate correttamente, incluse istanze abbandonate e servizi "ombra", sfuggono facilmente al controllo dei team di sicurezza.
-    \item \textbf{Insufficient Logging / Monitoring} — Log distribuiti su decine di servizi diversi e privi di un formato coerente rendono difficile individuare per tempo un'intrusione in corso.
-    \item \textbf{Unvalidated Redirects/Cloud Function Abuse} — Funzioni serverless eseguite con permessi troppo ampi, combinate a controlli insufficienti sui redirect, possono essere sfruttate per aggirare le restrizioni di accesso e ottenere un punto d'appoggio nascosto nell'infrastruttura.
+  \item \textbf{Security Misconfiguration} — Bucket di storage lasciati con permessi troppo permissivi o istanze di calcolo distribuite senza le dovute restrizioni restano tra le cause più frequenti di violazione dei dati in ambienti cloud.
+  \item \textbf{Identity / Access Mismanagement} — Ruoli IAM assegnati con privilegi superiori a quelli effettivamente necessari, e mai rivisti dopo la configurazione iniziale, espongono i sistemi a un concreto rischio di escalation dei permessi.
+  \item \textbf{Improper Secrets/Key Management} - Se chiavi API e credenziali vengono salvate in chiaro o incorporate nel codice sorgente, la loro compromissione può aprire un accesso laterale a più servizi collegati.
+  \item \textbf{Insecure Network Segmentation} — Senza una reale separazione tra reti e ambienti diversi, un attaccante che viola un singolo componente può muoversi liberamente verso risorse più sensibili.
+  \item \textbf{Injection / Input Validation Flaws in Cloud Services} — Le classiche vulnerabilità di injection assumono forme nuove nei contesti cloud-native, colpendo funzioni serverless, code di messaggi e gateway API dove i controlli sugli input non sono sempre applicati in modo uniforme.
+  \item \textbf{Insecure Deserialization / API Exposure} — La gestione non sicura di dati serializzati, unita ad API interne prive di adeguati controlli di autenticazione o versionamento, costituisce un punto d'ingresso sfruttabile per eseguire codice non autorizzato.
+  \item \textbf{Vulnerable Third-Party/Container Dependencies} — Librerie open source e immagini container non aggiornate accumulano vulnerabilità note, soprattutto quando le stesse basi vengono riutilizzate tra più progetti senza verifiche periodiche.
+  \item \textbf{Improper Asset Inventory / Visibility} — Risorse cloud dimenticate o mai tracciate correttamente, incluse istanze abbandonate e servizi "ombra", sfuggono facilmente al controllo dei team di sicurezza.
+  \item \textbf{Insufficient Logging / Monitoring} — Log distribuiti su decine di servizi diversi e privi di un formato coerente rendono difficile individuare per tempo un'intrusione in corso.
+  \item \textbf{Unvalidated Redirects/Cloud Function Abuse} — Funzioni serverless eseguite con permessi troppo ampi, combinate a controlli insufficienti sui redirect, possono essere sfruttate per aggirare le restrizioni di accesso e ottenere un punto d'appoggio nascosto nell'infrastruttura.
 
-    
+
 \end{enumerate}
 
 Tra le problematiche elencate, il presente lavoro si concentra sulla prima, indicata nel seguito come IaC misconfiguration, e sulla componente di esposizione delle API della sesta, Insecure Deserialization / API Exposure: sono le due voci più direttamente legate agli obiettivi del sistema sviluppato e quelle che ricorrono con maggiore frequenza negli scenari di autorizzazione tipici delle architetture basate su API. La prima è approfondita nella sottosezione seguente; la seconda nella Sezione~\ref{sec:api_security_risks}, dove la classificazione OWASP dedicata alle API la articola in dieci categorie distinte.
@@ -126,51 +126,51 @@ funzionalità. Di seguito la lista completa, in ordine di gravità
 secondo OWASP~\cite{owasp2023apitop10}:
 \begin{enumerate}
   \item \textbf{API1:2023 -- Broken Object Level Authorization (BOLA)} — un
-  endpoint accetta l'ID di una risorsa senza verificare che chi lo richiede
-  abbia davvero il diritto di accedervi; basta cambiare un numero nell'URL
-  per leggere dati altrui.
+    endpoint accetta l'ID di una risorsa senza verificare che chi lo richiede
+    abbia davvero il diritto di accedervi; basta cambiare un numero nell'URL
+    per leggere dati altrui.
 
   \item \textbf{API2:2023 -- Broken Authentication} — meccanismi di
-  autenticazione implementati male, token che non scadono mai, o password
-  recuperabili senza controlli sufficienti.
+    autenticazione implementati male, token che non scadono mai, o password
+    recuperabili senza controlli sufficienti.
 
   \item \textbf{API3:2023 -- Broken Object Property Level Authorization} —
-  qui il problema non è accedere alla risorsa sbagliata, ma vedere o
-  modificare campi che non dovrebbero essere esposti o scrivibili da quel
-  particolare utente.
+    qui il problema non è accedere alla risorsa sbagliata, ma vedere o
+    modificare campi che non dovrebbero essere esposti o scrivibili da quel
+    particolare utente.
 
   \item \textbf{API4:2023 -- Unrestricted Resource Consumption} — assenza di
-  limiti su chiamate, dimensione dei payload o uso di risorse computazionali,
-  con conseguenze che vanno dal semplice rallentamento a un vero e proprio
-  denial of service.
+    limiti su chiamate, dimensione dei payload o uso di risorse computazionali,
+    con conseguenze che vanno dal semplice rallentamento a un vero e proprio
+    denial of service.
 
   \item \textbf{API5:2023 -- Broken Function Level Authorization} — un
-  utente normale riesce a invocare funzioni riservate agli amministratori,
-  semplicemente perché il controllo sui permessi manca a livello di endpoint
-  o di metodo HTTP.
+    utente normale riesce a invocare funzioni riservate agli amministratori,
+    semplicemente perché il controllo sui permessi manca a livello di endpoint
+    o di metodo HTTP.
 
   \item \textbf{API6:2023 -- Unrestricted Access to Sensitive Business
-  Flows} — la singola richiesta può essere anche legittima, ma se ripetuta
-  migliaia di volte automatizza un abuso della logica di business (es.
-  acquisto massivo di biglietti, creazione automatica di account).
+    Flows} — la singola richiesta può essere anche legittima, ma se ripetuta
+    migliaia di volte automatizza un abuso della logica di business (es.
+    acquisto massivo di biglietti, creazione automatica di account).
 
   \item \textbf{API7:2023 -- Server Side Request Forgery (SSRF)} — l'API
-  accetta un URL fornito dall'utente e lo interroga senza validarlo,
-  permettendo di raggiungere risorse interne altrimenti non accessibili
-  dall'esterno.
+    accetta un URL fornito dall'utente e lo interroga senza validarlo,
+    permettendo di raggiungere risorse interne altrimenti non accessibili
+    dall'esterno.
 
   \item \textbf{API8:2023 -- Security Misconfiguration} — header di
-  sicurezza mancanti, CORS troppo permissivo, ambienti di debug ancora
-  attivi in produzione: stessa famiglia di errori vista nel capitolo
-  precedente, qui applicata allo strato applicativo.
+    sicurezza mancanti, CORS troppo permissivo, ambienti di debug ancora
+    attivi in produzione: stessa famiglia di errori vista nel capitolo
+    precedente, qui applicata allo strato applicativo.
 
   \item \textbf{API9:2023 -- Improper Inventory Management} — endpoint
-  vecchi, versioni deprecate o ambienti di staging dimenticati online, mai
-  rimossi né monitorati, restano comunque raggiungibili da chi li trova.
+    vecchi, versioni deprecate o ambienti di staging dimenticati online, mai
+    rimossi né monitorati, restano comunque raggiungibili da chi li trova.
 
   \item \textbf{API10:2023 -- Unsafe Consumption of APIs} — la vulnerabilità
-  non nasce nell'API stessa, ma nella fiducia cieca riposta nei dati
-  restituiti da API di terze parti integrate nel sistema.
+    non nasce nell'API stessa, ma nella fiducia cieca riposta nei dati
+    restituiti da API di terze parti integrate nel sistema.
 \end{enumerate}
 
 Tra le dieci categorie appena elencate la prima merita un'attenzione diversa
@@ -922,38 +922,15 @@ contromisura corrispondente; quando il contratto del fornitore è noto, la
 risposta può essere validata rispetto a uno schema, che non intercetta un
 payload conforme ma trasforma la fiducia implicita in un vincolo dichiarato.
 
-\section{Sintesi: dove si trova il difetto}
-\label{sec:sintesi-stato-arte}
+\subsection{Sintesi: dove si trova il difetto}
 
-Lette una accanto all'altra, le categorie descritte in questo capitolo si
-distinguono meno per il tema che per il luogo in cui il difetto lascia una
-traccia. Per alcune il difetto è scritto negli artefatti di progetto: una
-configurazione insicura sta nel file che dichiara la risorsa, come nella IaC
-misconfiguration e in API8; un limite mancante sta nel codice, nel proxy o nel
-contratto (API4); un URL fornito dall'utente finisce in una chiamata di rete
-(API7); la risposta di un servizio esterno viene usata senza essere validata
-(API10). Per queste categorie le fonti indicano già contromisure verificabili,
-dagli strumenti automatici per le configurazioni all'analisi statica del costo
-di una query~\cite{cha2020graphql}.
+Le categorie analizzate in questo capitolo si differenziano anche per il punto in cui è possibile individuare il difetto. In alcuni casi
+la vulnerabilità può essere individuata direttamente nel codice, nelle configurazioni o nelle chiamate effettuate dal sistema. In altri casi, invece, queste informazioni mostrano solo una parte del problema e non permettono di stabilire se i controlli presenti funzionino correttamente.
 
-Per le categorie di autenticazione e di autorizzazione (API1, API2, API3 e
-API5) gli artefatti mostrano solo una parte del problema. Si vede se un
-controllo manca, per esempio un oggetto recuperato senza legarlo al chiamante
-o una funzione riservata priva di verifica del ruolo, ma non se un controllo
-presente decida correttamente. La stessa tassonomia CWE distingue il controllo
-assente da quello che esiste ma decide male~\cite{cwe285}, e solo il primo
-lascia nel codice una traccia certa.
+Esistono infine categorie in cui le informazioni
+necessarie non sono presenti direttamente nel codice o nella configurazione,
+ma dipendono dal comportamento del sistema o dal contesto in cui viene utilizzato.
 
-Per due categorie, infine, il difetto non è negli artefatti. In API6 lo stesso
-endpoint è sicuro in un contesto e vulnerabile in un altro, e a deciderlo è il
-modello di business che gli sta dietro~\cite{owasp2023api6}; in API9 il
-difetto è l'assenza di un inventario, che non è un comportamento del
-software~\cite{cwe1059}.
-
-Le fonti esaminate descrivono ciascuna categoria con precisione, ma una alla
-volta. Nessuna stabilisce, per l'intera lista, quali categorie si possano
-accertare leggendo gli artefatti, quali richiedano di osservare il sistema in
-esecuzione e quali dipendano da conoscenze che gli artefatti non contengono. È
-da questa domanda che parte il Capitolo~\ref{cap:metodo}, che trasforma la
-distinzione in un criterio di classificazione e ne verifica le conseguenze
-costruendo uno strumento di rilevazione.
+Questa distinzione è alla base del Capitolo 3,
+dove le categorie vengono classificate in base a ciò che può essere rilevato direttamente e
+alle informazioni aggiuntive necessarie per individuarle.
