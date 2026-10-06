@@ -10,25 +10,16 @@
 \label{sec:research-questions}
 
 La rassegna del capitolo precedente restituisce un quadro disomogeneo:
-alcune categorie dell'OWASP API Security Top 10 dispongono di tecniche di
-rilevazione consolidate, altre sono trattate quasi solo in chiave dinamica,
-altre ancora non hanno una formulazione operativa che ne consenta il
-riconoscimento automatico. Il divario dipende da come si manifesta la violazione che definisce
-ciascuna categoria. Vi sono violazioni che lasciano
-una traccia strutturale negli artefatti di progetto (quali codice applicativo,
-definizioni infrastrutturali e specifica dell'interfaccia) e violazioni il
-cui riconoscimento presuppone di sapere quale uso dell'applicazione sia
-legittimo, informazione che nessuno di essi contiene.
-
-Questa differenza corrisponde alla distinzione fra \emph{vulnerabilità tecniche} e \emph{vulnerabilità di logica di business}
-(\emph{logic vulnerabilities})~\cite{felmetsger2010logic,pellegrino2014logic}.
-Le prime violano proprietà strutturali verificabili sugli artefatti di
-progetto; le seconde violano l'intento per cui il flusso applicativo è stato
-concepito. La stessa OWASP, nel motivare la categoria API6:2023, riconduce a
-questo carattere la resistenza dei difetti di logica di business al
-rilevamento automatico: la correttezza è definita rispetto all'intento del
-dominio applicativo, non rispetto a una proprietà del
-codice~\cite{owasp2023api6}.
+le categorie dell'OWASP API Security Top 10 differiscono profondamente per
+il luogo e il modo in cui la violazione si manifesta. Alcune lasciano una
+traccia strutturale negli artefatti di progetto (codice applicativo,
+definizioni infrastrutturali, specifica dell'interfaccia), altre vi lasciano
+solo una condizione parziale o presuppongono di sapere quale
+uso dell'applicazione sia legittimo. È la distinzione fra
+\emph{vulnerabilità tecniche} e \emph{vulnerabilità di logica di
+business}~\cite{felmetsger2010logic,pellegrino2014logic}, alla quale la stessa
+OWASP riconduce la resistenza di queste ultime al rilevamento
+automatico~\cite{owasp2023api6}.
 
 Il presente lavoro applica sistematicamente tale distinzione alle dieci
 categorie dell'OWASP API Security Top 10 (2023) e ne verifica le conseguenze
@@ -36,47 +27,50 @@ implementative con un'analisi multi-layer dei tre livelli indicati,
 integrata da evidenza dinamica dove la sola ispezione statica non basta. Su
 questa base si formula la domanda di ricerca principale.
 
-\rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023)
-  sono riconducibili a vulnerabilità tecniche rilevabili mediante analisi
-  statica multi-layer su codice applicativo, definizioni infrastrutturali e
-  specifica dell'interfaccia, quali richiedono in aggiunta evidenza esterna
-agli artefatti, e di quale natura sia tale evidenza?}
+\rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023) si
+  possono rilevare con l'analisi statica degli artefatti di progetto, e quali
+richiedono un'evidenza che questi non contengono?}
 
 La domanda si scompone in due interrogativi subordinati.
 
-\rqbox{1.1}{Per le categorie riconducibili a vulnerabilità tecniche,
-  quale combinazione di livelli di analisi è necessaria alla loro copertura,
-  e quali condizioni di rischio emergono soltanto dalla congiunzione di
-segnali che, presi isolatamente, non costituiscono una violazione?}
+\rqbox{1.1}{Per le categorie rilevabili staticamente, quali livelli di
+analisi occorre combinare per coprirle?}
 
-\rqbox{1.2}{Per le categorie la cui proprietà violata non è interamente
-  esprimibile sugli artefatti, quale componente resta riconoscibile
-  staticamente e di quale natura è il residuo: accertabile sollecitando il
-  sistema in esecuzione, colmabile estendendo il perimetro degli artefatti
-  esaminati, esplicitabile come parametro dichiarato dell'analisi, oppure
-irriducibile alla conoscenza del dominio applicativo?}
+La domanda riguarda anche le condizioni di rischio che compaiono solo
+combinando più livelli, cioè segnali che presi singolarmente non
+costituiscono una violazione.
+
+\rqbox{1.2}{Per le categorie non rilevabili interamente con l'analisi statica,
+  quale parte resta riconoscibile staticamente e di che natura è ciò che
+manca?}
+
+Ciò che manca, il \emph{residuo}, può essere accertabile sul sistema in
+esecuzione, recuperabile estendendo l'analisi ad altri file del progetto,
+esplicitabile come parametro dell'analisi, oppure legato alla sola
+conoscenza del dominio applicativo; la Sottosezione~\ref{sec:criterio} ne
+dà la definizione precisa.
 
 \subsection{Impostazione dello studio}
 \label{sec:impostazione}
 
-Le domande non si risolvono sulla carta. Un criterio applicato con
-coerenza può dire quali categorie \emph{sembrano} riconducibili a violazioni
-tecniche; se la riconduzione regga davvero lo si scopre solo costruendo i
-moduli di rilevazione e osservandoli all'opera su codice reale. Lo studio
-assume perciò una forma costruttiva.
+Rispondere alle domande richiede due passaggi distinti. Il primo è
+analitico: un criterio applicato in modo coerente alle dieci categorie
+stabilisce quali siano tecniche, ibride o di logica di business. Il secondo è
+costruttivo: per ogni categoria tecnica o ibrida si realizza un modulo che
+verifichi la condizione individuata dal criterio, e lo si mette
+alla prova. La costruzione mostra che la classificazione è applicabile in
+pratica, cioè che le condizioni previste si possono effettivamente
+verificare sul codice e sulle configurazioni; non ne dimostra da sola la correttezza, perché
+un difetto non rilevato può dipendere dai limiti dell'implementazione e non
+dal criterio. Lo studio assume perciò una forma costruttiva.
 
-Questo chiarisce il ruolo del sistema descritto nel seguito: è il banco di
-prova della classificazione, non l'oggetto della ricerca. Ogni categoria
-ricondotta a una violazione strutturale deve avere una regola che la
-riconosca; ogni categoria esclusa deve restare, coerentemente, senza
-modulo. Vale come evidenza soltanto ciò che è stato verificato: la
-classificazione secondo il criterio dichiarato, l'esito dei moduli su casi
-di prova e su un bersaglio realistico, e la motivazione documentata delle
-categorie non coperte. Una regola presente nel codice ma mai esercitata su
-un caso concreto non conta come copertura. Il capitolo formula il criterio,
-ne deriva i requisiti per lo strumento e si chiude con il disegno della
-valutazione; l'applicazione del criterio alle dieci categorie è presentata
-insieme ai risultati.
+Questo chiarisce il ruolo del sistema descritto nel seguito: è lo strumento
+con cui la classificazione viene resa operativa, non l'oggetto della
+ricerca. Ogni categoria ricondotta a una violazione strutturale deve avere
+una regola che la riconosca; ogni categoria esclusa deve restare,
+coerentemente, senza modulo, con una motivazione documentata. Il capitolo
+formula il criterio, ne deriva i requisiti per lo strumento e descrive i
+moduli di rilevazione, raggruppati secondo la classificazione.
 
 \subsection{Il criterio di classificazione}
 \label{sec:criterio}
@@ -127,8 +121,7 @@ La classificazione non descrive uno strumento, ma vincola ciò che uno
 strumento adeguato deve saper fare. I requisiti che seguono sono formulati
 come capacità richieste, indipendentemente dalle tecnologie; la loro
 traduzione in un'architettura concreta è mostrata nella
-Sezione~\ref{sec:rilevamento-misconfig} per la IaC misconfiguration e
-nelle sezioni seguenti per le altre categorie.
+Sezione~\ref{sec:architettura} e nelle sezioni dedicate ai singoli moduli.
 
 Il primo requisito è l'analisi su più livelli. Le proprietà individuate dal
 criterio non risiedono tutte nello stesso luogo: alcune si manifestano nel
@@ -138,15 +131,13 @@ strumento che esamini un solo livello non può quindi coprire il
 perimetro, e ciascun livello richiede una rappresentazione e una tecnica di
 ispezione proprie.
 
-Il secondo è la correlazione fra i livelli. Alcune condizioni non
-sono osservabili in alcun singolo livello, ma nella discrepanza fra due di
-essi: un percorso presente nel codice e assente dal contratto non è una
-violazione in nessuno dei due luoghi, eppure la divergenza segnala una
-superficie esposta e non governata; l'assenza di un limite nel codice
-cambia significato a seconda che le definizioni infrastrutturali ne
-prevedano uno altrove. Lo strumento deve quindi mettere in relazione segnali
-di livelli diversi e derivarne giudizi che nessun livello esprime da solo.
-Questa capacità risponde a \RQ{1.1}.
+Il secondo è la correlazione fra i livelli. Alcune condizioni emergono
+solo confrontando due livelli. Un percorso presente nel codice ma assente
+dal contratto, per esempio, non è un errore in nessuno dei due, ma indica
+un endpoint esposto e non documentato. Allo stesso modo, un limite assente
+nel codice è un problema solo se non lo applica nemmeno l'infrastruttura.
+Lo strumento deve quindi combinare i segnali dei diversi livelli: è questa
+la capacità su cui verte \RQ{1.1}.
 
 Il terzo è la verifica dinamica: per le categorie che richiedono
 un riscontro a runtime, lo strumento deve poter inviare richieste reali
@@ -164,42 +155,46 @@ analisi che l'ha generata, perché una segnalazione priva di tale riconduzione
 può indicare un difetto reale ma non contribuisce a rispondere alle domande
 di ricerca.
 
-\subsection{Disegno della valutazione}
-\label{sec:disegno-valutazione}
+\section{Architettura del sistema}
+\label{sec:architettura}
 
-La valutazione ha due scopi distinti: controllare che ogni modulo riconosca
-la condizione per cui è stato scritto, e osservare il comportamento dello
-strumento nel suo insieme su codice che non è stato scritto per essere
-analizzato.
+\begin{figure}[!htbp]
+  \centering
+  \input{figure/uml-componenti}
+  \caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti
+    del sistema, raggruppati per livello architetturale. Le frecce tratteggiate
+    indicano dipendenze; quella con la punta triangolare vuota indica la
+  realizzazione delle interfacce di dominio da parte degli adapter.}
+  \label{fig:uml-componenti}
+\end{figure}
 
-Al primo scopo servono coppie di casi di prova, ciascuna formata da una
-versione che contiene la condizione da rilevare e da una che non la contiene:
-il modulo deve segnalare la prima e non la seconda. Le coppie coprono
-tutti e tre i livelli di analisi, così che nessun livello sia esercitato solo
-indirettamente attraverso il bersaglio realistico. Poiché casi di prova e regole
-hanno lo stesso autore, questa prova stabilisce che l'implementazione fa ciò
-che si intendeva, non che funzioni su codice reale.
+Il sistema è organizzato secondo i principi della \emph{Clean Architecture}:
+un livello di dominio che definisce entità e contratti, un livello
+applicativo che orchestra l'analisi, un livello infrastrutturale che
+incapsula gli strumenti esterni e un livello di presentazione, a riga di
+comando o tramite un cruscotto web, che espone i risultati
+(Figura~\ref{fig:uml-componenti}).
 
-Al secondo scopo serve OWASP crAPI~\cite{owasp2026crapi}, applicazione
-volutamente vulnerabile mantenuta dalla OWASP Foundation e quindi fissata a una
-revisione precisa per rendere i risultati riproducibili. Non essendo scritta
-dall'autore, riduce la circolarità della prima prova; resta però un bersaglio
-didattico, costruito perché le sue vulnerabilità siano riconoscibili, e i
-risultati non si possono estendere senza cautela ad applicazioni reali.
+In risposta alla tracciabilità richiesta nella
+Sottosezione~\ref{sec:requisiti}, ogni anomalia, qualunque strumento l'abbia
+prodotta, viene ricondotta a un'unica entità di dominio, il \emph{Finding}, che
+ne registra la sorgente e la regola, la posizione con una chiave di
+correlazione, la categoria, la severità (da \texttt{CRITICAL} a
+\texttt{INFO}) e un grado di confidenza fra $0$ e $1$. Vi si aggiunge la
+\emph{natura} del rischio: un'\emph{esposizione} quando la configurazione apre
+un varco sfruttabile direttamente, un \emph{irrobustimento} quando manca una
+difesa in profondità che da sola non costituisce un accesso; se la regola non
+permette di stabilirlo, la segnalazione resta non classificata.
 
-Per i casi di prova il riferimento di verità è noto per costruzione;
-per crAPI è stato ricostruito a mano, individuando nel codice i punti in cui
-si manifestano le vulnerabilità documentate dal progetto, ed è riportato per
-esteso perché i risultati vadano letti rispetto a ciò che si è assunto come
-vero. Una segnalazione conta come corrispondente a una voce del riferimento
-quando riguarda la stessa categoria OWASP e lo stesso punto di esposizione
-dell'interfaccia, identificato da metodo e percorso normalizzato,
-qualunque sia il livello di analisi che l'ha prodotta; questa convenzione è
-stata fissata prima di osservare i risultati. Su questa base si registra, per
-ogni categoria, se i moduli segnalano i casi che contengono la
-condizione e non quelli che ne sono privi, e si distinguono le categorie senza
-segnalazioni in cui ciò discende dalla classificazione da quelle in cui indica
-una copertura mancante.
+Gli strumenti esterni sono avvolti da \emph{adapter} che realizzano
+l'interfaccia di dominio \texttt{IScanner}, eseguono lo strumento e ne
+traducono l'uscita in Finding: Checkov~\cite{checkov2026docs} per le
+definizioni infrastrutturali, Semgrep per il codice applicativo e Spectral per
+la specifica dell'interfaccia. L'orchestratore conosce gli scanner solo
+attraverso questa interfaccia: li esegue sul repository bersaglio e consegna
+le segnalazioni al motore di correlazione, che le aggrega per chiave e assegna
+a ciascuna un punteggio di rischio. Aggiungere un controllo significa
+registrare un nuovo adapter, senza modificare l'orchestratore.
 
 \section{Rilevamento delle IaC misconfiguration}
 \label{sec:rilevamento-misconfig}
@@ -214,128 +209,40 @@ viene creata né interrogata.
 
 Dei quattro scenari con cui OWASP illustra la categoria, due ricadono nel
 perimetro del sistema e due ne restano fuori. Rientrano il secondo e il quarto,
-perché in entrambi la configurazione difettosa è dichiarata in un artefatto
+perché in entrambi la configurazione difettosa è dichiarata in un file
 ispezionabile --- la direttiva che abilita il directory listing nella
 configurazione del server, i permessi di condivisione fissati nel manifest
 della risorsa di storage --- e può quindi essere individuata prima del
 rilascio. Restano fuori il primo e il terzo: le applicazioni di esempio
-dimenticate in produzione non compaiono in alcun artefatto del progetto e
+dimenticate in produzione non compaiono in alcun file del progetto e
 presuppongono un inventario degli host effettivamente in esecuzione, mentre i
 messaggi di errore troppo dettagliati emergono soltanto dalle risposte prodotte
 a runtime.
-
-L'esposizione segue il percorso di una segnalazione: l'architettura entro cui
-lo scanner opera, lo strumento adottato e le policy pertinenti, l'adapter che
-ne traduce l'uscita nel modello di dominio e, infine, l'aggregazione con il
-calcolo del punteggio di rischio. Gli esiti della validazione sono riportati
-nel Capitolo~\ref{cap:risultati}.
-
-\subsection{Architettura del sistema}
-\label{sec:architettura}
-
-\begin{figure}[!htbp]
-  \centering
-  \input{figure/uml-componenti}
-  \caption[Diagramma dei componenti del sistema]{Diagramma UML dei componenti
-    del sistema, raggruppati per livello architetturale. Le frecce tratteggiate
-    indicano dipendenze; quella con la punta triangolare vuota indica la
-  realizzazione delle interfacce di dominio da parte degli adapter.}
-  \label{fig:uml-componenti}
-\end{figure}
-
-Il sistema è organizzato secondo i principi della \emph{Clean Architecture}:
-un livello di dominio che definisce le entità e i contratti, un livello
-applicativo che orchestra l'analisi, un livello infrastrutturale che
-incapsula gli strumenti esterni e un livello di presentazione che espone i
-risultati. La Figura~\ref{fig:uml-componenti} mostra i componenti raggruppati
-per livello e le dipendenze fra i livelli: la presentazione dipende
-dall'applicazione, l'applicazione dal dominio, e l'infrastruttura realizza le
-interfacce che il dominio dichiara. Il livello di presentazione offre due vie
-d'accesso alla stessa pipeline: un'interfaccia a riga di comando, che
-registra gli adapter, esegue l'orchestratore e scrive i rapporti su file, e
-un cruscotto web basato su FastAPI, che espone la stessa esecuzione come
-servizio e presenta i risultati in pagine interattive.
-
-La separazione risponde direttamente alla tracciabilità richiesta nella
-Sottosezione~\ref{sec:requisiti}:
-qualunque sia lo strumento che l'ha prodotta, ogni anomalia viene ricondotta
-a un'unica entità di dominio, il \emph{Finding}, che la
-Figura~\ref{fig:uml-classi} mostra insieme ai suoi oggetti valore, alle
-enumerazioni di severità e natura, all'interfaccia \texttt{IScanner} con
-l'adapter che la realizza e al motore di correlazione.
-
-\begin{figure}[!htbp]
-  \centering
-  \input{figure/uml-classi}
-  \caption[Diagramma delle classi del dominio e del motore di correlazione]{Diagramma
-    UML delle classi del dominio e del motore di correlazione.
-    \texttt{Severity} e \texttt{FindingNature} sono enumerazioni;
-    \texttt{APIEndpointNormalizer} espone solo metodi di classe. Gli adapter di
-  Semgrep e Spectral, non trattati, realizzano la stessa interfaccia.}
-  \label{fig:uml-classi}
-\end{figure}
-
-Un Finding risponde a tre domande. Da dove viene: la sorgente, la regola
-che l'ha generato e i dati grezzi dello strumento. Dove si trova: la
-posizione nel file, la risorsa infrastrutturale interessata e una chiave di
-correlazione. Quanto pesa: la categoria, la severità su cinque gradi
-(\texttt{CRITICAL}, \texttt{HIGH}, \texttt{MEDIUM}, \texttt{LOW}, più
-\texttt{INFO} per le note informative) e un grado di confidenza fra $0$ e
-$1$. A queste si aggiunge la \emph{natura} del rischio, che distingue
-un'\emph{esposizione}, quando la configurazione apre un varco sfruttabile
-direttamente, da un \emph{irrobustimento}, quando manca una linea di difesa
-in profondità che da sola non costituisce un accesso. Quando la regola non
-permette di stabilire a priori da quale parte stia la segnalazione, la
-natura resta indefinita (un valore nullo nel dominio) e la segnalazione non
-classificata.
-
-L'interfaccia astratta \texttt{IScanner} formalizza il contratto a cui ogni
-componente di analisi deve conformarsi: un metodo \texttt{scan} che riceve il
-percorso del bersaglio e restituisce una lista di Finding. È implementata dagli
-\emph{adapter} che avvolgono strumenti esterni e hanno il compito di
-eseguire lo strumento, leggerne l'uscita e tradurla nel modello di dominio.
-L'adapter di cui si occupa questa sezione è quello di
-Checkov~\cite{checkov2026docs}, che analizza le definizioni
-infrastrutturali; la stessa interfaccia ha altre due realizzazioni,
-Semgrep per il codice applicativo e Spectral per la specifica
-dell'interfaccia, che servono altre categorie e restano fuori da questa
-sezione. L'orchestratore conosce gli scanner
-solo attraverso questa interfaccia, e l'esecuzione procede in due fasi: gli
-scanner registrati vengono eseguiti sul repository bersaglio, poi le
-segnalazioni raccolte vengono consegnate al motore di correlazione, che le
-aggrega per chiave e assegna a ciascuna un punteggio di rischio. Aggiungere un
-controllo significa registrare un nuovo adapter, senza modificare
-l'orchestratore.
 
 \subsection{Lo scanner Checkov e la traduzione nel modello di dominio}
 \label{sec:checkov}
 
 Checkov~\cite{checkov2026docs} è un analizzatore statico per
-Infrastructure-as-Code che legge i file di definizione (tra cui
-  Terraform~\cite{terraform2026docs}, CloudFormation, Kubernetes,
-Dockerfile, Helm e specifiche OpenAPI), ne costruisce un grafo di risorse
-e vi valuta un catalogo di policy. Le policy sono di due tipi: controlli
-sugli attributi di una singola risorsa, scritti in Python e identificati da
-\texttt{CKV\_\emph{provider}\_\emph{n}}, e controlli sulle relazioni fra
-risorse, espressi in YAML sul grafo e identificati da
-\texttt{CKV2\_\emph{provider}\_\emph{n}}; a questi si aggiunge un
-riconoscitore di segreti che esamina qualunque file e produce identificativi
-\texttt{CKV\_SECRET\_\emph{n}}. Ogni valutazione di una policy su una
-risorsa dà un esito superato, fallito o non determinabile, con il file e
-l'intervallo di righe della risorsa.
+Infrastructure-as-Code: legge i file di definizione dell'infrastruttura, fra
+cui i manifest Terraform~\cite{terraform2026docs}, e vi applica un catalogo di
+controlli predefiniti. Ogni controllo verifica una proprietà di sicurezza su
+una risorsa --- per esempio che un bucket di storage non conceda la lettura
+pubblica --- e restituisce un esito superato o fallito, con il file e le righe
+della risorsa interessata. Ogni controllo è però identificato solo da un codice
+opaco, come \texttt{CKV\_AWS\_20}, che da solo non dice né a quale tema si
+riferisca né quanto sia grave.
 
-Per lo scenario in perimetro, riguardante i permessi di condivisione aperti su
-risorse di storage, il catalogo contiene controlli che coprono le tre
-vie attraverso cui un bucket S3 può risultare pubblico: la lista di
-controllo d'accesso, la policy del bucket e il blocco dell'accesso pubblico
-a livello di account o di bucket. La Tabella~\ref{tab:policy-checkov} li
-elenca insieme ai controlli che Checkov valuta sulle stesse risorse senza
-che riguardino l'esposizione (registrazione degli accessi, versioning,
-cifratura con chiave gestita, replica, ciclo di vita, notifiche) e che
-lo strumento colloca sullo stesso piano dei primi. La distinzione fra
-esposizione e irrobustimento, essenziale per questo lavoro, nel
-catalogo di Checkov non esiste: è il sistema a introdurla attraverso un
-catalogo proprio delle policy, descritto nel seguito.
+Lo scenario in perimetro riguarda i permessi di condivisione aperti su risorse
+di storage. Un bucket S3 può diventare pubblico per tre vie --- la lista di
+controllo d'accesso, la policy del bucket e il mancato blocco dell'accesso
+pubblico --- e Checkov ha un controllo per ciascuna. Sulle stesse risorse,
+però, ne valuta anche altri che non aprono alcun varco, come la registrazione
+degli accessi, il versioning o la cifratura, collocandoli sullo stesso piano
+dei primi. Distinguere ciò che espone un varco da ciò che aggiunge una difesa
+in profondità è essenziale per questo lavoro, ma in Checkov questa distinzione
+non esiste: la introduce il sistema, con un proprio catalogo delle policy
+descritto nel seguito. La Tabella~\ref{tab:policy-checkov} mette i due gruppi a
+confronto sulla stessa risorsa di storage.
 
 \begin{table}[htbp]
   \centering
@@ -345,94 +252,43 @@ catalogo proprio delle policy, descritto nel seguito.
     \toprule
     \textbf{Policy} & \textbf{Risorsa Terraform} & \textbf{Condizione verificata} \\
     \midrule
-    \multicolumn{3}{@{}l}{\emph{Esposizione dello storage}} \\
+    \multicolumn{3}{@{}l}{\emph{Esposizione: la configurazione apre un varco}} \\
     CKV\_AWS\_20  & \texttt{aws\_s3\_bucket} & ACL che concede lettura pubblica \\
     CKV\_AWS\_53--56 & \texttt{aws\_s3\_bucket\_\allowbreak public\_\allowbreak access\_\allowbreak block} & i quattro flag del blocco dell'accesso pubblico non attivi \\
     CKV\_AWS\_70  & \texttt{aws\_s3\_bucket\_policy} & policy che concede un'azione a qualunque principal \\
-    CKV2\_AWS\_6  & \texttt{aws\_s3\_bucket} & bucket privo di un blocco dell'accesso pubblico attivo (controllo sul grafo) \\
+    CKV2\_AWS\_6  & \texttt{aws\_s3\_bucket} & bucket privo di un blocco dell'accesso pubblico attivo \\
     CKV2\_AWS\_65 & \texttt{aws\_s3\_bucket\_\allowbreak ownership\_\allowbreak controls} & liste di controllo d'accesso non disabilitate \\
     \midrule
-    \multicolumn{3}{@{}l}{\emph{Irrobustimento dello storage, senza esposizione}} \\
+    \multicolumn{3}{@{}l}{\emph{Irrobustimento: manca una difesa, senza aprire un varco}} \\
     CKV\_AWS\_18  & \texttt{aws\_s3\_bucket} & registrazione degli accessi assente \\
     CKV\_AWS\_21  & \texttt{aws\_s3\_bucket} & versioning non abilitato \\
     CKV\_AWS\_145 & \texttt{aws\_s3\_bucket} & cifratura non basata su chiave KMS \\
     CKV\_AWS\_144 & \texttt{aws\_s3\_bucket} & replica fra regioni assente \\
     CKV2\_AWS\_61, 62 & \texttt{aws\_s3\_bucket} & ciclo di vita e notifiche di evento assenti \\
-    \midrule
-    \multicolumn{3}{@{}l}{\emph{Altre risorse del bersaglio di prova}} \\
-    CKV\_AWS\_59  & \texttt{aws\_api\_gateway\_\allowbreak method} & metodo esposto senza autorizzazione \\
-    CKV\_AWS\_62, 63 & \texttt{aws\_iam\_role\_policy} & policy con privilegi amministrativi o azioni \texttt{*} \\
-    CKV\_AWS\_45  & \texttt{aws\_lambda\_function} & segreto cablato nelle variabili d'ambiente \\
-    CKV\_AWS\_169 & \texttt{aws\_sns\_topic\_policy} & policy del topic aperta a qualunque principal \\
     \bottomrule
   \end{tabularx}
-  \caption[Policy Checkov pertinenti]{Policy di Checkov 3.2.459 pertinenti
-    allo scenario in perimetro e alle altre risorse del bersaglio di prova. Le
+  \caption[Policy Checkov sullo storage]{Controlli di Checkov~3.2.459 sulla
+    stessa risorsa di storage, divisi fra quelli che segnalano un'\emph{esposizione}
+    e quelli che segnalano un mancato \emph{irrobustimento}: una distinzione che
+    lo strumento non fa e che il sistema introduce con il proprio catalogo. Le
   denominazioni sono tradotte dai nomi ufficiali dei controlli.}
   \label{tab:policy-checkov}
 \end{table}
 
 L'adapter esegue Checkov sulla sola directory bersaglio richiedendo l'uscita
-in formato JSON, e traduce ciascun controllo fallito in un Finding
-(Figura~\ref{fig:uml-attivita}). La categoria è derivata tramite parole chiave
+in formato JSON, e traduce ciascun controllo fallito in un Finding. La categoria è derivata tramite parole chiave
 da identificativo, nome ufficiale e tipo di risorsa. Natura, severità ed
 esposizione pubblica provengono invece dal \emph{catalogo delle policy}: un file
 YAML esterno che costituisce parametro dell'analisi e non costante del codice,
 in accordo con la configurabilità richiesta nella
-Sottosezione~\ref{sec:requisiti}. Il catalogo risolve ciascun controllo secondo
-la priorità riassunta nella Tabella~\ref{tab:catalogo-policy} (mappatura
-  esplicita su 99 controlli, prefissi o parole chiave, con ripiego predefinito su
-segnalazione non classificata \texttt{MEDIUM}).
+Sottosezione~\ref{sec:requisiti}. Il modo in cui il catalogo risolve i
+singoli controlli è descritto nel Capitolo~\ref{cap:risultati}.
 
 La confidenza del Finding non misura il controllo, che è deterministico sul
-file, ma la precisione con cui il catalogo lo ha interpretato: $1$ per la
-mappatura esplicita, $0{,}9$ per il prefisso, $0{,}8$ per le parole chiave,
-$0{,}6$ per il ripiego predefinito. Il Finding include titolo, intervallo di
-righe e record grezzo. Se il controllo è contrassegnato come pubblico,
-l'adapter vi associa un contesto di risorsa esposta a Internet e pubblica; se
-riguarda segreti o cifratura a riposo, un contesto di dati sensibili. Come
-chiave di correlazione adotta l'ultimo segmento del nome della risorsa (ad
-  esempio \path{bucket_1_public_acl} per
-\path{aws_s3_bucket.bucket_1_public_acl}), consentendo di raggruppare i rilievi
-riferiti alla medesima entità logica definita dallo sviluppatore.
-
-\begin{figure}[!tbp]
-  \centering
-  \input{figure/uml-attivita-checkov}
-  \caption[Diagramma di attività dell'adapter Checkov]{Diagramma UML di
-    attività del metodo \texttt{scan} dell'adapter di Checkov. Ogni controllo
-    fallito diventa un Finding: la categoria è derivata da identificativo, nome
-    e tipo di risorsa; natura, severità ed esposizione pubblica provengono dal
-  catalogo delle policy.}
-  \label{fig:uml-attivita}
-\end{figure}
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l>{\hsize=1.15\hsize}X>{\hsize=0.85\hsize}X@{}}
-    \toprule
-    \textbf{Regola} & \textbf{Come risolve il controllo} & \textbf{Esempio} \\
-    \midrule
-    Mappatura esplicita & identificativo presente nel catalogo, con natura,
-    severità ed eventuali flag di esposizione pubblica e di dati sensibili &
-    \texttt{CKV\_AWS\_20}: esposizione, \texttt{CRITICAL}, pubblica \\
-    Prefisso & famiglia di controlli riconosciuta dall'inizio dell'identificativo
-    & \texttt{CKV\_SECRET\_*}: esposizione, \texttt{HIGH}, dati sensibili \\
-    Parole chiave & termini cercati nel nome ufficiale del controllo; i gruppi
-    difensivi precedono quelli di esposizione & \emph{logging}, \emph{versioning}:
-    irrobustimento, \texttt{LOW} \\
-    Predefinito & nessuna regola soddisfatta & non classificato, \texttt{MEDIUM} \\
-    \bottomrule
-  \end{tabularx}
-  \caption[Risoluzione dei controlli nel catalogo delle policy]{Ordine con cui
-    il catalogo delle policy assegna natura, severità e contesto a un controllo
-    fallito di Checkov; la regola che risolve determina anche la confidenza. Le
-    esposizioni hanno severità predefinita \texttt{HIGH}, gli irrobustimenti
-  \texttt{LOW}, salvo indicazione esplicita.}
-  \label{tab:catalogo-policy}
-\end{table}
+file, ma quanto è stata precisa la sua interpretazione nel catalogo. L'adapter
+registra inoltre il contesto del rischio, cioè l'esposizione a Internet o il
+coinvolgimento di dati sensibili, e usa come chiave di correlazione il nome
+della risorsa, così da raggruppare i rilievi riferiti alla stessa entità.
 
 \subsection{Correlazione e punteggio di rischio}
 \label{sec:correlazione}
@@ -445,58 +301,29 @@ precede un irrobustimento; a parità di natura prevale la severità maggiore.
 Un controllo di natura inferiore non altera mai la severità della
 rappresentante e resta come sotto-elemento della voce, con la propria natura
 e severità: nulla viene scartato, e una sola esecuzione restituisce l'intero
-insieme delle condizioni da correggere. La
-Figura~\ref{fig:uml-sequenza} riporta la sequenza della pipeline statica.
+insieme delle condizioni da correggere.
 
-\begin{figure}[tbp]
-  \centering
-  \input{figure/uml-sequenza-correlazione}
-  \caption[Diagramma di sequenza della pipeline statica]{Diagramma UML di
-    sequenza della pipeline statica dell'orchestratore. Il secondo argomento di
-    \texttt{correlate}, riservato alle segnalazioni a runtime di altri moduli, è
-  vuoto.}
-  \label{fig:uml-sequenza}
-\end{figure}
-
-Il punteggio di rischio è un modello pesato proprio. Il CVSS sarebbe stato
-la scelta naturale, ma richiede un vettore che nessuno degli strumenti
-integrati produce:
+Il punteggio di rischio è un modello pesato proprio, perché il CVSS richiede
+un vettore che nessuno degli strumenti integrati produce:
 \begin{equation}
   R = \min\bigl(10,\; 0{,}6\,S + 0{,}2 \cdot 10\,C + 0{,}2\,X\bigr),
   \label{eq:risk-score}
 \end{equation}
-Tre termini concorrono al risultato. $S$ è il valore numerico della
-severità: $10$ per \texttt{CRITICAL}, $7{,}0$ per \texttt{HIGH}, $4{,}5$ per
-\texttt{MEDIUM}, $2{,}0$ per \texttt{LOW}, $0$ per \texttt{INFO}.
-$C \in [0,1]$ è la confidenza dichiarata dalla sorgente: per Checkov la
-precisione della regola del catalogo, per ZAP il livello riportato
-dall'alert, per Semgrep $0{,}95$ se il presidio di autenticazione è stato
-trovato e $0{,}7$ se la sua assenza è dedotta; sale a $1$ quando un riscontro
-a runtime conferma la segnalazione. $X$ è il contesto, somma dei contributi
-dichiarati dalla sorgente: $4$ per una risorsa raggiungibile da Internet,
-$2$ se è pubblica, $4$ se coinvolge dati sensibili, $3$ quando nessun
-contesto è dichiarato. Per gli irrobustimenti $X$ vale sempre $0$: una linea
-di difesa mancante non è un vettore d'accesso. Con \texttt{CRITICAL} pari a
-$10$ il massimo teorico coincide con il limite superiore, che interviene solo
-quando concorrono tutti i contributi di contesto.
-
-In pratica, per le segnalazioni infrastrutturali (confidenza $1$):
-un'esposizione \texttt{CRITICAL} su risorsa pubblica vale $9{,}2$, una
-\texttt{CRITICAL} su dati sensibili $8{,}8$, una \texttt{HIGH} senza contesto
-$6{,}8$, un irrobustimento \texttt{LOW} $3{,}2$. Pesi, punteggi di severità,
-contributi di contesto e mappe di confidenza risiedono in un file YAML di
-configurazione; i valori riportati sono i predefiniti nel codice.
+Il punteggio combina tre termini: la severità $S$ della segnalazione, la
+confidenza $C \in [0,1]$ dichiarata dalla sorgente --- che sale a $1$ quando un
+riscontro a runtime conferma la segnalazione --- e il contesto $X$, che pesa
+l'esposizione a Internet e il coinvolgimento di dati sensibili. Per gli
+irrobustimenti $X$ è nullo, perché una linea di difesa mancante non è di per sé
+un vettore d'accesso. I valori di severità, i contributi di contesto e le mappe
+di confidenza delle diverse sorgenti sono predefiniti nel codice ma risiedono
+in un file YAML di configurazione, in accordo con la configurabilità richiesta
+nella Sottosezione~\ref{sec:requisiti}.
 
 Il cruscotto ordina le voci per natura e poi per punteggio decrescente,
 mostrato accanto alla severità, e sotto ciascuna elenca i controlli
-aggregati. Ogni voce e ogni controllo ricevono un'indicazione correttiva: da
-una base di conoscenza locale indicizzata per controllo oppure, in sua
-assenza, da un consiglio generato dall'intelligenza artificiale con un
-modello linguistico eseguito localmente tramite Ollama. Il motore di
-remediation dipende soltanto dall'interfaccia di dominio
-\texttt{ILlmProvider}; l'adapter di Ollama la realizza e viene iniettato dal
-punto di composizione, sicché il livello applicativo non conosce
-l'infrastruttura, come per gli scanner.
+aggregati. Ogni voce riceve un'indicazione correttiva, tratta da una base di
+conoscenza locale o, in sua assenza, generata da un modello linguistico
+eseguito localmente tramite Ollama.
 
 \section{Categorie ibride: analisi statica e residuo dinamico}
 \label{sec:categorie-ibride}
@@ -516,14 +343,12 @@ sufficiente. Un oggetto recuperato senza legarlo al chiamante, un token
 decodificato senza verificarne la firma, un oggetto restituito con tutti i suoi
 campi riservati, una funzione amministrativa priva di controllo di ruolo sono
 condizioni senza le quali la violazione non può esistere, e l'analisi statica
-le trova. Quando il controllo è presente, invece, gli artefatti non dicono se
+le trova. Quando il controllo è presente, invece, il codice non dice se
 funzioni: il filtro sul proprietario può usare il campo sbagliato, un token
 scaduto può essere accettato, un controllo di ruolo può non bloccare nulla.
 Proprietà di questo tipo si osservano solo nella risposta del sistema a una
 sollecitazione mirata, di solito la stessa richiesta inviata con identità
-diverse, e formano il residuo che \RQ{1.2} chiama \emph{dinamico}. È questa
-forma comune del residuo, più della vicinanza fra i temi, a giustificare una
-trattazione unica.
+diverse, e formano il residuo che \RQ{1.2} chiama \emph{dinamico}.
 
 Tutti i moduli distinguono tre tipi di controllo, che nel codice si somigliano
 perché spesso sono decoratori o middleware applicati alla stessa rotta:
@@ -534,95 +359,60 @@ permesso fare. Ogni modulo cerca quello pertinente alla propria categoria (il
 per la BOPLA, il ruolo sulla funzione per la BFLA), mentre il modulo della
 Broken Authentication esamina il meccanismo stesso che riconosce il chiamante.
 Per le categorie di autorizzazione la sola autenticazione non vale mai come
-protezione, perché qualunque utente registrato la supera.
-
-Il criterio vieta inoltre di dire all'analisi quali oggetti, proprietà o
-funzioni siano riservati, perché significherebbe consegnarle in anticipo la
-logica di autorizzazione che deve verificare. La configurazione contiene solo
-elementi generali, come l'indirizzo del bersaglio, le identità di prova con i
-loro ruoli o i nomi dei campi che esprimono un privilegio, e ciò che è protetto
-va dedotto dagli artefatti.
-
-I moduli si separano invece nel trattamento del residuo. Nella BOLA e nella
-BOPLA la segnalazione statica è un'ipotesi: un livello dinamico invia richieste
-reali con identità di ruolo diverso e il suo esito torna sulla segnalazione,
-confermandola o smentendola. Nella Broken Authentication il rapporto si
-rovescia, perché la parte statica serve soprattutto a ricostruire il modello
-di autenticazione che orienta le prove dinamiche, e una sola regola statica
-copre il caso in cui il sistema non si lascia interrogare. Il modulo della
-BFLA, infine, resta statico: riconosce l'assenza del controllo di ruolo ma non
-invoca le funzioni per accertarla, e il residuo dinamico rimane aperto.
+protezione, perché qualunque utente registrato la supera. Ciò che è protetto,
+come impone il criterio (Sottosezione~\ref{sec:criterio}), va dedotto dal codice
+e dal contratto.
 
 \paragraph{Struttura comune dei rilevatori}
-I quattro moduli non condividono un'unica architettura. Seguono due impianti,
-uno per l'analisi statica a livelli e uno per le pipeline a fasi, e il modulo
-della BOLA li usa entrambi, perché affianca a un rilevatore statico un livello
-dinamico. Conviene descriverli qui una volta sola, insieme al modo in cui i
-risultati raggiungono il resto del sistema, e lasciare alle sottosezioni ciò
-che è proprio di ciascuna categoria.
+I quattro moduli non condividono un'unica architettura, ma seguono due
+impianti, che si distinguono anzitutto per il trattamento del residuo
+dinamico; la BOLA li usa entrambi, perché affianca a un rilevatore statico un
+livello dinamico. Li si descrive qui una volta sola, lasciando alle
+sottosezioni ciò che è proprio di ciascuna categoria.
 
-Il rilevatore statico della BOLA e quello della BFLA sono costruiti sullo
-stesso schema: un punto d'ingresso, un componente per ciascun livello di
-analisi, un componente per ciascuna regola e un modello dei dati comune a
-livelli e regole. Il punto d'ingresso esegue i livelli in sequenza, il codice
-sorgente sempre e il contratto OpenAPI solo quando è disponibile; la BFLA vi
-aggiunge un livello dedicato ai file di configurazione. Il codice Python e
-JavaScript/TypeScript è letto attraverso l'albero sintattico prodotto da
-tree-sitter~\cite{treesitter2026docs} e non con ricerche testuali, così che
-commenti, formattazione e decoratori sovrapposti non alterino il risultato. Il
-primo passo associa ogni funzione che gestisce una rotta, detta
-\emph{handler}, al percorso e ai metodi che espone, tenendo conto dei prefissi
-dei raggruppamenti di rotte (i \emph{Blueprint} di Flask) e, in Express, dei
-middleware passati alla registrazione della rotta, fra i quali vanno cercati i
-controlli. Su questa mappa operano le regole, e ogni segnalazione ha la stessa
-struttura nei due moduli: regola e debolezza CWE, severità, file e riga,
-endpoint e metodi, protezione trovata e protezione mancante, istruzione che fa
-da evidenza, confidenza e livello che l'ha prodotta.
+Il primo impianto, \emph{statico a livelli}, è quello della BOLA e della BFLA.
+Analizza prima il codice sorgente e, quando è disponibile, il contratto
+OpenAPI; la BFLA vi aggiunge i file di configurazione. Il codice non viene
+cercato come testo, ma letto attraverso l'albero sintattico prodotto da
+tree-sitter~\cite{treesitter2026docs}, così che commenti, formattazione e
+decoratori non ne alterino l'interpretazione: ogni funzione che gestisce una
+rotta viene associata al percorso, ai metodi e ai controlli che la proteggono,
+e su questa mappa operano le regole. Il contratto serve soprattutto come
+termine di confronto: un'operazione che la specifica dichiara protetta e che il
+codice non protegge smentisce una garanzia promessa, mentre un endpoint
+presente nel codice ma assente dal contratto rivela una superficie non
+documentata. È la correlazione fra livelli richiesta da \RQ{1.1}. Quando più
+regole colpiscono lo stesso endpoint, le segnalazioni vengono deduplicate
+tenendo quella che diagnostica il difetto in modo più preciso, secondo un
+ordine di priorità proprio di ciascun modulo e, a parità di priorità,
+preferendo quella ricavata dal codice, che punta a una riga precisa. Le regole
+che descrivono un altro aspetto del difetto non vengono deduplicate, per non
+nasconderne una parte. Per la BFLA questo impianto è l'intero modulo: riconosce
+l'assenza del controllo di ruolo ma non invoca le funzioni per accertarla, e il
+residuo dinamico rimane aperto.
 
-Il livello del contratto pone all'interfaccia dichiarata le stesse domande
-poste al codice, ma conta soprattutto come termine di confronto. Un'operazione
-che il contratto dichiara protetta e che il codice non protegge smentisce una
-garanzia promessa, mentre un endpoint presente nel codice e assente dal
-contratto indica una superficie che nessuno ha documentato. È la correlazione
-fra livelli richiesta da \RQ{1.1}, applicata a categorie che non si
-esauriscono negli artefatti, e la stessa idea ritorna nelle regole contrattuali
-della BOPLA. Poiché più regole e più livelli possono colpire lo stesso
-endpoint, le segnalazioni vengono poi deduplicate: fra quelle che cadono sullo
-stesso punto sopravvive la segnalazione della regola con priorità più alta,
-dove la priorità misura la precisione della diagnosi e non la gravità, mentre
-le regole che misurano un aspetto diverso da quello conteso restano fuori dalla
-competizione e si affiancano alla segnalazione superstite. Il risultato è un
-rapporto che riassume le segnalazioni per severità, regola e livello e che, su
-richiesta, annota nel contratto OpenAPI le operazioni coinvolte.
+Il secondo impianto, \emph{a fasi}, è quello della Broken Authentication e
+della BOPLA, e arriva fino al sistema in esecuzione: una fase di scoperta
+raccoglie ciò che codice, contratto e traffico dicono del bersaglio, una fase di
+sintesi ne ricava un modello, una batteria di prove dinamiche lo mette alla
+prova e un rapporto finale ne raccoglie gli esiti, riassunti in un punteggio di
+robustezza. I due moduli condividono parte dell'implementazione, e anche il
+livello dinamico della BOLA procede allo stesso modo, dalla scoperta degli
+endpoint fino all'attacco. Il peso della parte statica, però, cambia. Nella
+BOLA e nella BOPLA la segnalazione statica è un'ipotesi: le prove dinamiche
+inviano richieste reali con identità di ruolo diverso e il loro esito torna
+sulla segnalazione, confermandola o smentendola. Nella Broken Authentication
+il rapporto si rovescia, perché la parte statica serve soprattutto a
+ricostruire il modello di autenticazione che orienta le prove, e una sola
+regola statica copre il caso in cui il sistema non si lascia interrogare.
 
-La Broken Authentication e la BOPLA seguono invece un impianto a fasi, che
-parte dal repository e arriva al sistema in esecuzione. Una fase di scoperta
-raccoglie ciò che gli artefatti, ed eventualmente il traffico osservato, dicono
-del bersaglio, una fase di sintesi ne
-ricava un modello (il modello di autenticazione nel primo caso, l'insieme delle
-proprietà protette nel secondo), una batteria di prove dinamiche lo mette alla
-prova e un rapporto finale, in formato JSON e Markdown, ne raccoglie gli esiti,
-riassunti anche in un punteggio di robustezza che parte da cento e scende per
-ogni debolezza accertata. I due moduli condividono anche una parte
-dell'implementazione: la BOPLA riusa la configurazione del bersaglio e
-l'analizzatore del codice della Broken Authentication, costruito su tree-sitter
-e in grado di coprire in modo uniforme otto linguaggi. Anche il livello
-dinamico della BOLA procede per fasi, dalla scoperta degli endpoint alla
-preparazione dei dati fino all'attacco.
-
-Il formato delle segnalazioni, infine, non è lo stesso per tutti i moduli. Il
-Finding di dominio della Sottosezione~\ref{sec:architettura} è prodotto
-direttamente soltanto dal livello dinamico della BOLA, i cui esiti raggiungono
-il motore di correlazione della Sottosezione~\ref{sec:correlazione} attraverso
-la chiave formata dal metodo e dal percorso normalizzato dell'endpoint. Il
-rilevatore statico della BOLA e il modulo della BOPLA dispongono di una
-traduzione verso lo stesso modello che conserva questa chiave, per ora
-esercitata soltanto dalle prove automatiche, mentre la Broken Authentication e
-la BFLA producono esclusivamente un rapporto nel proprio formato. Nella
-panoramica del cruscotto i moduli vengono quindi eseguiti in sequenza e i loro
-risultati presentati modulo per modulo, senza passare per il motore di
-correlazione. La validazione dei moduli e i limiti emersi sono discussi nel
-Capitolo~\ref{cap:risultati}.
+I moduli non producono però segnalazioni nello stesso formato. Solo il livello
+dinamico della BOLA genera il Finding di dominio della
+Sezione~\ref{sec:architettura}, che raggiunge il motore di correlazione
+(Sottosezione~\ref{sec:correlazione}) attraverso la chiave di metodo e percorso
+normalizzato; gli altri moduli producono un rapporto in forma propria. Per
+questo nel cruscotto i moduli vengono eseguiti in sequenza e presentati modulo
+per modulo.
 
 \subsection{API1 -- Il legame fra oggetto e chiamante}
 \label{sec:rilevamento-bola}
@@ -634,16 +424,12 @@ endpoint come \texttt{GET /api/orders/\{id\}}: è protetto dal login, ma a un
 utente basta sostituire nel percorso l'identificativo del proprio ordine con
 quello di un ordine altrui per leggerne il contenuto.
 
-Il modulo implemntato lavora su due livelli : Il livello statico cerca nel codice gli
-handler che accedono a un oggetto senza legarlo all'identità del chiamante.
-Quando questo legame manca, il difetto è facilmente verificabile. Quando
-invece c'è, il codice non basta a dire se sia corretto, infatti il campo usato potrebbe
-non esprimere davvero l'appartenenza, il confronto potrebbe essere scritto nel
-verso sbagliato, oppure il proprietario potrebbe essere un valore che il client
-è in grado di falsificare. Per questo il modulo comprende anche un livello
-dinamico, che invia richieste reali con identità diverse e ne osserva le
-risposte. I due livelli comunicano attraverso una chiave comune, formata dal
-metodo e dal percorso normalizzato dell'endpoint.
+Il livello statico cerca nel codice gli handler che accedono a un oggetto
+senza legarlo all'identità del chiamante; il livello dinamico copre i legami
+presenti ma sbagliati, come un campo che non esprime davvero l'appartenenza o
+un proprietario che il client può falsificare. I due livelli comunicano
+attraverso una chiave comune, formata dal metodo e dal percorso normalizzato
+dell'endpoint.
 
 \paragraph{Il livello statico}
 Il livello statico analizza applicazioni Flask, FastAPI ed Express. Per prima
@@ -664,38 +450,53 @@ quell'identità. Un legame può essere una query che filtra anche sull'identità
 un confronto fra il proprietario dell'oggetto e l'utente corrente, la chiamata
 a una funzione che verifica la proprietà oppure un decoratore dedicato.
 
-Per questi controlli sono state definite 3 euristiche : il primo riguarda le
+Per questi controlli sono state definite tre euristiche: la prima riguarda le
 condizioni composte, che vengono spezzate nelle singole clausole: così una
 condizione che nomina sia l'identità sia l'identificativo, senza però metterli
-in relazione, non viene scambiata per un controllo. Il secondo riguarda i
+in relazione, non viene scambiata per un controllo. La seconda riguarda i
 percorsi annidati, dove contano anche i legami fra identificativi: un task
 cercato all'interno di un progetto già validato è protetto, un task cercato con
-il solo identificativo no. Il terzo riguarda le funzioni di supporto definite
+il solo identificativo no. La terza riguarda le funzioni di supporto definite
 nello stesso file. Spesso sono proprio loro a recuperare l'oggetto e a
 controllarne il proprietario, perciò il modulo ne riassume il comportamento e
 lo attribuisce all'handler che le chiama.
 
 \paragraph{Le regole statiche}
-Sui fatti di ownership operano le cinque regole:OA-001 e OA-002 coprono il caso di base, cioè un
-handler che accede all'oggetto con il solo identificativo inviato dal client:
-la prima si applica agli handler autenticati, la seconda a quelli privi di
-qualsiasi contesto di identità. OA-003 confronta fra loro gli handler della
-stessa risorsa. Se un metodo filtra sul proprietario e un altro no, è il codice
-stesso a mostrare che il controllo era un requisito noto, ed è per questo che
-la regola ha la confidenza più alta. OA-004 si occupa dei riferimenti annidati.
-OA-005, infine, segnala un identificativo numerico, e quindi prevedibile,
-esposto senza autenticazione.
+Sui fatti di ownership operano le cinque regole della
+Tabella~\ref{tab:regole-bola}. OA-003 ha la confidenza più alta: se un metodo
+della stessa risorsa filtra sul proprietario e un altro no, è il codice stesso
+a mostrare che il controllo era un requisito noto.
 
-Più regole possono scattare sullo stesso endpoint. In questo caso sopravvive la
-segnalazione della regola più precisa, secondo l'ordine OA-003 $>$ OA-004 $>$
-OA-001 $>$ OA-002. Una cancellazione non protetta, per esempio, soddisfa sia
-OA-003 sia OA-001: viene riportata come OA-003, e OA-001 resta come riferimento
-all'interno della segnalazione. OA-005 non partecipa a questa selezione, perché
-descrive l'identificativo e non il controllo, e si affianca alle altre
-segnalazioni. A differenza della BFLA, le segnalazioni sono raggruppate per
-file oltre che per chiave di correlazione: due servizi dello stesso repository
-possono esporre lo stesso percorso con implementazioni diverse, e in quel caso
-non si tratta di duplicati.
+\begin{table}[htbp]
+  \centering
+  \small
+  \linespread{1.0}\selectfont
+  \begin{tabularx}{\linewidth}{@{}l X@{}}
+    \toprule
+    \textbf{Regola} & \textbf{Condizione segnalata} \\
+    \midrule
+    OA-001 & handler autenticato che accede all'oggetto con il solo
+    identificativo inviato dal client \\
+    OA-002 & lo stesso accesso in un handler privo di qualsiasi contesto di
+    identità \\
+    OA-003 & handler della stessa risorsa incoerenti: uno filtra sul
+    proprietario, un altro no \\
+    OA-004 & oggetto annidato cercato con il solo identificativo, senza
+    passare per l'oggetto padre \\
+    OA-005 & identificativo numerico, quindi prevedibile, esposto senza
+    autenticazione \\
+    \bottomrule
+  \end{tabularx}
+  \caption[Regole statiche della BOLA]{Le cinque regole statiche del modulo
+  della Broken Object Level Authorization, tutte sul codice sorgente.}
+  \label{tab:regole-bola}
+\end{table}
+
+L'ordine di priorità è OA-003 $>$ OA-004 $>$ OA-001 $>$ OA-002; OA-005, che
+descrive l'identificativo e non il controllo, resta fuori dalla selezione. Le
+segnalazioni sono raggruppate per file oltre che per chiave, perché due servizi
+dello stesso repository possono esporre lo stesso percorso con implementazioni
+diverse.
 
 \paragraph{Il confronto con il contratto}
 Quando è disponibile la specifica OpenAPI, ogni segnalazione viene confrontata
@@ -717,89 +518,24 @@ dalla specifica.
 Il livello dinamico applica il \emph{differential testing}: invia la stessa
 richiesta con identità diverse e ne confronta le risposte. Le identità sono
 tre: una \emph{vittima} con ruolo ordinario, un \emph{pari} con lo stesso ruolo
-e un'identità \emph{privilegiata} con ruolo amministrativo. Un file di
-configurazione, che fa da contratto con l'applicazione in prova, indica come
-ottenerle, insieme all'indirizzo del bersaglio e agli endpoint di supporto. I
-token possono essere richiesti a un identity provider come
-Keycloak~\cite{keycloak2026docs}, forniti come valori statici o ricavati dal
-traffico; le credenziali, invece, vengono lette solo da variabili d'ambiente.
-Tutte le richieste passano per OWASP ZAP~\cite{zap2026docs}, usato come proxy,
-che per ogni esito vulnerabile avvia anche una scansione attiva dell'URL
-coinvolto.
+e un'identità \emph{privilegiata} con ruolo amministrativo, indicate in un file
+di configurazione; le richieste passano per OWASP ZAP~\cite{zap2026docs}, usato
+come proxy. Si provano gli endpoint che contengono almeno un identificativo,
+ricavati dalla pipeline, dalla specifica OpenAPI o dal traffico catturato. Le
+risorse di ciascuna identità sono create tramite endpoint di supporto esposti
+dal bersaglio, ripristinando lo stato dopo ogni richiesta che modifica i dati,
+oppure, se il bersaglio non collabora, ricavate dal traffico osservato,
+escludendo in tal caso i metodi che modificano i dati.
 
-L'elenco degli endpoint da provare arriva dalla pipeline oppure viene ricavato
-dalla specifica OpenAPI. I parametri di percorso sono normalizzati nel
-segnaposto \texttt{\{id\}} e si tengono solo gli endpoint che ne contengono
-almeno uno. Nei percorsi annidati, come \texttt{/projects/\{id\}/tasks/\{id\}},
-il bersaglio è l'ultimo identificativo. L'eventuale traffico catturato aggiunge
-altri endpoint e altri riferimenti a oggetti, presenti nel percorso, nella
-query o nel corpo.
-
-Per attaccare servono risorse che appartengano a ciascuna identità, e il modulo
-le prepara in due modalità. In \emph{Lab Mode} il bersaglio collabora: espone
-alcuni endpoint di prova, con cui il modulo crea le risorse di ogni identità.
-Attorno a ogni metodo che modifica i dati (\texttt{POST}, \texttt{PUT},
-\texttt{PATCH}, \texttt{DELETE}) il modulo salva lo stato e poi lo ripristina,
-così che un attacco riuscito, per esempio una cancellazione, non alteri le
-prove successive. In \emph{Assessment Mode} il bersaglio non collabora.
-Identità, ruoli e risorse possedute si ricavano dal traffico osservato, e i
-token JWT vengono decodificati senza verificarne la firma, perché si tratta di
-traffico già avvenuto. I metodi che modificano i dati sono esclusi, salvo
-autorizzazione esplicita, perché in questa modalità lo stato non può essere
-ripristinato.
-
-Per ogni endpoint e metodo il modulo prova tre scenari. Nella BOLA
-\emph{orizzontale} il pari tenta di accedere a una risorsa della vittima. Nella
-BOLA \emph{verticale} la vittima tenta di accedere a una risorsa dell'identità
-privilegiata. Il terzo scenario è un accesso di controllo: l'amministratore
-accede alla risorsa della vittima, cosa che il sistema dovrebbe consentire. In
-ciascuno scenario partono tre richieste: quella del proprietario, che fornisce
-la risposta di riferimento; quella dell'attaccante, che usa il proprio token
-sulla risorsa altrui; una richiesta anonima, senza credenziali. Gli
-identificativi vengono sostituiti ovunque compaiano, cioè nel percorso, nella
-query e nel corpo.
-
-\paragraph{Il verdetto}
-La risposta ricevuta dall'attaccante viene valutata in due passi. Il primo
-stabilisce se la richiesta è stata bloccata. Lo è quando riceve \texttt{401},
-\texttt{403} o un'altra risposta di errore. Molte applicazioni, però,
-rifiutano l'accesso senza usare il codice di stato appropriato, per cui conta
-come bloccata anche una risposta di successo che contiene un messaggio di
-rifiuto, come \emph{access denied} o \emph{non autorizzato}: in questo caso si
-parla di \emph{blocco mascherato}. Il secondo passo, se la richiesta non è
-stata bloccata, stabilisce se l'attaccante ha davvero ottenuto la risorsa. Si
-ha un \emph{successo tecnico} quando il corpo della risposta coincide con
-quello ricevuto dal proprietario, al netto dei campi volatili che cambiano a
-ogni chiamata, come le date di aggiornamento, oppure quando contiene
-l'identificativo della risorsa della vittima. Il confronto avviene sulla
-struttura JSON e non sulla lunghezza della risposta, e l'elenco dei campi
-volatili è configurabile.
-
-Un successo tecnico, però, non è ancora una vulnerabilità. L'amministratore che
-legge l'ordine di un utente ottiene la stessa risposta del proprietario, ma ne
-ha il diritto. Il verdetto finale spetta quindi a una matrice dei privilegi,
-che assegna a ogni ruolo il rango dichiarato nel file di configurazione.
-L'accesso da un rango superiore a uno inferiore è legittimo; quello fra ranghi
-uguali è una BOLA orizzontale; quello da un rango inferiore a uno superiore è
-una BOLA verticale. Un ruolo assente dalla configurazione viene trattato come
-il più basso, e il modulo emette un avviso. Ogni esito diventa una segnalazione
-di runtime: una vulnerabilità confermata, con severità \texttt{HIGH}, oppure un
-esito sicuro, con severità informativa. La richiesta anonima serve infine a un
-controllo in più: se la risorsa viene restituita anche senza credenziali, il
-modulo segnala un difetto di autenticazione sullo stesso endpoint.
-
-\paragraph{Conferma e smentita}
-Il motore di correlazione usa la chiave comune, alla quale è legata anche la
-segnalazione di Spectral, per riunire in un'unica voce l'ipotesi statica e gli
-esiti di runtime. Conferme e smentite, però, sono trattate in modo diverso. Se
-l'attacco riesce, la voce conserva la segnalazione statica, che indica la riga
-da correggere, ne porta la severità a \texttt{CRITICAL} e la confidenza a $1$,
-e allega l'esito dinamico come evidenza. Se l'attacco viene bloccato, la
-severità resta invariata, la confidenza viene dimezzata e la voce è
-contrassegnata come smentita, senza evidenza di runtime; il dimezzamento
-avviene una sola volta, anche quando le smentite sono più di una. Se sulla
-stessa chiave arrivano sia una conferma sia una smentita, prevale la conferma,
-qualunque sia l'ordine di arrivo.
+Per ogni endpoint e metodo il modulo prova tre scenari: nella BOLA
+\emph{orizzontale} il pari tenta di accedere a una risorsa della vittima, nella
+BOLA \emph{verticale} la vittima a una risorsa dell'identità privilegiata, e in
+un accesso di controllo l'amministratore accede alla risorsa della vittima,
+come il sistema dovrebbe consentire. Il confronto fra la risposta del
+proprietario, quella dell'attaccante e quella di una richiesta anonima
+stabilisce se l'accesso non autorizzato è riuscito; la segnalazione di runtime
+che ne deriva torna, attraverso la chiave comune, sulla corrispondente ipotesi
+statica, confermandola o smentendola.
 
 L'analisi statica indica dove potrebbe trovarsi il difetto e raggiunge anche
 endpoint che il livello dinamico non vede. La verifica dinamica stabilisce se
@@ -809,7 +545,7 @@ il difetto è reale e copre i controlli che sono presenti ma sbagliati.
 \label{sec:rilevamento-broken-auth}
 
 Nella \emph{Broken Authentication}~\cite{owasp2023api2} il difetto riguarda la
-capacità del sistema di stabilire chi sia il chiamante. Dal codice il modulo ricostruisce un idea
+capacità del sistema di stabilire chi sia il chiamante. Dal codice il modulo ricostruisce un'idea
 del sistema di autenticazione, attraverso l'analisi delle librerie adottate, le funzioni di accesso,
 i middleware e i decoratori a protezione delle rotte e i claim inclusi nei token. Il codice non dice
 però come il meccanismo reagisce: se rifiuta un token falso o scaduto, se chiude
@@ -822,38 +558,18 @@ tentativi di accesso emerge dall'osservazione del traffico più che da
 un'ispezione sintattica~\cite{owasp2026credential}.
 
 \paragraph{Il grafo di conoscenza dell'autenticazione}
-Il modulo non presuppone di conoscere il bersaglio: ne ricava lo stack e la
-gestione dell'identità da tre fonti, fuse in un unico modello strutturato, il
-\emph{grafo di conoscenza dell'autenticazione}. La prima è una ricognizione dei
-file dichiarativi, cioè manifest delle dipendenze (da \path{package.json} a
-\path{requirements.txt} a \path{pom.xml}), file di configurazione e di
-infrastruttura, sui quali euristiche deterministiche riconoscono lo stack
-applicativo, le librerie e i protocolli usati per le credenziali. Le stesse
-informazioni vengono chieste in parallelo a un modello linguistico eseguito
-localmente tramite Ollama, che restituisce un oggetto strutturato; le
-euristiche hanno però la precedenza, perché il risultato resti riproducibile a
-parità di input, e se il modello è irraggiungibile l'analisi prosegue sul solo
-esito delle euristiche. La fase è statica e offline e non interroga il
-bersaglio in esecuzione. La seconda fonte è il codice sorgente, da cui
-l'analizzatore estrae rotte di accesso, middleware di protezione e invocazioni
-delle librerie dedicate; a ogni file assegna poi un
-punteggio in base a quanti di questi segnali contiene e trattiene solo i file
-oltre una soglia, così da concentrare le fasi seguenti su quelli che governano
-davvero l'identità. Quando è cablato nel codice, recupera anche il segreto usato
-per firmare i token, un dettaglio che diventa decisivo nella fase dinamica.
-
-La terza fonte entra in gioco nella fase di correlazione del modulo, che fonde
-i segnali statici con la specifica OpenAPI, da cui ricava gli schemi di
-sicurezza dichiarati e le rotte protette, e con l'eventuale traffico catturato
-a runtime, di cui decodifica i token per estrarne claim, ruoli e permessi. Il
-grafo che ne risulta sintetizza schemi di autenticazione, endpoint protetti e
-relativi controlli, e porta con sé un grado di confidenza fra $0$ e $1$ che
-parte da una base minima e cresce con ogni fonte concorde: l'analisi del
-codice, la specifica, il traffico e il riconoscimento di un provider noto. È la
-correlazione fra livelli di \RQ{1.1} tradotta in un numero: nessuna fonte basta
-da sola a fissare il modello, ma la loro convergenza lo rende più affidabile, e
-più avanti questo valore decide quali prove abbiano fondamento sufficiente per
-essere tentate.
+Il modulo non presuppone di conoscere il bersaglio: ne ricostruisce la gestione
+dell'identità in un modello strutturato, il \emph{grafo di conoscenza
+dell'autenticazione}, fondendo tre fonti. I file dichiarativi (manifest delle
+dipendenze, configurazione, infrastruttura) rivelano stack, librerie e
+protocolli delle credenziali; il codice sorgente le rotte di accesso, i
+middleware di protezione e, quando è cablato, il segreto usato per firmare i
+token, decisivo nella fase dinamica; la specifica OpenAPI e l'eventuale
+traffico catturato gli schemi di sicurezza dichiarati e i claim, i ruoli e i
+permessi contenuti nei token. Il grafo porta con sé una confidenza fra $0$ e
+$1$ che cresce con ogni fonte concorde: è la correlazione fra livelli di
+\RQ{1.1} tradotta in un numero, e più avanti decide quali prove abbiano
+fondamento sufficiente per essere tentate.
 
 \paragraph{La batteria di prove}
 Ricostruito il modello, il modulo sollecita l'applicazione con richieste reali.
@@ -921,10 +637,8 @@ endpoint di login, perché delega il riconoscimento a un provider esterno, le
 prove che richiederebbero un token non falliscono ma si dichiarano non
 concludenti, tenendo separata l'assenza di una debolezza dall'impossibilità di
 verificarla. Nel punteggio di robustezza ogni prova fallita sottrae una quota
-proporzionale al proprio peso, e a ciascuna il motore di remediation della
-Sottosezione~\ref{sec:correlazione} affianca un'indicazione correttiva, tratta
-dalla base di conoscenza locale o, in sua assenza, generata dal modello
-linguistico locale.
+proporzionale al proprio peso e riceve un'indicazione correttiva come nella
+Sottosezione~\ref{sec:correlazione}.
 
 \paragraph{La regola statica S01}
 Proprio quando l'autenticazione è delegata a un provider esterno la verifica
@@ -946,13 +660,10 @@ rilevabile proprio dove quella dinamica non lo è.
 La \emph{Broken Object Property Level Authorization}~\cite{owasp2023api3}
 (Sottosezione~\ref{subsubsec:api3}) ha due direzioni: una proprietà riservata
 restituita a chi non dovrebbe vederla e una proprietà interna accettata in
-scrittura da chi non dovrebbe modificarla. Codice e contratto indicano quali
-proprietà l'applicazione considera riservate e dove rischia di esporle, mentre
-solo il sistema in esecuzione dice se la protezione regge. La difficoltà propria
-di questa categoria sta però a monte. Il criterio impedisce di fornire al modulo
-un elenco di campi sensibili, che del resto funzionerebbe sulle applicazioni di
-prova e su nessun altro sistema, e prima di cercare dove una proprietà possa
-sfuggire il modulo deve quindi dedurre da sé quali proprietà siano protette.
+scrittura da chi non dovrebbe modificarla. La difficoltà propria di questa
+categoria sta a monte: escluso dal criterio un elenco di campi sensibili, il
+modulo deve dedurre da sé quali proprietà siano protette prima di cercare dove
+possano sfuggire.
 
 \paragraph{Inventario e proprietà protette}
 L'inventario degli oggetti e delle loro proprietà nasce da due fonti. Dal
@@ -969,11 +680,7 @@ ruolo può raggiungere, come una funzione riservata all'amministratore o il ramo
 di una condizione sul ruolo del chiamante, e considera protette le proprietà
 lette o modificate lì. Il riconoscimento non si basa sui nomi delle proprietà ma
 sui modi in cui i framework più diffusi dichiarano un controllo di ruolo,
-raccolti in un catalogo di configurazione estendibile. Come anticipato in
-apertura di sezione, non contano né la verifica che chiede soltanto di aver
-effettuato l'accesso, che tutti gli utenti autenticati superano vedendo gli
-stessi campi, né il controllo sul proprietario, che riguarda l'oggetto e non le
-sue proprietà. Il contratto aggiunge un secondo indizio, dotato di una
+raccolti in un catalogo di configurazione estendibile. Il contratto aggiunge un secondo indizio, dotato di una
 direzione: un campo di sola lettura è protetto in scrittura, uno di sola
 scrittura, come una password, in lettura. Il modulo conserva questa direzione,
 per cui un campo di sola lettura che compare in una risposta non è un difetto.
@@ -1051,13 +758,8 @@ domanda non è più se un utente possa accedere a un certo oggetto, ma se possa
 eseguire una certa funzione. Il difetto nasce spesso da una dimenticanza: una
 rotta aggiunta a un controller eredita il routing e l'autenticazione, ma non
 l'autorizzazione, e resta raggiungibile da chiunque abbia effettuato l'accesso.
-L'implementazione riconosce la mancanza del controllo sul
-ruolo del chiamante in una funzione riservata. Per stabilire se l'assenza sia
-davvero sfruttabile servirebbe invocare la funzione con le credenziali di un
-utente ordinario, una verifica dinamica che il modulo non compie. Il rilevatore
-è perciò interamente statico e segue lo schema comune, al quale aggiunge un
-livello dedicato ai file di configurazione e una regola che segue il flusso dei
-dati.
+Il rilevatore segue l'impianto statico a livelli, al quale aggiunge un livello
+dedicato ai file di configurazione e una regola che segue il flusso dei dati.
 
 \paragraph{Funzioni privilegiate e controlli di ruolo}
 Sulla mappa degli endpoint, un endpoint è considerato privilegiato quando il
@@ -1066,32 +768,20 @@ schema tipico delle funzioni riservate, come \texttt{/admin},
 \texttt{/internal}, \texttt{/debug}, \texttt{/config}, \texttt{/export} o
 \texttt{/users/\{id\}/role}, oppure quando è una cancellazione o una
 sostituzione rivolta a un'intera collezione anziché a un singolo elemento. Per i
-controlli, il modulo tiene due elenchi separati di decoratori e middleware:
-quelli che, come \texttt{login\_required}, verificano \emph{chi} è il chiamante
-e quelli che, come \texttt{require\_role("admin")}, verificano \emph{che cosa}
-può fare. Solo i secondi sono controlli di funzione, e il modulo li riconosce
-anche quando sono scritti nel corpo della funzione, come un confronto sul ruolo
-dell'utente corrente.
+controlli, il modulo tiene distinti i decoratori di autenticazione, come
+\texttt{login\_required}, da quelli di ruolo, come
+\texttt{require\_role("admin")}, e riconosce questi ultimi anche quando sono
+scritti nel corpo della funzione, come un confronto sul ruolo dell'utente
+corrente.
 
-Le regole di questo livello sono sei. La più grave, BF-001, segnala un endpoint
-privilegiato privo di qualsiasi controllo di ruolo (CWE-285~\cite{cwe285}).
-BF-002 riguarda una funzione protetta solo dal login che compie un'operazione
-sensibile, come una cancellazione, un cambio di ruolo o un rimborso, e resta
-alla portata di qualunque utente registrato (CWE-862~\cite{cwe862}).
-BF-003 riguarda il verbo HTTP (CWE-650~\cite{cwe650}): una
-rotta privilegiata che accetta qualsiasi metodo, oppure un'applicazione che
-rispetta l'intestazione \texttt{X-HTTP-Method-Override} senza limitarne i
-valori, permette di raggiungere l'operazione per una via diversa da quella
-prevista. BF-004 segnala le aree amministrative esposte
-(CWE-284~\cite{cwe284}), cioè un raggruppamento di rotte con prefisso
-\texttt{/admin} privo di un controllo di ruolo comune, oppure una funzione che
-restituisce dati in blocco, come l'esportazione di tutti gli utenti, collocata
-su un percorso ordinario. BF-006 cerca le funzioni \emph{ombra}, cioè endpoint
-di debug, di test o di popolamento dei dati rimasti nel codice di produzione
-(CWE-285), con una severità alta se l'endpoint è del tutto aperto, media se
-richiede solo il login e bassa se è protetto ma resta un residuo da rimuovere.
-L'ultima regola del livello, BF-007, segue il flusso dei dati ed è descritta più
-avanti.
+Su questa mappa operano le regole riepilogate nella
+Tabella~\ref{tab:regole-bfla}; tre richiedono una precisazione. BF-003
+scatta anche quando l'applicazione rispetta l'intestazione
+\texttt{X-HTTP-Method-Override} senza limitarne i valori. BF-006, che cerca
+endpoint di debug, di test o di popolamento dei dati rimasti in produzione, ha
+severità alta se l'endpoint è del tutto aperto, media se richiede solo il login
+e bassa se è protetto ma resta un residuo da rimuovere. BF-007, infine, segue
+il flusso dei dati ed è descritta più avanti.
 
 \paragraph{Configurazione e contratto}
 Nei file di configurazione il modulo cerca il \emph{diniego per impostazione
@@ -1110,8 +800,7 @@ questo modulo. Un'operazione dichiarata nella specifica e accettata dal codice c
 qualsiasi verbo produce una segnalazione BF-003 con l'evidenza di entrambi i
 livelli. Un endpoint di debug o di test presente nel codice e assente dal
 contratto è invece il caso più affidabile di BF-006, perché l'assenza dal
-contratto conferma che quella funzione non doveva essere pubblica. La
-Tabella~\ref{tab:regole-bfla} riepiloga le sette regole.
+contratto conferma che quella funzione non doveva essere pubblica.
 
 \begin{table}[htbp]
   \centering
@@ -1121,13 +810,13 @@ Tabella~\ref{tab:regole-bfla} riepiloga le sette regole.
     \toprule
     \textbf{Regola} & \textbf{CWE} & \textbf{Debolezza ricercata} & \textbf{Severità} \\
     \midrule
-    BF-001 & 285 & endpoint privilegiato privo di controllo di ruolo & \texttt{CRITICAL} \\
-    BF-002 & 862 & operazione sensibile protetta solo dall'autenticazione & \texttt{HIGH} \\
-    BF-003 & 650 & rotta privilegiata raggiungibile con qualsiasi verbo HTTP & \texttt{HIGH} \\
-    BF-004 & 284 & area amministrativa o funzione in blocco esposta & \texttt{HIGH} \\
-    BF-005 & 276 & permesso predefinito anziché diniego (configurazione) & \texttt{MEDIUM} \\
+    BF-001 & 285~\cite{cwe285} & endpoint privilegiato privo di controllo di ruolo & \texttt{CRITICAL} \\
+    BF-002 & 862~\cite{cwe862} & operazione sensibile (cancellazione, cambio di ruolo, rimborso) protetta solo dall'autenticazione & \texttt{HIGH} \\
+    BF-003 & 650~\cite{cwe650} & rotta privilegiata raggiungibile con qualsiasi verbo HTTP & \texttt{HIGH} \\
+    BF-004 & 284~\cite{cwe284} & rotte \texttt{/admin} senza controllo di ruolo comune, o funzione che restituisce dati in blocco su un percorso ordinario & \texttt{HIGH} \\
+    BF-005 & 276~\cite{cwe276} & permesso predefinito anziché diniego (configurazione) & \texttt{MEDIUM} \\
     BF-006 & 285 & funzione di debug o di test rimasta esposta & \texttt{HIGH}--\texttt{LOW} \\
-    BF-007 & 269 & ruolo scelto dal chiamante nel corpo della richiesta & \texttt{CRITICAL} \\
+    BF-007 & 269~\cite{cwe269} & ruolo scelto dal chiamante nel corpo della richiesta & \texttt{CRITICAL} \\
     \bottomrule
   \end{tabularx}
   \caption[Regole del modulo Broken Function Level Authorization]{Le sette regole
@@ -1165,29 +854,14 @@ usi in sola lettura, perché un ruolo passato a un filtro o a una ricerca serve 
 selezionare dati e non ad assegnarli, e la segnalazione viene soppressa se la
 funzione verifica il privilegio del chiamante prima dell'assegnazione, con un
 decoratore di ruolo o con una condizione che interroga il ruolo dell'utente
-corrente. La semplice autenticazione, anche qui, non basta.
+corrente.
 
-\paragraph{Deduplicazione per priorità di regola}
-Nella BFLA le segnalazioni sono raggruppate per solo percorso, così che lo
-stesso endpoint rilevato dal codice e dal contratto confluisca in una voce
-unica, e l'ordine di priorità è
-\begin{center}
-  BF-006 $>$ BF-004 $>$ BF-003 $>$ BF-002 $>$ BF-001 $>$ BF-005.
-\end{center}
-Dire che un endpoint è una funzione di debug dimenticata, o che si trova in
-un'area amministrativa senza protezione comune, spiega il difetto meglio del
-generico ``manca un controllo di ruolo'' e ne indica anche il rimedio. A parità di
-priorità prevale la segnalazione ricavata dal codice, che punta a una riga
-precisa, su quella ricavata dal solo contratto, mentre le segnalazioni di
-configurazione, che non si riferiscono a un endpoint, sono sempre conservate.
-
-Come OA-005 nel modulo della BOLA, BF-007 resta fuori dalla competizione: le
-altre regole chiedono se il chiamante possa invocare la funzione, BF-007 se
-possa scegliere il valore che la funzione assegna. Su un endpoint di cambio
-ruolo privo di controllo di ruolo, per esempio, le due segnalazioni convivono, BF-002 per
-indicare che la funzione è accessibile a qualsiasi utente autenticato e BF-007
-per indicare che il nuovo ruolo lo decide chi invia la richiesta, e sopprimerne
-una nasconderebbe metà del problema.
+Le segnalazioni sono raggruppate per solo percorso, così che lo stesso endpoint
+rilevato dal codice e dal contratto confluisca in una voce unica, con ordine di
+priorità BF-006 $>$ BF-004 $>$ BF-003 $>$ BF-002 $>$ BF-001 $>$ BF-005; BF-007,
+che riguarda il valore assegnato e non l'accesso alla funzione, resta fuori
+dalla selezione, e le segnalazioni di configurazione, che non si riferiscono a
+un endpoint, sono sempre conservate.
 
 \section{Categorie tecniche: un metodo per categoria}
 \label{sec:categorie-tecniche}
@@ -1209,34 +883,95 @@ noti, per il consumo di API esterne il modo in cui il codice tratta le risposte
 che riceve. Per questo le quattro categorie sono descritte separatamente.
 
 \subsection{API4 -- I limiti sul consumo di risorse, su tre livelli}
-
 \label{sec:rilevamento-resource}
 
-Ogni richiesta a un'API ha un costo: tempo di calcolo, memoria, banda, a volte denaro vero, come quando il server invia un SMS o interroga un modello di intelligenza artificiale a pagamento. L'\emph{Unrestricted Resource Consumption}~\cite{owasp2023api4} (Sottosezione~\ref{subsubsec:api4}) riguarda le API che non mettono un tetto a questo costo. In quei casi basta una richiesta che chiede un milione di risultati, un file enorme o mille SMS di fila per rallentare il servizio o far lievitare la bolletta.
+Ogni richiesta a un'API ha un costo in tempo di calcolo, memoria e banda, e in
+alcuni casi un costo economico diretto, come quando il server invia un SMS o
+interroga un modello di intelligenza artificiale a pagamento.
+L'\emph{Unrestricted Resource Consumption}~\cite{owasp2023api4}
+(Sottosezione~\ref{subsubsec:api4}) riguarda le API che non pongono un limite a
+questo costo: una richiesta che chiede un numero arbitrario di risultati, un
+file di dimensioni eccessive o una sequenza di invii ripetuti basta a degradare
+il servizio o a generare costi non previsti.
 
-Rispetto alle categorie di autorizzazione viste finora c'è una differenza importante. L'assenza di un limite può essere individuata direttamente attraverso l'analisi statica del progetto, verificando nel codice e nella configurazione se sono presenti meccanismi come rate limiting, timeout o limiti di paginazione, senza dover eseguire o attaccare il sistema. Per questo motivo la categoria rientra fra quelle \emph{tecniche} della Sottosezione~\ref{sec:criterio} e il modulo si basa esclusivamente sul rilevamento statico.
-
-Lo stesso limite, però, può essere definito in punti diversi del sistema. Un controllo sulla dimensione dei file può essere presente nel codice dell'applicazione, imposto dal proxy che la precede oppure dichiarato nel contratto dell'API. La sua assenza dal codice, quindi, non è sufficiente per stabilire la presenza della vulnerabilità: il limite potrebbe infatti essere applicato a un livello esterno all'applicazione. Il modulo analizza staticamente tutti e tre i livelli e ne confronta i risultati, come previsto dalla \RQ{1.1}. In questo caso la correlazione tra i livelli non rappresenta un semplice raffinamento dell'analisi, ma è necessaria per distinguere un'assenza locale da una reale assenza del limite nel sistema.
+Lo stesso limite può però essere definito in punti diversi del sistema: un
+controllo sulla dimensione dei file può trovarsi nel codice dell'applicazione,
+essere imposto dal proxy che la precede o essere dichiarato nel contratto
+dell'API. La sua assenza dal codice non basta quindi a stabilire la
+vulnerabilità. Il modulo analizza staticamente tutti e tre i livelli e ne
+confronta i risultati, come previsto da \RQ{1.1}: qui la correlazione non è un
+raffinamento dell'analisi, ma la condizione per distinguere un'assenza locale
+da una reale assenza del limite nel sistema.
 
 \paragraph{I tre livelli di analisi}
-
 \label{sec:resource-layers}
 
-Nel codice sorgente, Python e JavaScript, il modulo cerca i punti in cui un limite servirebbe e manca. Qualche esempio: una paginazione in cui l'utente può alzare a piacere il numero di risultati; un file caricato senza guardarne la dimensione; una chiamata verso un altro servizio priva di timeout, che può restare appesa a lungo; un ciclo che scorre un elenco inviato dal client senza controllarne la lunghezza; un servizio a pagamento che chiunque può invocare quante volte vuole.
+Su ciascun livello il modulo cerca i punti in cui un limite servirebbe e manca
+(Tabella~\ref{tab:livelli-resource}). Nel codice sorgente, Python e
+JavaScript, si tratta di paginazioni, caricamenti, chiamate verso altri
+servizi, cicli su dati inviati dal client e, per le API GraphQL, della
+profondità di annidamento delle query. Nella configurazione contano i limiti di
+memoria dei container, la dimensione massima delle richieste e i timeout dei
+server; un timeout impostato a zero, che di fatto disattiva il controllo, ha
+severità maggiore di uno assente. Nel contratto OpenAPI, quando è disponibile,
+il modulo verifica i vincoli dichiarati sui
+parametri\footnote{Nel contratto OpenAPI i vincoli \texttt{maximum},
+\texttt{maxLength} e \texttt{maxItems} dichiarano rispettivamente il valore, la
+lunghezza e il numero di elementi massimi ammessi per un campo.} e la
+protezione degli endpoint costosi.
 
-Per le API GraphQL, che permettono al client di costruire query specificando i dati e le relazioni da restituire, verifica anche che le query non possano raggiungere una profondità di annidamento eccessiva, evitando così richieste capaci di consumare una quantità elevata di risorse.
+\begin{table}[htbp]
+  \centering
+  \small
+  \linespread{1.0}\selectfont
+  \begin{tabularx}{\linewidth}{@{}l X@{}}
+    \toprule
+    \textbf{Livello} & \textbf{Condizione segnalata} \\
+    \midrule
+    codice & paginazione con numero di risultati scelto liberamente dal client \\
+    & file caricato senza controllo della dimensione \\
+    & chiamata verso un altro servizio priva di timeout \\
+    & ciclo su un elenco inviato dal client senza limite di lunghezza \\
+    & servizio a pagamento invocabile senza limiti \\
+    & query GraphQL senza limite alla profondità di annidamento \\
+    \midrule
+    configurazione & container senza limite di memoria \\
+    & dimensione massima delle richieste non fissata dal proxy o
+    dall'applicazione \\
+    & timeout del server assente o impostato a zero \\
+    \midrule
+    contratto & parametro di paginazione senza valore massimo \\
+    & caricamento senza dimensione massima \\
+    & operazione \emph{batch} senza numero massimo di elementi \\
+    & endpoint costoso privo di protezione \\
+    \bottomrule
+  \end{tabularx}
+  \caption[Condizioni rilevate dal modulo Unrestricted Resource
+  Consumption]{Le condizioni rilevate dal modulo, per livello di analisi.
+  Le segnalazioni dei diversi livelli vengono poi confrontate fra loro.}
+  \label{tab:livelli-resource}
+\end{table}
 
-Nella configurazione controlla che i container abbiano un tetto di memoria, che il proxy o l'applicazione fissino una dimensione massima per le richieste e che i server definiscano un timeout per quelle troppo lente. Un timeout impostato a zero, che di fatto spegne il controllo, pesa più di uno semplicemente dimenticato.
+Stabilire quali endpoint siano costosi è la parte più delicata e resta
+un'euristica. Il nome è un indizio, perché percorsi come \texttt{/sms} o
+\texttt{/export} suggeriscono un'elaborazione onerosa, ma da solo può
+ingannare: leggere una fattura già emessa non ha costo, emetterla sì. Il modulo
+considera perciò anche ciò che l'operazione riceve: un numero di telefono
+accompagnato da un testo, un importo con la relativa valuta o un \emph{prompt}
+destinato a un modello di intelligenza artificiale sono indizi più affidabili
+del solo nome. Il codice può inoltre chiarire un dubbio che il contratto lascia
+aperto: una rotta che invoca un servizio a pagamento è costosa anche quando ha
+un nome innocuo, e viene segnalata se il contratto non prevede alcuna
+protezione.
 
-Il contratto OpenAPI, quando c'è, descrive ciò che l'API promette ai suoi client. Qui il modulo verifica che i parametri di paginazione abbiano un valore massimo, che i caricamenti abbiano una dimensione massima\footnote{Nel contratto OpenAPI i vincoli \texttt{maximum}, \texttt{maxLength} e \texttt{maxItems} dichiarano rispettivamente il valore, la lunghezza e il numero di elementi massimi ammessi per un campo.}, che le operazioni \emph{batch} fissino quanti elementi possono ricevere e che gli endpoint costosi siano protetti.
-
-Capire quali endpoint siano costosi è la parte più delicata e rimane necessariamente un'euristica. Il nome aiuta, perché \texttt{/sms} o \texttt{/export} fanno pensare a un lavoro pesante, ma da solo può ingannare: leggere una fattura già emessa non costa nulla, emetterla sì. Il modulo guarda perciò anche a cosa fa l'operazione e a cosa riceve. Un numero di telefono accompagnato da un testo, un importo con la sua valuta o un \emph{prompt}, cioè una richiesta inviata a un modello di intelligenza artificiale, sono indizi più affidabili del solo nome dell'endpoint. Questa valutazione resta comunque basata su euristiche e può quindi produrre casi che richiedono una verifica ulteriore.
-
-Ogni segnalazione indica la regola violata, la debolezza CWE, la severità e la difesa che ci si aspettava di trovare, così chi legge sa subito cosa aggiungere.
-
-L'ultimo passo mette a confronto i tre livelli. Il modulo risale da ogni segnalazione nel codice alla rotta che la contiene e la accosta all'operazione corrispondente del contratto. Quando lo stesso limite manca in entrambi, come un parametro \texttt{limit} senza tetto nel codice e nel contratto, le due segnalazioni vengono collegate e aumenta la confidenza associata alla rilevazione. Quando invece un altro livello copre il buco, per esempio un proxy che rifiuta i file troppo grandi, la segnalazione resta nel rapporto ma la sua severità viene impostata a \texttt{INFO}, con il riferimento alla difesa che la compensa.
-
-Il codice, infine, può chiarire un dubbio che il contratto lascia aperto. Se una rotta chiama un servizio a pagamento è costosa anche quando ha un nome innocuo, e il modulo la segnala se il contratto non prevede alcuna protezione.
+L'ultimo passo confronta i tre livelli. Il modulo risale da ogni segnalazione
+nel codice alla rotta che la contiene e la accosta all'operazione
+corrispondente del contratto. Quando lo stesso limite manca in entrambi, come
+un parametro \texttt{limit} senza tetto nel codice e nel contratto, le due
+segnalazioni vengono collegate e la confidenza aumenta. Quando invece un altro
+livello compensa la mancanza, per esempio un proxy che rifiuta i file troppo
+grandi, la segnalazione resta nel rapporto con severità \texttt{INFO} e con il
+riferimento alla difesa che la compensa.
 
 \subsection{API7 -- Dall'input dell'utente alla chiamata di rete}
 \label{sec:rilevamento-ssrf}
@@ -1266,8 +1001,7 @@ percorsi segnalati ma non sfruttabili~\cite{ji2025artemis}, fino al ricorso a
 tecniche dinamiche~\cite{wang2024ssrfuzz}. Per il modulo ne derivano tre
 difficoltà: conoscere tutte le funzioni che inviano richieste di rete, non
 segnalare i dati dell'utente che finiscono in una richiesta senza influire
-sull'indirizzo, e riconoscere i controlli sull'URL posti lungo il percorso. I
-paragrafi che seguono mostrano come vengono affrontate.
+sull'indirizzo, e riconoscere i controlli sull'URL posti lungo il percorso.
 
 \paragraph{Il flusso dei dati}
 Il modulo usa Semgrep, uno strumento di analisi statica che cerca nel codice
@@ -1309,7 +1043,7 @@ diffusi nei due linguaggi (Tabella~\ref{tab:regole-ssrf}).
     \bottomrule
   \end{tabularx}
   \caption[Regole del modulo Server-Side Request Forgery]{Le sei regole del
-    modulo: cinque sul codice sorgente e una sul contratto OpenAPI.}
+  modulo: cinque sul codice sorgente e una sul contratto OpenAPI.}
   \label{tab:regole-ssrf}
 \end{table}
 
@@ -1362,22 +1096,9 @@ Il modulo analizza la struttura sintattica dei file Python ed esegue controlli
 testuali su quelli JavaScript e TypeScript, escludendo le directory non
 applicative (come ambienti virtuali o cartelle di build). I
 controlli sono articolati in verifiche locali su ciascun file e verifiche
-globali sul progetto (Tabella~\ref{tab:regole-secmisconfig}).
-
-A livello di singolo file, il modulo intercetta i comportamenti a rischio più
-comuni: politiche CORS permissive o aperte assieme alle credenziali utente, modalità di
-debug e gestori di errore che espongono la traccia dello
-stack, segreti cablati
-nel codice individuati tramite entropia di Shannon e rotte prive di restrizioni sui metodi HTTP o dell'intestazione
-\texttt{Cache-Control}.
-
-A livello globale, tre verifiche valutano l'impostazione complessiva del
-servizio: l'assenza delle intestazioni HTTP difensive raccomandate (come HSTS e
-\texttt{Content-Security-Policy}), la totale mancanza di una politica CORS e la
-presenza di dipendenze con vulnerabilità note, individuate confrontando le
-versioni dichiarate con un elenco di versioni vulnerabili. Ogni segnalazione
-porta con sé un grado di confidenza, e quelle sotto la soglia di $0{,}70$
-vengono scartate prima di comporre il rapporto.
+globali sul progetto (Tabella~\ref{tab:regole-secmisconfig}). Ogni
+segnalazione porta con sé un grado di confidenza, e quelle sotto la soglia di
+$0{,}70$ vengono scartate prima di comporre il rapporto.
 
 \begin{table}[htbp]
   \centering
@@ -1387,13 +1108,13 @@ vengono scartate prima di comporre il rapporto.
     \toprule
     \textbf{Regola} & \textbf{Comportamento ricercato} & \textbf{Ambito} & \textbf{Severità} \\
     \midrule
-    SC-001 & politica CORS con carattere jolly & file & \texttt{HIGH} \\
+    SC-001 & politica CORS con carattere jolly o aperta assieme alle credenziali & file & \texttt{HIGH} \\
     SC-002 & modalità di debug attiva & file & \texttt{HIGH} \\
     SC-003 & gestore d'errore che espone la traccia dello stack & file & \texttt{HIGH} \\
-    SC-004 & header di sicurezza mancanti & globale & \texttt{MEDIUM} \\
+    SC-004 & header di sicurezza mancanti (come HSTS e \texttt{Content-\allowbreak Security-\allowbreak Policy}) & globale & \texttt{MEDIUM} \\
     SC-005 & segreto cablato nel codice (entropia di Shannon) & file & \texttt{CRITICAL} \\
     SC-006 & assenza totale di politica CORS applicativa & globale & \texttt{MEDIUM} \\
-    SC-007 & dipendenze applicative con vulnerabilità note & globale & \texttt{HIGH} \\
+    SC-007 & dipendenze in una versione presente in un elenco di versioni vulnerabili & globale & \texttt{HIGH} \\
     SC-008 & metodi HTTP non ristretti o operazioni che modificano dati esposte tramite GET & file & \texttt{MEDIUM} \\
     SC-009 & assenza di \texttt{Cache-Control} su rotte con dati sensibili & file & \texttt{MEDIUM} \\
     \bottomrule
@@ -1438,29 +1159,19 @@ di \RQ{1.2}, ripreso nel Capitolo~\ref{cap:risultati}.
 
 Il modulo percorre i file Python del bersaglio, li legge con l'analizzatore
 sintattico della libreria standard e applica tre regole, riassunte nella
-Tabella~\ref{tab:regole-unsafe}. La prima insegue il dato che arriva da un
-servizio esterno e viene poi accettato, salvato o passato ad altri componenti
-senza alcun controllo: è l'iniezione differita, dove un contenuto malevolo entra
-dal canale, ritenuto fidato, di una terza parte e fa danni più tardi, quando
-l'applicazione lo rilegge e lo usa (CWE-20~\cite{cwe20}). La seconda cerca le
-chiamate che raggiungono un servizio esterno su canale in
-chiaro, cioè con
-\texttt{http} invece di \texttt{https} (CWE-319~\cite{cwe319}). La terza individua
-i client che seguono ciecamente le
-redirezioni
-indicate da una terza parte (CWE-601~\cite{cwe601}).
+Tabella~\ref{tab:regole-unsafe}.
 
 \begin{table}[htbp]
   \centering
   \small
   \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l >{\hsize=1.5\hsize}X l@{}}
+  \begin{tabularx}{\linewidth}{@{}l l >{\hsize=1.5\hsize}X l@{}}
     \toprule
-    \textbf{Regola} & \textbf{Comportamento ricercato} & \textbf{Severità} \\
+    \textbf{Regola} & \textbf{CWE} & \textbf{Comportamento ricercato} & \textbf{Severità} \\
     \midrule
-    UC-001 & dati di terze parti usati senza validazione & \texttt{HIGH} \\
-    UC-002 & consumo di un servizio esterno su canale in chiaro (\texttt{http}) & \texttt{HIGH} \\
-    UC-003 & redirezioni di terze parti seguite ciecamente & \texttt{HIGH} \\
+    UC-001 & 20~\cite{cwe20} & dati di terze parti usati senza validazione & \texttt{HIGH} \\
+    UC-002 & 319~\cite{cwe319} & consumo di un servizio esterno su canale in chiaro (\texttt{http}) & \texttt{HIGH} \\
+    UC-003 & 601~\cite{cwe601} & redirezioni di terze parti seguite ciecamente & \texttt{HIGH} \\
     \bottomrule
   \end{tabularx}
   \caption[Regole del modulo Unsafe Consumption of APIs]{Le tre regole del modulo,
@@ -1475,18 +1186,16 @@ il dato da sorvegliare è la risposta di un servizio esterno: la regola prende
 quindi come punto di partenza il contenuto restituito da una chiamata HTTP in
 uscita, per esempio il risultato di \texttt{requests.get(\dots).json()}, e ne
 segue l'uso fino al punto in cui viene salvato o passato ad altri componenti
-senza controlli. La seconda guarda un valore: l'indirizzo del servizio
+senza controlli. È il caso dell'iniezione differita: un contenuto malevolo
+entra dal canale, ritenuto fidato, di una terza parte e fa danni più tardi,
+quando l'applicazione lo rilegge e lo usa. La seconda guarda un valore: l'indirizzo del servizio
 chiamato, che non deve cominciare con \texttt{http://}. La terza guarda
 un'opzione che manca: \texttt{requests}, per esempio, segue le redirezioni in
 automatico a meno che la chiamata non contenga \texttt{allow\_redirects=False},
 e la regola segnala le chiamate verso terze parti in cui quell'opzione è
 assente.
 
-Come nel modulo precedente, ogni segnalazione porta con sé un grado di
-confidenza, e quelle sotto la soglia di $0{,}70$ non entrano nel rapporto. Il
-rapporto indica, per ciascuna regola, se ha prodotto almeno una segnalazione e
+Vale la stessa soglia di confidenza del modulo precedente, e il rapporto indica, per ciascuna regola, se ha prodotto almeno una segnalazione e
 riassume i risultati per severità e categoria.
 
-L'insieme dei moduli descritti completa così la strategia di rilevamento del capitolo, fondata sulla combinazione di analisi statica multi-layer (codice, contratti OpenAPI e definizioni IaC) e verifica dinamica mirata per le categorie ibride. Questo impianto metodologico fissa i criteri per la validazione empirica dello strumento, presentata nel capitolo seguente.
-
-
+L'insieme dei moduli descritti completa così la strategia di rilevamento del capitolo, fondata sulla combinazione di analisi statica multi-layer (codice, contratti OpenAPI e definizioni IaC) e verifica dinamica mirata per le categorie ibride.
