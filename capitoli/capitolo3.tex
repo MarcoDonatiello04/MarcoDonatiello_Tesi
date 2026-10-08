@@ -3,11 +3,17 @@
 \chapter{Metodo di ricerca}
 \label{cap:metodo}
 
+Questo capitolo descrive lo strumento realizzato per rilevare le
+vulnerabilità dell'OWASP API Security Top 10 (2023) e delle configurazioni
+infrastrutturali. Dopo aver introdotto il criterio con cui le categorie vengono
+classificate e i requisiti che ne derivano per lo strumento, il capitolo ne
+presenta l'architettura e descrive i moduli di rilevazione: prima quello per
+le configurazioni infrastrutturali, poi quelli per le categorie ibride e per le
+categorie tecniche. La valutazione dello strumento è oggetto del
+Capitolo~\ref{cap:risultati}.
+
 \section{Approccio metodologico}
 \label{sec:approccio-metodologico}
-
-\subsection{Obiettivi e domande di ricerca}
-\label{sec:research-questions}
 
 La rassegna del capitolo precedente restituisce un quadro disomogeneo:
 le categorie dell'OWASP API Security Top 10 differiscono profondamente per
@@ -21,62 +27,10 @@ business}~\cite{felmetsger2010logic,pellegrino2014logic}, alla quale la stessa
 OWASP riconduce la resistenza di queste ultime al rilevamento
 automatico~\cite{owasp2023api6}.
 
-Il presente lavoro applica sistematicamente tale distinzione alle dieci
-categorie dell'OWASP API Security Top 10 (2023) e ne verifica le conseguenze
-implementative con un'analisi multi-layer dei tre livelli indicati,
-integrata da evidenza dinamica dove la sola ispezione statica non basta. Su
-questa base si formula la domanda di ricerca principale.
-
-\rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023) si
-  possono rilevare con l'analisi statica degli artefatti di progetto, e quali
-richiedono un'evidenza che questi non contengono?}
-
-La domanda si scompone in due interrogativi subordinati.
-
-\rqbox{1.1}{Per le categorie rilevabili staticamente, quali livelli di
-analisi occorre combinare per coprirle?}
-
-La domanda riguarda anche le condizioni di rischio che compaiono solo
-combinando più livelli, cioè segnali che presi singolarmente non
-costituiscono una violazione.
-
-\rqbox{1.2}{Per le categorie non rilevabili interamente con l'analisi statica,
-  quale parte resta riconoscibile staticamente e di che natura è ciò che
-manca?}
-
-Ciò che manca, il \emph{residuo}, può essere accertabile sul sistema in
-esecuzione, recuperabile estendendo l'analisi ad altri file del progetto,
-esplicitabile come parametro dell'analisi, oppure legato alla sola
-conoscenza del dominio applicativo; la Sottosezione~\ref{sec:criterio} ne
-dà la definizione precisa.
-
-\subsection{Impostazione dello studio}
-\label{sec:impostazione}
-
-Rispondere alle domande richiede due passaggi distinti. Il primo è
-analitico: un criterio applicato in modo coerente alle dieci categorie
-stabilisce quali siano tecniche, ibride o di logica di business. Il secondo è
-costruttivo: per ogni categoria tecnica o ibrida si realizza un modulo che
-verifichi la condizione individuata dal criterio, e lo si mette
-alla prova. La costruzione mostra che la classificazione è applicabile in
-pratica, cioè che le condizioni previste si possono effettivamente
-verificare sul codice e sulle configurazioni; non ne dimostra da sola la correttezza, perché
-un difetto non rilevato può dipendere dai limiti dell'implementazione e non
-dal criterio. Lo studio assume perciò una forma costruttiva.
-
-Questo chiarisce il ruolo del sistema descritto nel seguito: è lo strumento
-con cui la classificazione viene resa operativa, non l'oggetto della
-ricerca. Ogni categoria ricondotta a una violazione strutturale deve avere
-una regola che la riconosca; ogni categoria esclusa deve restare,
-coerentemente, senza modulo, con una motivazione documentata. Il capitolo
-formula il criterio, ne deriva i requisiti per lo strumento e descrive i
-moduli di rilevazione, raggruppati secondo la classificazione.
-
 \subsection{Il criterio di classificazione}
 \label{sec:criterio}
 
-Il criterio rende operativa la distinzione della
-Sottosezione~\ref{sec:research-questions}. Per ogni categoria si individua la
+Il criterio rende operativa la distinzione appena richiamata. Per ogni categoria si individua la
 proprietà di sicurezza la cui violazione la definisce, attenendosi alla
 formulazione ufficiale OWASP~\cite{owasp2023apitop10}, alle debolezze CWE
 associate e alla caratterizzazione emersa dalla rassegna.
@@ -98,8 +52,8 @@ invece regole puntuali sui permessi degli utenti rispetto alle singole
 risorse, per evitare di inserire a priori la logica di autorizzazione che
 l'analisi stessa dovrebbe verificare.
 
-Il residuo delle categorie ibride non è omogeneo, e distinguerne la natura è
-l'oggetto di \RQ{1.2}. Un residuo è \emph{dinamico} quando la proprietà
+Il residuo delle categorie ibride non è omogeneo, e distinguerne la natura
+serve a capire che cosa la parte statica non può vedere. Un residuo è \emph{dinamico} quando la proprietà
 mancante si manifesta nella risposta del sistema a una sollecitazione mirata,
 tipicamente l'invio della stessa richiesta con identità distinte. È \emph{di
 perimetro} quando è colmabile estendendo l'analisi a un livello non
@@ -136,8 +90,7 @@ solo confrontando due livelli. Un percorso presente nel codice ma assente
 dal contratto, per esempio, non è un errore in nessuno dei due, ma indica
 un endpoint esposto e non documentato. Allo stesso modo, un limite assente
 nel codice è un problema solo se non lo applica nemmeno l'infrastruttura.
-Lo strumento deve quindi combinare i segnali dei diversi livelli: è questa
-la capacità su cui verte \RQ{1.1}.
+Lo strumento deve quindi combinare i segnali dei diversi livelli.
 
 Il terzo è la verifica dinamica: per le categorie che richiedono
 un riscontro a runtime, lo strumento deve poter inviare richieste reali
@@ -152,8 +105,8 @@ regole impongano scelte arbitrarie come se fossero vincoli universali.
 Il quinto è la tracciabilità: ogni segnalazione deve essere
 riconducibile alla categoria di cui costituisce evidenza e al livello di
 analisi che l'ha generata, perché una segnalazione priva di tale riconduzione
-può indicare un difetto reale ma non contribuisce a rispondere alle domande
-di ricerca.
+può indicare un difetto reale ma non permette di valutare la copertura della
+categoria.
 
 \section{Architettura del sistema}
 \label{sec:architettura}
@@ -335,8 +288,8 @@ Property Level Authorization (API3) e la Broken Function Level Authorization
 a cui si accede, le sue singole proprietà e la funzione che si invoca; la
 quarta riguarda il passo che le precede, il riconoscimento di chi effettua la
 richiesta. Secondo il criterio della Sottosezione~\ref{sec:criterio} sono
-tutte categorie ibride, ed è su di esse che il sistema cerca una risposta
-concreta a \RQ{1.2}.
+tutte categorie ibride, e per ciascuna il sistema separa la parte
+riconoscibile staticamente dal residuo.
 
 Per ciascuna esiste infatti un predicato sugli artefatti necessario ma non
 sufficiente. Un oggetto recuperato senza legarlo al chiamante, un token
@@ -348,7 +301,7 @@ funzioni: il filtro sul proprietario può usare il campo sbagliato, un token
 scaduto può essere accettato, un controllo di ruolo può non bloccare nulla.
 Proprietà di questo tipo si osservano solo nella risposta del sistema a una
 sollecitazione mirata, di solito la stessa richiesta inviata con identità
-diverse, e formano il residuo che \RQ{1.2} chiama \emph{dinamico}.
+diverse, e formano il residuo che il criterio chiama \emph{dinamico}.
 
 Tutti i moduli distinguono tre tipi di controllo, che nel codice si somigliano
 perché spesso sono decoratori o middleware applicati alla stessa rotta:
@@ -381,7 +334,7 @@ e su questa mappa operano le regole. Il contratto serve soprattutto come
 termine di confronto: un'operazione che la specifica dichiara protetta e che il
 codice non protegge smentisce una garanzia promessa, mentre un endpoint
 presente nel codice ma assente dal contratto rivela una superficie non
-documentata. È la correlazione fra livelli richiesta da \RQ{1.1}. Quando più
+documentata. È la correlazione fra livelli prevista dai requisiti. Quando più
 regole colpiscono lo stesso endpoint, le segnalazioni vengono deduplicate
 tenendo quella che diagnostica il difetto in modo più preciso, secondo un
 ordine di priorità proprio di ciascun modulo e, a parità di priorità,
@@ -567,8 +520,8 @@ middleware di protezione e, quando è cablato, il segreto usato per firmare i
 token, decisivo nella fase dinamica; la specifica OpenAPI e l'eventuale
 traffico catturato gli schemi di sicurezza dichiarati e i claim, i ruoli e i
 permessi contenuti nei token. Il grafo porta con sé una confidenza fra $0$ e
-$1$ che cresce con ogni fonte concorde: è la correlazione fra livelli di
-\RQ{1.1} tradotta in un numero, e più avanti decide quali prove abbiano
+$1$ che cresce con ogni fonte concorde: è la correlazione fra livelli
+tradotta in un numero, e più avanti decide quali prove abbiano
 fondamento sufficiente per essere tentate.
 
 \paragraph{La batteria di prove}
@@ -849,8 +802,7 @@ Consumption (API4), la Server-Side Request Forgery (API7), la Security
 Misconfiguration (API8) e l'Unsafe Consumption of APIs (API10). Secondo il
 criterio della Sottosezione~\ref{sec:criterio} si comportano come categorie
 tecniche: la violazione si riconosce leggendo l'elaborato di progetto, senza
-sollecitare il sistema in esecuzione, e i rilevatori sono statici. È su di esse
-che il sistema cerca una risposta a \RQ{1.1}.
+sollecitare il sistema in esecuzione, e i rilevatori sono statici.
 
 Non condividendo un modello uniforme, ciascuna categoria richiede una logica di
 analisi dedicata e viene pertanto descritta separatamente.
@@ -872,7 +824,7 @@ controllo sulla dimensione dei file può trovarsi nel codice dell'applicazione,
 essere imposto dal proxy che la precede o essere dichiarato nel contratto
 dell'API. La sua assenza dal codice non basta quindi a stabilire la
 vulnerabilità. Il modulo analizza staticamente tutti e tre i livelli e ne
-confronta i risultati, come previsto da \RQ{1.1}: qui la correlazione non è un
+confronta i risultati, come richiesto dal secondo requisito: qui la correlazione non è un
 raffinamento dell'analisi, ma la condizione per distinguere un'assenza locale
 da una reale assenza del limite nel sistema.
 
@@ -1133,7 +1085,7 @@ nel codice, e per questa parte la categoria si comporta come una categoria
 \emph{tecnica}: il rilevatore è statico e lavora sui sorgenti Python. Resta
 fuori ciò che il codice non può dire, cioè se la fiducia mal riposta porti
 davvero a una compromissione: è un residuo di natura \emph{dinamica} nel senso
-di \RQ{1.2}, ripreso nel Capitolo~\ref{cap:risultati}.
+del criterio, ripreso nel Capitolo~\ref{cap:risultati}.
 
 \paragraph{Le tre regole}
 \label{sec:unsafe-rules}

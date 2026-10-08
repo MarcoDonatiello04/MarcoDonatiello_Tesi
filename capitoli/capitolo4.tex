@@ -11,19 +11,81 @@ riconosce la condizione per cui è stato costruito. Il codice non scritto per i
 moduli, cioè i repository esterni e crAPI, mostra come si comporta lo strumento
 quando la condizione non è stata preparata per lui. Un insieme di prova di tre applicazioni scritte da terzi,
 infine, è stato riservato alla validazione e analizzato con tutti i moduli in
-un'unica campagna. Dopo aver richiamato obiettivi e impostazione della
-validazione, il capitolo presenta i risultati dei due tipi di prova, li discute
+un'unica campagna. Dopo aver presentato le domande di ricerca e
+l'impostazione dello studio, il capitolo presenta i risultati dei due tipi di prova, li discute
 per categoria alla luce della classificazione, risponde alle domande di ricerca
 e si chiude con i limiti e le minacce alla validità.
 
 \section{Obiettivi e impostazione della validazione}
 \label{sec:ris-oggetto}
 
+\subsection{Obiettivi e domande di ricerca}
+\label{sec:research-questions}
+
+Come discusso nel Capitolo~\ref{cap:stato-arte}, le categorie dell'OWASP API
+Security Top 10 (2023) differiscono per il luogo in cui la violazione lascia
+traccia: alcune sono vulnerabilità \emph{tecniche}, riconoscibili negli
+artefatti di progetto, altre dipendono dalla logica di business. Lo studio
+applica sistematicamente questa distinzione alle dieci categorie e ne verifica
+le conseguenze con lo strumento descritto nel Capitolo~\ref{cap:metodo}, che
+combina l'analisi statica di più livelli con un'evidenza dinamica dove la sola
+ispezione statica non basta. Su questa base si formula la domanda di ricerca
+principale.
+
+\rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023) si
+  possono rilevare con l'analisi statica degli artefatti di progetto, e quali
+richiedono un'evidenza che questi non contengono?}
+
+La domanda si scompone in due interrogativi subordinati.
+
+\rqbox{1.1}{Per le categorie rilevabili staticamente, quali livelli di
+analisi occorre combinare per coprirle?}
+
+La domanda riguarda anche le condizioni di rischio che compaiono solo
+combinando più livelli, cioè segnali che presi singolarmente non
+costituiscono una violazione.
+
+\rqbox{1.2}{Per le categorie non rilevabili interamente con l'analisi statica,
+  quale parte resta riconoscibile staticamente e di che natura è ciò che
+manca?}
+
+Ciò che manca, il \emph{residuo}, può essere accertabile sul sistema in
+esecuzione, recuperabile estendendo l'analisi ad altri file del progetto,
+esplicitabile come parametro dell'analisi, oppure legato alla sola
+conoscenza del dominio applicativo; la Sottosezione~\ref{sec:criterio} ne
+dà la definizione precisa.
+
+\subsection{Impostazione dello studio}
+\label{sec:impostazione}
+
+Rispondere alle domande richiede due passaggi distinti. Il primo è
+analitico: un criterio applicato in modo coerente alle dieci categorie
+stabilisce quali siano tecniche, ibride o di logica di business. Il secondo è
+costruttivo: per ogni categoria tecnica o ibrida si realizza un modulo che
+verifichi la condizione individuata dal criterio, e lo si mette
+alla prova. La costruzione mostra che la classificazione è applicabile in
+pratica, cioè che le condizioni previste si possono effettivamente
+verificare sul codice e sulle configurazioni; non ne dimostra da sola la correttezza, perché
+un difetto non rilevato può dipendere dai limiti dell'implementazione e non
+dal criterio. Lo studio assume perciò una forma costruttiva.
+
+Questo chiarisce il ruolo del sistema descritto nel
+Capitolo~\ref{cap:metodo}: è lo strumento
+con cui la classificazione viene resa operativa, non l'oggetto della
+ricerca. Ogni categoria ricondotta a una violazione strutturale deve avere
+una regola che la riconosca; ogni categoria esclusa deve restare,
+coerentemente, senza modulo, con una motivazione documentata. Il
+Capitolo~\ref{cap:metodo} ha descritto il criterio e i moduli che lo rendono
+operativo; questo capitolo li mette alla prova.
+
+\subsection{Le evidenze raccolte}
+\label{sec:ris-evidenze}
+
 La validazione deve fornire le evidenze sperimentali per rispondere alle due
-domande di ricerca: determinare quale combinazione di livelli di analisi consenta
-la copertura delle categorie tecniche (\RQ{1.1}) e chiarire, per le categorie
-ibride, quale quota rimanga riconoscibile staticamente e quale sia la natura del
-residuo (\RQ{1.2}).
+domande subordinate: determinare quale combinazione di livelli di analisi
+consenta la copertura delle categorie tecniche (\RQ{1.1}) e chiarire, per le
+categorie ibride, quale quota rimanga riconoscibile staticamente e quale sia la
+natura del residuo (\RQ{1.2}).
 
 Come riassunto nella Tabella~\ref{tab:ris-evidenze}, le evidenze raccolte si
 articolano su tre livelli complementari:
