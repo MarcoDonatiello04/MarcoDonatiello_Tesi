@@ -1,394 +1,95 @@
 %!TEX root = ../main.tex
-\chapter*{Glossario}
-\addcontentsline{toc}{chapter}{Glossario}
+\section*{Glossario}
 
-I termini tecnici ricorrenti nella tesi sono definiti qui una volta sola, in
-ordine alfabetico.
-
+{\linespread{1.2}\selectfont
 \begin{description}
-  \item[Adapter] Componente che avvolge uno strumento esterno, ne esegue
-  l'analisi e ne traduce l'uscita nel modello di dominio del sistema, così che
-  il resto dell'applicazione non dipenda dal formato del singolo strumento.
+  \setlength{\itemsep}{2pt}
+  \setlength{\parskip}{0pt}
 
-  \item[Albero sintattico] (\emph{syntax tree}) Rappresentazione strutturata del
-  codice sorgente prodotta da un parser, in cui funzioni, istruzioni ed
-  espressioni sono nodi di un albero; analizzarlo, anziché il testo, rende
-  l'esame indifferente a commenti e formattazione.
+  \item[Adapter] Componente che esegue uno strumento esterno e ne traduce
+  l'uscita nel modello di dominio del sistema.
 
-  \item[Allowlist e denylist] (anche \emph{whitelist} e \emph{blacklist}) Elenco
-  dei valori ammessi e, rispettivamente, dei valori esclusi. Filtrare con
-  un'allowlist blocca tutto ciò che non è previsto; una denylist lascia passare
-  qualunque valore non elencato, compresi quelli aggiunti in seguito.
+  \item[Allowlist e denylist] Elenco dei valori ammessi e, rispettivamente, di
+  quelli esclusi; una denylist lascia passare tutto ciò che non elenca.
 
-  \item[Analisi della contaminazione] (\emph{taint analysis}) Tecnica che marca
-  come ``contaminati'' i valori provenienti da una \emph{sorgente} esterna, cioè
-  il punto in cui un dato controllato dall'esterno entra nel programma, e ne
-  segue la propagazione fino a un \emph{sink}, l'operazione sensibile in cui il
-  valore viene infine usato.
+  \item[Analisi della contaminazione] (\emph{taint analysis}) Tecnica che segue
+  un dato controllato dall'esterno dal punto in cui entra nel programma
+  (\emph{sorgente}) fino all'operazione sensibile in cui viene usato
+  (\emph{sink}).
 
-  \item[Analisi statica e dinamica] L'analisi statica esamina gli artefatti di
-  progetto (codice, configurazioni, contratti) senza eseguire il sistema;
-  l'analisi dinamica invia richieste al sistema in esecuzione e ne osserva le
-  risposte.
+  \item[Analisi statica e dinamica] La prima esamina codice, configurazioni e
+  contratti senza eseguire il sistema; la seconda invia richieste al sistema in
+  esecuzione e ne osserva le risposte.
 
-  \item[API ombra] (\emph{shadow API}) Endpoint esposto dall'applicazione ma
-  assente dalla documentazione ufficiale, e quindi sottratto ai controlli e
-  alla manutenzione di chi la gestisce.
-
-  \item[Autenticazione e autorizzazione] L'autenticazione accerta chi effettua
-  la richiesta; l'autorizzazione stabilisce se quel soggetto, una volta
-  identificato, abbia il diritto di compiere una specifica operazione su una
-  specifica risorsa.
-
-  \item[Black box] Modalità di analisi che osserva il sistema solo dall'esterno,
-  attraverso le risposte alle richieste, senza accesso al codice sorgente; vi si
-  contrappone l'analisi \emph{white box}, che legge il codice.
+  \item[Autenticazione e autorizzazione] La prima accerta chi effettua la
+  richiesta; la seconda stabilisce se quel soggetto possa compiere
+  un'operazione su una risorsa.
 
   \item[Bucket] Contenitore di oggetti in un servizio di storage cloud come
-  Amazon S3, con permessi di accesso propri che ne determinano la visibilità
-  pubblica o privata.
-
-  \item[\texttt{Cache-Control}] Intestazione HTTP che indica a browser e proxy se
-  e per quanto tempo possono conservare una copia della risposta; se manca, dati
-  riservati possono restare in una cache condivisa.
-
-  \item[Chiave API] (\emph{API key}) Stringa segreta inviata con ogni richiesta
-  per identificare l'applicazione chiamante; identifica un client, non un
-  utente, e non sostituisce un meccanismo di autenticazione.
-
-  \item[Claim] Singola affermazione contenuta in un token, per esempio
-  l'identificativo dell'utente (\texttt{sub}), il suo ruolo, la scadenza o il
-  destinatario previsto (\emph{audience}).
-
-  \item[Clean Architecture] Stile architetturale che organizza il software in
-  livelli concentrici (dominio, applicazione, infrastruttura, presentazione), in
-  cui le dipendenze puntano sempre verso il dominio e i dettagli tecnici restano
-  ai margini.
-
-  \item[Codice di stato HTTP] Numero di tre cifre con cui il server riassume
-  l'esito di una richiesta, per esempio \texttt{200 OK} (successo),
-  \texttt{403 Forbidden} (accesso negato), \texttt{404 Not Found} (risorsa
-  inesistente), \texttt{429 Too Many Requests} (limite di frequenza superato).
-
-  \item[Confine di fiducia] (\emph{trust boundary}) La linea che separa la parte
-  di un sistema di cui ci si fida da quella che va invece verificata;
-  collocarlo nel punto sbagliato significa accettare senza controlli dati che
-  provengono in realtà dall'esterno.
-
-  \item[Confusione di algoritmo] (\emph{algorithm confusion}) Attacco ai token
-  firmati in cui l'attaccante cambia l'algoritmo dichiarato, per esempio da
-  RS256, asimmetrico, a HS256, simmetrico, inducendo il server a verificare la
-  firma con una chiave che l'attaccante conosce.
-
-  \item[Container] Unità di esecuzione isolata che impacchetta un'applicazione
-  con le sue dipendenze; condivide il kernel del sistema ospite, per cui un
-  container eseguito con privilegi elevati ne amplia la superficie di attacco.
-
-  \item[Controller] Componente di un framework web che raggruppa le funzioni
-  incaricate di gestire le richieste rivolte a una stessa risorsa.
-
-  \item[CORS] (\emph{Cross-Origin Resource Sharing}) Meccanismo con cui un server
-  dichiara quali siti di origine diversa possono leggere le sue risposte dal
-  browser; una configurazione permissiva consente a domini terzi non
-  autorizzati di accedere a dati riservati.
-
-  \item[CVSS] (\emph{Common Vulnerability Scoring System}) Standard pubblico per
-  attribuire a una vulnerabilità un punteggio di gravità da 0 a 10, calcolato a
-  partire da un vettore di metriche sulle sue caratteristiche.
-
-  \item[CWE] (\emph{Common Weakness Enumeration}) Il catalogo pubblico delle
-  debolezze software mantenuto da MITRE; ogni voce, indicata dalla sigla CWE
-  seguita da un numero, descrive una classe di difetto indipendentemente dal
-  prodotto in cui compare.
-
-  \item[Decoratore] Costrutto di linguaggi come Python che avvolge una funzione
-  per aggiungerle un comportamento; nei framework web è il modo tipico di
-  proteggere una rotta, per esempio con \texttt{login\_required}.
-
-  \item[Denial of service] (DoS) Attacco che rende un servizio indisponibile
-  agli utenti legittimi, per esempio esaurendone CPU, memoria o banda.
-
-  \item[Deny-by-default] (diniego per impostazione predefinita) Il criterio per
-  cui ogni funzione è negata salvo concessione esplicita al ruolo che ne ha
-  diritto; con il criterio opposto una dimenticanza non produce alcun errore e
-  passa inosservata.
-
-  \item[Differential testing] Tecnica di verifica che invia la stessa richiesta
-  con identità diverse e ne confronta le risposte: se un utente ottiene ciò che
-  spetta a un altro, il controllo di autorizzazione è assente o difettoso.
-
-  \item[Directory listing] Funzione di un server web che, in assenza di una
-  pagina indice, mostra l'elenco dei file contenuti in una cartella, rivelando
-  risorse che non dovrebbero essere pubbliche.
-
-  \item[DTO] (\emph{Data Transfer Object}, oggetto di trasporto) Oggetto usato
-  per trasferire dati fra il client e il server, spesso una proiezione parziale
-  dell'entità memorizzata nel database.
-
-  \item[Endpoint] Il singolo punto di accesso di un'API, identificato da un URL e
-  da un metodo HTTP, che espone una specifica operazione su una risorsa.
-
-  \item[Entropia di Shannon] Misura del grado di casualità di una stringa;
-  sequenze ad alto disordine indicano chiavi o token reali, distinguendoli dai
-  normali identificatori.
-
-  \item[Escalation dei privilegi] Il passaggio di un utente a permessi superiori
-  a quelli che gli sono stati concessi, per esempio da utente ordinario ad
-  amministratore.
-
-  \item[Falso positivo e falso negativo] Un falso positivo è una segnalazione
-  che non corrisponde a un difetto reale; un falso negativo è un difetto reale
-  che lo strumento non segnala. Vi si contrappone il \emph{vero positivo}, una
-  segnalazione che corrisponde a un difetto reale.
-
-  \item[Finding] La singola segnalazione prodotta da uno strumento di analisi,
-  tradotta nel modello di dominio comune del sistema con sorgente, posizione,
-  categoria, severità e confidenza.
-
-  \item[Fingerprinting del dispositivo] Tecnica che riconosce un client a partire
-  da caratteristiche del dispositivo e del browser, anche quando cambia
-  indirizzo IP o account.
-
-  \item[Forza bruta] (\emph{brute force}) Attacco che prova sistematicamente un
-  gran numero di valori, per esempio password o codici di verifica, finché non
-  trova quello corretto.
-
-  \item[Fuzzing] Tecnica di verifica che invia a un sistema un gran numero di
-  input generati automaticamente, spesso malformati o inattesi, osservandone
-  le reazioni anomale.
-
-  \item[Gateway] Componente posto davanti ai servizi applicativi che riceve
-  tutte le chiamate esterne e vi applica funzioni comuni quali autenticazione,
-  instradamento e limiti di frequenza.
-
-  \item[GraphQL] Linguaggio di interrogazione per API in cui il client, anziché
-  richiamare endpoint predefiniti, descrive in una sola richiesta l'esatto
-  insieme di dati che desidera ricevere.
-
-  \item[Handler] La funzione che il framework invoca per servire una determinata
-  rotta: riceve la richiesta, esegue l'operazione e costruisce la risposta.
-
-  \item[Hardening] (irrobustimento) Insieme delle operazioni con cui si riduce la
-  superficie di attacco di un sistema: disattivazione di funzioni e servizi non
-  necessari, rimozione delle credenziali predefinite, applicazione delle
-  impostazioni consigliate.
-
-  \item[HSTS] (\emph{HTTP Strict Transport Security}) Intestazione HTTP con cui un
-  server impone al browser di contattarlo soltanto su connessione cifrata.
-
-  \item[IaC] (\emph{Infrastructure as Code}) Pratica per cui le risorse
-  infrastrutturali (reti, istanze, storage, permessi) sono dichiarate in file
-  versionati che uno strumento di provisioning traduce nello stato reale; il
-  file diventa così un artefatto ispezionabile prima che la risorsa esista.
-
-  \item[Identity provider] Servizio esterno che gestisce le identità degli utenti,
-  ne verifica le credenziali e rilascia i token con cui le applicazioni li
-  riconoscono, per esempio Keycloak.
-
-  \item[In chiaro] (\emph{cleartext}) Senza cifratura; un URL \texttt{http://}
-  anziché \texttt{https://} espone i dati in transito a chi intercetta il
-  traffico, l'attacco \emph{man-in-the-middle}.
-
-  \item[Iniezione] (\emph{injection}) Attacco in cui un dato fornito
-  dall'esterno viene interpretato come comando, per esempio come parte di una
-  query SQL (\emph{SQL injection}). Nell'iniezione \emph{differita} il dato
-  malevolo viene prima memorizzato e solo in un secondo momento usato.
-
-  \item[Integrazione continua] (\emph{continuous integration}) Pratica per cui a
-  ogni modifica del codice una pipeline automatica compila, verifica e analizza
-  il progetto.
-
-  \item[Intestazione HTTP] (\emph{header}) Campo di metadati che accompagna una
-  richiesta o una risposta HTTP, per esempio \texttt{Authorization}, che
-  trasporta le credenziali, o \texttt{Content-Type}, che indica il formato del
-  corpo.
-
-  \item[JWKS] (\emph{JSON Web Key Set}) Insieme delle chiavi pubbliche, pubblicato
-  in formato JSON, con cui un servizio verifica la firma dei token; se il server
-  accetta un riferimento a un JWKS indicato nel token stesso, l'attaccante può
-  firmare token con una chiave propria.
-
-  \item[JWT] (\emph{JSON Web Token}) Formato di token composto da tre parti
-  codificate in Base64 e separate da punti: intestazione, contenuto (i
-  \emph{claim}) e firma. La firma garantisce l'integrità del contenuto solo se
-  il server la verifica.
-
-  \item[Least privilege] (principio del minimo privilegio) Il principio per cui
-  un soggetto dispone soltanto dei permessi strettamente necessari a svolgere
-  le proprie funzioni.
-
-  \item[Lista di controllo d'accesso] (ACL, \emph{Access Control List}) Elenco
-  associato a una risorsa che indica quali soggetti possono accedervi e con
-  quali operazioni.
-
-  \item[Log4Shell] Vulnerabilità del 2021 della libreria di logging Java Log4j,
-  in cui una stringa registrata nei log poteva indurre il server a scaricare ed
-  eseguire codice remoto.
-
-  \item[Manifest] File dichiarativo che descrive una risorsa o un progetto: un
-  manifest Terraform dichiara risorse infrastrutturali, un manifest delle
-  dipendenze (come \path{requirements.txt} o \path{package.json}) elenca le
-  librerie usate.
-
-  \item[Mass assignment] L'assegnazione automatica dei campi ricevuti dal client
-  agli attributi di un oggetto applicativo; se il server non filtra i campi
-  ammessi, il client può valorizzare attributi interni non previsti dal flusso
-  normale.
-
-  \item[Metodo HTTP] (o \emph{verbo HTTP}) L'azione richiesta su una risorsa, per
-  esempio \texttt{GET} per leggere o \texttt{DELETE} per cancellare.
-
-  \item[MFA] (\emph{Multi-Factor Authentication}) Autenticazione che richiede,
-  oltre alla password, un secondo fattore indipendente, spesso un codice
-  monouso (OTP, \emph{One-Time Password}).
-
-  \item[Middleware] Componente che si interpone fra la ricezione di una
-  richiesta e il suo handler, applicando funzioni comuni a più rotte come
-  l'autenticazione o la registrazione degli accessi.
-
-  \item[Modello linguistico] (\emph{Large Language Model}) Modello di
-  intelligenza artificiale addestrato su grandi quantità di testo, capace di
-  generare risposte in linguaggio naturale; nel sistema è eseguito localmente
-  tramite Ollama.
-
-  \item[Multi-tenant] Architettura in cui più clienti (\emph{tenant}) condividono
-  la stessa infrastruttura applicativa, separati soltanto dalla logica di
-  autorizzazione.
-
-  \item[OAuth e OpenID Connect] OAuth~2.0 è il protocollo con cui un'applicazione
-  ottiene un accesso delegato alle risorse di un utente; OpenID Connect (OIDC)
-  vi aggiunge l'autenticazione dell'utente. Parametri come \texttt{state} e PKCE
-  (\emph{Proof Key for Code Exchange}) proteggono il flusso da intercettazioni e
-  falsificazioni.
-
-  \item[OpenAPI] Formato standard, in YAML o JSON, per descrivere un'API REST:
-  endpoint, parametri, schemi di richiesta e risposta, requisiti di sicurezza.
-  Il documento che ne risulta è detto \emph{contratto} o \emph{specifica}
-  dell'API.
-
-  \item[Operazione batch] Una singola richiesta che trasporta un elenco di
-  elementi da elaborare insieme.
-
-  \item[Paginazione] La suddivisione di una risposta voluminosa in pagine di
-  dimensione limitata, così che una singola richiesta non restituisca
-  un'intera collezione.
-
-  \item[Parametro di percorso e di query] Valori trasportati dall'URL di una
-  richiesta: il parametro di percorso ne fa parte (\texttt{482} in
-  \texttt{/orders/482}), quello di query segue il punto interrogativo
-  (\texttt{?limit=50}).
-
-  \item[Payload] Il contenuto utile trasportato da una richiesta o da una
-  risposta, tipicamente il corpo in formato JSON; per estensione, il contenuto
-  costruito da un attaccante per sfruttare una vulnerabilità.
-
-  \item[Pipeline] Sequenza automatizzata di fasi eseguite una dopo l'altra, in
-  cui l'uscita di ciascuna alimenta la successiva.
-
-  \item[Policy] Documento che dichiara quali soggetti (\emph{principal}) possono
-  eseguire quali azioni su quali risorse; nei servizi cloud governa, per
-  esempio, l'accesso a un bucket o i permessi di un ruolo IAM.
-
-  \item[Prova d'unità] (\emph{unit test}) Verifica automatica di un singolo
-  componente del software isolato dal resto, con le dipendenze esterne
-  sostituite da simulazioni.
-
-  \item[Proxy] Componente intermedio attraverso cui transitano le richieste fra
-  client e server; un proxy di intercettazione permette di osservare e
-  modificare il traffico.
-
-  \item[Rate limiting] (limitazione di frequenza) Il limite al numero di
-  richieste che un client può inviare in un dato intervallo di tempo.
-
-  \item[Recall e precisione] Metriche di accuratezza di uno strumento di
-  rilevamento: la recall è la quota di difetti reali che lo strumento trova, la
-  precisione la quota di segnalazioni che corrispondono a difetti reali.
-
-  \item[Redirezione] (\emph{redirect}) La risposta con cui un server rimanda il
-  client a un altro indirizzo; seguirla in automatico consente a un fornitore
-  compromesso di dirottare la richiesta, dati sensibili compresi, verso un
-  server ostile.
-
-  \item[ReDoS] (\emph{Regular expression Denial of Service}) Un input costruito
-  ad arte che fa degenerare il tempo di valutazione di un'espressione regolare,
-  saturando la CPU con una richiesta sola.
-
-  \item[Refresh token] Token a lunga durata usato per ottenere nuovi token di
-  accesso senza ripetere il login; per limitarne l'abuso dovrebbe essere
-  monouso, ruotato a ogni utilizzo e soggetto a scadenza.
-
-  \item[Remediation] L'insieme delle azioni correttive che eliminano o mitigano
-  una vulnerabilità segnalata.
-
-  \item[Riferimento di verità] (\emph{ground truth}) L'elenco delle
-  vulnerabilità effettivamente presenti in un bersaglio, rispetto al quale si
-  misurano le segnalazioni di uno strumento.
-
-  \item[Rotta] (\emph{route}) L'associazione fra un percorso URL con il relativo
-  metodo HTTP e la funzione che lo gestisce; il \emph{routing} è il meccanismo
-  che smista ogni richiesta verso la rotta corrispondente.
-
-  \item[Runtime] La fase in cui il software è in esecuzione, contrapposta a
-  quella in cui viene scritto, compilato o analizzato staticamente.
-
-  \item[SAML e SSO] Il \emph{Single Sign-On} (SSO) consente di accedere a più
-  servizi con un'unica autenticazione; SAML (\emph{Security Assertion Markup
-  Language}) è uno standard XML per realizzarlo, in cui l'identity provider
-  rilascia asserzioni firmate sull'identità dell'utente.
-
-  \item[Schema di sicurezza] (\emph{security scheme}) La sezione del contratto
-  OpenAPI che dichiara come un endpoint è protetto, per esempio tramite token o
-  chiave API.
-
-  \item[Serializzazione] La conversione di un oggetto in memoria in un formato
-  trasmissibile, come JSON; serializzare automaticamente un oggetto intero può
-  esporne anche gli attributi interni.
-
-  \item[Serverless] Modello di esecuzione cloud in cui il codice gira in funzioni
-  attivate su richiesta, senza che lo sviluppatore gestisca i server
-  sottostanti.
-
-  \item[Servizio di metadati] (\emph{instance metadata service}) Servizio
-  interno degli ambienti cloud, raggiungibile da ogni macchina a un indirizzo
-  noto come \texttt{169.254.169.254}, che fornisce configurazione e spesso
-  credenziali temporanee dell'istanza.
-
-  \item[Session fixation] Attacco in cui l'avversario impone alla vittima un
-  identificativo di sessione da lui conosciuto; se il server non lo rinnova
-  dopo il login, l'attaccante eredita la sessione autenticata.
-
-  \item[Spoofing] La falsificazione di un'informazione per farsi passare per
-  qualcun altro, per esempio un'intestazione HTTP che dichiara un indirizzo IP
-  di origine diverso da quello reale.
-
-  \item[Terraform] Strumento di Infrastructure as Code che legge file
-  dichiarativi in linguaggio HCL e crea, modifica o distrugge le risorse cloud
-  corrispondenti.
-
-  \item[Timeout] Il tempo massimo concesso a un'operazione prima di
-  interromperla; in sua assenza una chiamata lenta può restare appesa a tempo
-  indefinito, trattenendo risorse.
-
-  \item[TLS] (\emph{Transport Layer Security}) Il protocollo che cifra e
-  autentica il canale di comunicazione su cui viaggia il traffico HTTP.
+  Amazon S3, con permessi propri che lo rendono pubblico o privato.
+
+  \item[CWE] Catalogo pubblico delle debolezze software mantenuto da MITRE; ogni
+  voce (CWE seguita da un numero) descrive una classe di difetto.
+
+  \item[Decoratore] Costrutto che avvolge una funzione per aggiungerle un
+  comportamento; nei framework web protegge tipicamente una rotta, come
+  \texttt{login\_required}.
+
+  \item[Endpoint] Punto di accesso di un'API, identificato da un URL e da un
+  metodo HTTP, che espone un'operazione su una risorsa.
+
+  \item[Falso positivo e falso negativo] Segnalazione che non corrisponde a un
+  difetto reale e, rispettivamente, difetto reale non segnalato.
+
+  \item[Finding] Singola segnalazione di uno strumento, espressa nel modello
+  comune del sistema con posizione, categoria, severità e confidenza.
+
+  \item[Hardening] (irrobustimento) Difesa aggiuntiva, come la cifratura o la
+  registrazione degli accessi, la cui assenza non apre da sola un varco.
+
+  \item[IaC e Terraform] Con l'\emph{Infrastructure as Code} le risorse cloud
+  sono dichiarate in file versionati; Terraform è lo strumento che li traduce
+  nelle risorse reali.
+
+  \item[Iniezione] (\emph{injection}) Attacco in cui un dato esterno viene
+  interpretato come comando, per esempio in una query SQL.
+
+  \item[Manifest] File che dichiara risorse infrastrutturali (Terraform) o le
+  dipendenze di un progetto (\path{requirements.txt}, \path{package.json}).
+
+  \item[Mass assignment] Copia automatica dei campi inviati dal client sugli
+  attributi di un oggetto, che permette di valorizzare anche quelli interni.
+
+  \item[Middleware] Componente che si interpone fra la richiesta e il suo
+  handler, applicando funzioni comuni a più rotte come l'autenticazione.
+
+  \item[OpenAPI] Formato standard per descrivere un'API REST (endpoint,
+  parametri, schemi, sicurezza); il documento è detto \emph{contratto}.
+
+  \item[Policy] Documento che dichiara quali soggetti possono eseguire quali
+  azioni su quali risorse, per esempio su un bucket.
+
+  \item[Rate limiting] Limite al numero di richieste che un client può inviare
+  in un intervallo di tempo.
+
+  \item[Recall e precisione] Quota di difetti reali trovati dallo strumento e,
+  rispettivamente, quota di segnalazioni che corrispondono a difetti reali.
+
+  \item[Redirezione] Risposta con cui un server rimanda il client a un altro
+  indirizzo.
+
+  \item[Riferimento di verità] (\emph{ground truth}) Elenco delle vulnerabilità
+  effettivamente presenti in un bersaglio, con cui si confrontano le
+  segnalazioni.
+
+  \item[Rotta e handler] La rotta associa un percorso e un metodo HTTP a una
+  funzione, l'\emph{handler}, che serve la richiesta.
+
+  \item[Serializzazione] Conversione di un oggetto in un formato trasmissibile
+  come JSON; se automatica può esporre attributi interni.
 
   \item[Token] Stringa rilasciata dopo l'autenticazione e inviata con ogni
-  richiesta successiva, tipicamente nell'intestazione
-  \texttt{Authorization: Bearer}, per dimostrare l'identità del chiamante senza
-  ripetere le credenziali.
-
-  \item[Traccia dello stack] (\emph{stack trace}) L'elenco delle chiamate di
-  funzione attive nel momento dell'errore; mostrata al client rivela percorsi,
-  librerie e struttura interna dell'applicazione.
-
-  \item[UUID] (\emph{Universally Unique Identifier}) Identificatore di 128 bit
-  generato in modo da essere praticamente unico e, a differenza di un intero
-  progressivo, difficile da indovinare.
-
-  \item[Versioning] La conservazione delle versioni precedenti di un oggetto,
-  che consente di recuperarlo dopo una modifica o una cancellazione.
-
-  \item[Webhook] Indirizzo che un'applicazione registra presso un servizio
-  perché questo vi invii una richiesta HTTP al verificarsi di un evento.
+  richiesta per dimostrare l'identità del chiamante; un JWT contiene
+  affermazioni firmate (\emph{claim}) come l'utente, il ruolo e la scadenza.
 \end{description}
-\clearpage
+}
