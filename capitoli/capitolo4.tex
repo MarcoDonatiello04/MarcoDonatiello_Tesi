@@ -91,10 +91,11 @@ funzionale dei singoli moduli in condizioni controllate, confermando sia la
 capacità di rilevare le violazioni introdotte, sia l'assenza di falsi allarmi
 sulle corrispondenti versioni sicure.
 
-Sul fronte infrastrutturale, l'analisi dei manifest Terraform (Tabella~\ref{tab:iac-ranking})
-conferma l'accuratezza del modello di rischio: le configurazioni aperte o prive di
-autorizzazione si collocano sistematicamente ai vertici della graduatoria di severità,
-mentre le risorse protette ottengono punteggi minimi legati a soli irrobustimenti.
+Sul fronte infrastrutturale, la Tabella~\ref{tab:iac-ranking} riporta i punteggi
+di rischio ottenuti sui manifest Terraform e conferma l'accuratezza del modello di
+rischio: le configurazioni aperte o prive di autorizzazione occupano le prime
+cinque posizioni, con punteggi fra 6,8 e 9,2, mentre i bucket protetti si fermano
+a 3,2, un punteggio dovuto ai soli irrobustimenti.
 
 L'ordinamento dipende dal catalogo delle policy, che assegna natura e severità
 a ciascun controllo fallito di Checkov secondo le regole della

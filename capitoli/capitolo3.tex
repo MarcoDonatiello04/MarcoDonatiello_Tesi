@@ -687,7 +687,9 @@ per cui un campo di sola lettura che compare in una risposta non è un difetto.
 
 \paragraph{Regole statiche e verifica per proprietà}
 Individuate le proprietà protette, quattro regole statiche cercano i punti in
-cui la protezione può essere aggirata (Tabella~\ref{tab:regole-bopla}). La
+cui la protezione può essere aggirata. La Tabella~\ref{tab:regole-bopla} le
+riassume indicando anche la direzione, lettura o scrittura, in cui ciascuna
+mette alla prova la protezione. La
 regola S01 cerca il \emph{mass assignment}, cioè il corpo
 della richiesta copiato per intero su un oggetto, per esempio con un ciclo su
 tutti i campi ricevuti. Se il codice accetta solo i campi di
@@ -772,7 +774,12 @@ autenticazione, come \texttt{login\_required}, da quelli di ruolo, come
 \texttt{require\_role("admin")}, e riconosce questi ultimi anche quando sono
 scritti nel corpo della funzione, come un confronto sul ruolo dell'utente
 corrente. Su questa mappa operano le regole riepilogate nella
-Tabella~\ref{tab:regole-bfla}.
+Tabella~\ref{tab:regole-bfla}. Come mostra la tabella, quasi tutte cercano una
+funzione privilegiata a cui manca il controllo di ruolo; fanno eccezione
+BF-005, che guarda la configurazione, e BF-007, che segue il ruolo inviato dal
+chiamante. La severità più alta spetta proprio ai due casi in cui chiunque può
+ottenere privilegi: la funzione riservata senza alcun controllo di ruolo
+(BF-001) e il ruolo scelto dal chiamante (BF-007).
 
 \paragraph{Configurazione e contratto}
 Nei file di configurazione il modulo cerca il \emph{diniego per impostazione
@@ -872,8 +879,11 @@ da una reale assenza del limite nel sistema.
 \paragraph{I tre livelli di analisi}
 \label{sec:resource-layers}
 
-Su ciascun livello il modulo cerca i punti in cui un limite servirebbe e manca
-(Tabella~\ref{tab:livelli-resource}). Nel codice sorgente, Python e
+Su ciascun livello il modulo cerca i punti in cui un limite servirebbe e manca.
+La Tabella~\ref{tab:livelli-resource} elenca queste condizioni raggruppate per
+livello e mostra che lo stesso limite, come la dimensione di un caricamento o
+il numero di risultati di una paginazione, può comparire su più livelli: è
+questo che rende possibile il confronto. Nel codice sorgente, Python e
 JavaScript, si tratta di paginazioni, caricamenti, chiamate verso altri
 servizi, cicli su dati inviati dal client e, per le API GraphQL, della
 profondità di annidamento delle query. Nella configurazione contano i limiti di
@@ -985,8 +995,10 @@ richiesta verso una risorsa diversa da quella prevista.
 
 Il percorso si considera interrotto, e la chiamata non viene segnalata, quando
 lungo la strada l'indirizzo viene verificato, per esempio confrontandolo con un
-elenco di destinazioni ammesse. Le regole del modulo sono riepilogate nella
-Tabella~\ref{tab:regole-ssrf}.
+elenco di destinazioni ammesse. La Tabella~\ref{tab:regole-ssrf} riepiloga le
+regole del modulo: le prime tre applicano l'analisi appena descritta alle
+diverse librerie di rete, SS-004 e SS-005 cercano due situazioni specifiche,
+descritte di seguito, e SS-006 lavora sul contratto.
 
 \begin{table}[htbp]
   \centering
@@ -1059,7 +1071,12 @@ Il modulo analizza la struttura sintattica dei file Python ed esegue controlli
 testuali su quelli JavaScript e TypeScript, escludendo le directory non
 applicative (come ambienti virtuali o cartelle di build). I
 controlli sono articolati in verifiche locali su ciascun file e verifiche
-globali sul progetto (Tabella~\ref{tab:regole-secmisconfig}). Ogni
+globali sul progetto. Come mostra la Tabella~\ref{tab:regole-secmisconfig}, sei
+regole esaminano un singolo file, mentre tre valutano il progetto nel suo
+insieme: l'assenza degli header di sicurezza o di una politica CORS e le
+dipendenze in versioni vulnerabili. La severità più alta spetta al segreto
+scritto nel codice (SC-005), che chiunque legga il repository può riutilizzare.
+Ogni
 segnalazione porta con sé un grado di confidenza, e quelle sotto la soglia di
 $0{,}70$ vengono scartate prima di comporre il rapporto.
 
@@ -1122,8 +1139,10 @@ di \RQ{1.2}, ripreso nel Capitolo~\ref{cap:risultati}.
 \label{sec:unsafe-rules}
 
 Il modulo percorre i file Python del bersaglio, li legge con l'analizzatore
-sintattico della libreria standard e applica tre regole, riassunte nella
-Tabella~\ref{tab:regole-unsafe}.
+sintattico della libreria standard e applica tre regole. La
+Tabella~\ref{tab:regole-unsafe} le riassume: ciascuna corrisponde a una CWE
+distinta e a una delle tre forme di fiducia mal riposta coperte dal modulo, e
+tutte hanno severità alta.
 
 \begin{table}[htbp]
   \centering
