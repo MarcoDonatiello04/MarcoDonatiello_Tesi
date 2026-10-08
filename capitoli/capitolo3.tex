@@ -763,66 +763,55 @@ dedicato ai file di configurazione e una regola che segue il flusso dei dati.
 
 \paragraph{Funzioni privilegiate e controlli di ruolo}
 Sulla mappa degli endpoint, un endpoint è considerato privilegiato quando il
-suo percorso, con i parametri sostituiti da un segnaposto, corrisponde a uno
-schema tipico delle funzioni riservate, come \texttt{/admin},
-\texttt{/internal}, \texttt{/debug}, \texttt{/config}, \texttt{/export} o
-\texttt{/users/\{id\}/role}, oppure quando è una cancellazione o una
-sostituzione rivolta a un'intera collezione anziché a un singolo elemento. Per i
-controlli, il modulo tiene distinti i decoratori di autenticazione, come
-\texttt{login\_required}, da quelli di ruolo, come
+suo percorso corrisponde a uno schema tipico delle funzioni riservate, come
+\texttt{/admin}, \texttt{/internal}, \texttt{/debug}, \texttt{/config},
+\texttt{/export} o \texttt{/users/\{id\}/role}, oppure quando è una
+cancellazione o una sostituzione rivolta a un'intera collezione anziché a un
+singolo elemento. Per i controlli, il modulo tiene distinti i decoratori di
+autenticazione, come \texttt{login\_required}, da quelli di ruolo, come
 \texttt{require\_role("admin")}, e riconosce questi ultimi anche quando sono
 scritti nel corpo della funzione, come un confronto sul ruolo dell'utente
-corrente.
-
-Su questa mappa operano le regole riepilogate nella
-Tabella~\ref{tab:regole-bfla}; tre richiedono una precisazione. BF-003
-scatta anche quando l'applicazione rispetta l'intestazione
-\texttt{X-HTTP-Method-Override} senza limitarne i valori. BF-006, che cerca
-endpoint di debug, di test o di popolamento dei dati rimasti in produzione, ha
-severità alta se l'endpoint è del tutto aperto, media se richiede solo il login
-e bassa se è protetto ma resta un residuo da rimuovere. BF-007, infine, segue
-il flusso dei dati ed è descritta più avanti.
+corrente. Su questa mappa operano le regole riepilogate nella
+Tabella~\ref{tab:regole-bfla}.
 
 \paragraph{Configurazione e contratto}
 Nei file di configurazione il modulo cerca il \emph{diniego per impostazione
-predefinita}, che il capitolo precedente ha indicato come
-difesa centrale della categoria. La regola BF-005 (CWE-276~\cite{cwe276})
-scatta quando un'applicazione Django REST Framework non dichiara una classe di
-permessi predefinita o dichiara quella che consente tutto, quando
-un'applicazione FastAPI non registra dipendenze globali e quando
+predefinita}, che il capitolo precedente ha indicato come difesa centrale della
+categoria. La regola BF-005 scatta quando un'applicazione Django REST Framework
+non dichiara una classe di permessi predefinita o dichiara quella che consente
+tutto, quando un'applicazione FastAPI non registra dipendenze globali e quando
 un'applicazione Express non monta un middleware di autenticazione prima dei
 router.
 
 Nel contratto il modulo segnala le operazioni privilegiate prive di uno schema
-di sicurezza, locale o globale, e i percorsi
-amministrativi esposti. Il confronto con il codice produce due casi propri di
-questo modulo. Un'operazione dichiarata nella specifica e accettata dal codice con
-qualsiasi verbo produce una segnalazione BF-003 con l'evidenza di entrambi i
-livelli. Un endpoint di debug o di test presente nel codice e assente dal
-contratto è invece il caso più affidabile di BF-006, perché l'assenza dal
+di sicurezza e i percorsi amministrativi esposti. Il confronto con il codice è
+particolarmente utile per BF-006: un endpoint di debug o di test presente nel
+codice e assente dal contratto è il caso più affidabile, perché l'assenza dal
 contratto conferma che quella funzione non doveva essere pubblica.
 
 \begin{table}[htbp]
   \centering
   \small
   \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l l >{\hsize=1.5\hsize}X l@{}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabularx}{\linewidth}{@{}l l X l@{}}
     \toprule
     \textbf{Regola} & \textbf{CWE} & \textbf{Debolezza ricercata} & \textbf{Severità} \\
     \midrule
     BF-001 & 285~\cite{cwe285} & endpoint privilegiato privo di controllo di ruolo & \texttt{CRITICAL} \\
     BF-002 & 862~\cite{cwe862} & operazione sensibile (cancellazione, cambio di ruolo, rimborso) protetta solo dall'autenticazione & \texttt{HIGH} \\
     BF-003 & 650~\cite{cwe650} & rotta privilegiata raggiungibile con qualsiasi verbo HTTP & \texttt{HIGH} \\
-    BF-004 & 284~\cite{cwe284} & rotte \texttt{/admin} senza controllo di ruolo comune, o funzione che restituisce dati in blocco su un percorso ordinario & \texttt{HIGH} \\
-    BF-005 & 276~\cite{cwe276} & permesso predefinito anziché diniego (configurazione) & \texttt{MEDIUM} \\
-    BF-006 & 285 & funzione di debug o di test rimasta esposta & \texttt{HIGH}--\texttt{LOW} \\
+    BF-004 & 284~\cite{cwe284} & rotte \texttt{/admin} senza un controllo di ruolo comune, o dati restituiti in blocco su un percorso ordinario & \texttt{HIGH} \\
+    BF-005 & 276~\cite{cwe276} & permesso predefinito anziché diniego nella configurazione & \texttt{MEDIUM} \\
+    BF-006 & 285~\cite{cwe285} & funzione di debug o di test rimasta esposta & \texttt{HIGH}--\texttt{LOW} \\
     BF-007 & 269~\cite{cwe269} & ruolo scelto dal chiamante nel corpo della richiesta & \texttt{CRITICAL} \\
     \bottomrule
   \end{tabularx}
   \caption[Regole del modulo Broken Function Level Authorization]{Le sette regole
     del modulo. \mbox{BF-005} opera sui file di configurazione; \mbox{BF-001},
     \mbox{BF-003}, \mbox{BF-004} e \mbox{BF-006} sul codice e sul contratto
-  OpenAPI; \mbox{BF-002} e \mbox{BF-007} sul solo codice.}
+    OpenAPI; \mbox{BF-002} e \mbox{BF-007} sul solo codice. La severità di
+    \mbox{BF-006} dipende da quanto l'endpoint è protetto.}
   \label{tab:regole-bfla}
 \end{table}
 
@@ -832,36 +821,19 @@ percorso o una voce di configurazione, ma nel percorso che un dato compie
 all'interno della funzione. Il caso tipico è una funzione che crea un invito o
 aggiorna un profilo e prende il ruolo da assegnare direttamente dal corpo della
 richiesta: basta inviare \texttt{\{"role": "admin"\}} per ottenere privilegi che
-nessuno ha concesso. La regola BF-007 (CWE-269~\cite{cwe269}) è stata
-introdotta per questo scenario ed è la prima del modulo a seguire un flusso di
-dati. L'analisi resta all'interno della singola funzione e ne percorre le
-istruzioni nell'ordine in cui sono scritte, a partire dalle \emph{sorgenti} del
-contenuto della richiesta: in Python il corpo JSON o i campi del modulo, oltre
-ai parametri FastAPI tipizzati con un modello di dati, in Express il corpo della
-richiesta, anche quando viene scomposto in variabili. Se una variabile riceve
-il corpo e da essa si legge il campo del ruolo, anche la variabile che lo
-riceve è considerata controllata dal chiamante, finché un'assegnazione
-successiva di un valore fisso non interrompe il legame. I campi seguiti sono
-quelli che esprimono un privilegio, come \texttt{role}, \texttt{is\_admin},
-\texttt{permissions}, \texttt{group} o \texttt{scope}, in un elenco
-configurabile.
+nessuno ha concesso. La regola BF-007 copre questo scenario seguendo il flusso
+dei dati all'interno della singola funzione: parte dal contenuto della
+richiesta e segue i campi che esprimono un privilegio, come \texttt{role},
+\texttt{is\_admin} o \texttt{permissions}, anche quando passano per variabili
+intermedie.
 
-La regola scatta quando uno di questi valori raggiunge un'\emph{assegnazione}:
-un attributo di un oggetto, un argomento passato alla creazione o
-all'aggiornamento di un record, un dizionario salvato nel database o una
-clausola SQL \texttt{UPDATE}. Per contenere i falsi positivi sono esclusi gli
-usi in sola lettura, perché un ruolo passato a un filtro o a una ricerca serve a
-selezionare dati e non ad assegnarli, e la segnalazione viene soppressa se la
-funzione verifica il privilegio del chiamante prima dell'assegnazione, con un
-decoratore di ruolo o con una condizione che interroga il ruolo dell'utente
-corrente.
-
-Le segnalazioni sono raggruppate per solo percorso, così che lo stesso endpoint
-rilevato dal codice e dal contratto confluisca in una voce unica, con ordine di
-priorità BF-006 $>$ BF-004 $>$ BF-003 $>$ BF-002 $>$ BF-001 $>$ BF-005; BF-007,
-che riguarda il valore assegnato e non l'accesso alla funzione, resta fuori
-dalla selezione, e le segnalazioni di configurazione, che non si riferiscono a
-un endpoint, sono sempre conservate.
+La regola scatta quando uno di questi valori viene scritto nel record
+dell'utente o salvato nel database. Per contenere i falsi positivi sono esclusi
+gli usi in sola lettura, perché un ruolo passato a un filtro o a una ricerca
+serve a selezionare dati e non ad assegnarli, e la segnalazione viene soppressa
+se la funzione verifica il privilegio del chiamante prima dell'assegnazione.
+Infine, lo stesso endpoint rilevato sia nel codice sia nel contratto confluisce
+in una sola segnalazione.
 
 \section{Categorie tecniche: un metodo per categoria}
 \label{sec:categorie-tecniche}
