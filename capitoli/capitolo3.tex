@@ -777,11 +777,10 @@ Tabella~\ref{tab:regole-bfla}.
 \paragraph{Configurazione e contratto}
 Nei file di configurazione il modulo cerca il \emph{diniego per impostazione
 predefinita}, che il capitolo precedente ha indicato come difesa centrale della
-categoria. La regola BF-005 scatta quando un'applicazione Django REST Framework
-non dichiara una classe di permessi predefinita o dichiara quella che consente
-tutto, quando un'applicazione FastAPI non registra dipendenze globali e quando
-un'applicazione Express non monta un middleware di autenticazione prima dei
-router.
+categoria. La regola BF-005 segnala le applicazioni in cui una rotta priva di
+una protezione esplicita resta aperta a tutti, anziché essere negata: è il
+caso, per esempio, di un progetto che non imposta un permesso predefinito per
+tutte le rotte, o che applica l'autenticazione solo dopo averle registrate.
 
 Nel contratto il modulo segnala le operazioni privilegiate prive di uno schema
 di sicurezza e i percorsi amministrativi esposti. Il confronto con il codice è
@@ -846,13 +845,8 @@ tecniche: la violazione si riconosce leggendo l'elaborato di progetto, senza
 sollecitare il sistema in esecuzione, e i rilevatori sono statici. È su di esse
 che il sistema cerca una risposta a \RQ{1.1}.
 
-A differenza delle categorie ibride, però, non hanno una forma comune da
-descrivere una volta sola. Ciascuna richiede un metodo proprio: per il consumo
-di risorse un limite va cercato su tre livelli e ne vanno confrontati i
-risultati, per la SSRF conta il percorso del dato dall'input dell'utente alla
-chiamata di rete, per la configurazione il confronto con valori di riferimento
-noti, per il consumo di API esterne il modo in cui il codice tratta le risposte
-che riceve. Per questo le quattro categorie sono descritte separatamente.
+Non condividendo un modello uniforme, ciascuna categoria richiede una logica di
+analisi dedicata e viene pertanto descritta separatamente.
 
 \subsection{API4 -- I limiti sul consumo di risorse, su tre livelli}
 \label{sec:rilevamento-resource}
@@ -971,44 +965,42 @@ scritto il programma. Gli studi sull'argomento ne mostrano anche i limiti,
 dalla necessità di verificare a mano i risultati~\cite{wessels2024ssrf} ai
 percorsi segnalati ma non sfruttabili~\cite{ji2025artemis}, fino al ricorso a
 tecniche dinamiche~\cite{wang2024ssrfuzz}. Per il modulo ne derivano tre
-difficoltà: conoscere tutte le funzioni che inviano richieste di rete, non
-segnalare i dati dell'utente che finiscono in una richiesta senza influire
-sull'indirizzo, e riconoscere i controlli sull'URL posti lungo il percorso.
+esigenze: riconoscere tutte le funzioni con cui il codice invia richieste di
+rete, segnalare l'input dell'utente solo quando decide la destinazione della
+richiesta, e accorgersi di quando l'indirizzo viene controllato prima
+dell'uso.
 
 \paragraph{Il flusso dei dati}
-Il modulo usa Semgrep, uno strumento di analisi statica che cerca nel codice
-schemi descritti da regole, in modalità di \emph{analisi della
-contaminazione}. Le sorgenti sono
-i punti in cui entra l'input dell'utente: parametri della query, corpo della
-richiesta, campi di un modulo, intestazioni HTTP e, nelle applicazioni Node.js,
-parametri del percorso. I sink sono le funzioni dei principali client HTTP di
-Python e di JavaScript. La segnalazione scatta solo quando il dato contaminato
-finisce nell'indirizzo della richiesta, non in un altro argomento, e questo
-risponde alla seconda difficoltà. L'indirizzo può essere anche solo in parte
-controllato dall'utente, per esempio quando l'input viene concatenato a un URL
-di base fisso: anche così può spostare la richiesta su un percorso diverso da
-quello previsto, e il modulo segue il dato attraverso concatenazioni e
-formattazioni di stringhe.
+Il modulo usa Semgrep, uno strumento che cerca nel codice schemi descritti da
+regole, per seguire il percorso dell'input dell'utente all'interno del
+programma (\emph{analisi della contaminazione}). Il percorso parte dai punti
+in cui l'input entra nell'applicazione, come i parametri della query o il corpo
+della richiesta, e arriva alle funzioni che inviano richieste ad altri server,
+nelle librerie più diffuse di Python e di JavaScript. Non basta però che
+l'input arrivi alla chiamata: la segnalazione scatta solo se finisce
+nell'indirizzo di destinazione, e non per esempio nel contenuto inviato. Basta
+anche che l'utente controlli una parte dell'indirizzo, come quando il suo input
+viene aggiunto in coda a un URL fisso, perché anche così può dirottare la
+richiesta verso una risorsa diversa da quella prevista.
 
-La terza difficoltà riguarda i controlli. Il flusso si interrompe quando il
-dato passa per una funzione di validazione dell'URL o per un controllo che
-verifica che la destinazione appartenga a un elenco di host autorizzati, e la
-chiamata protetta da quel controllo non viene segnalata. La prima difficoltà,
-infine, si traduce nell'elenco delle regole, che coprono i client HTTP più
-diffusi nei due linguaggi (Tabella~\ref{tab:regole-ssrf}).
+Il percorso si considera interrotto, e la chiamata non viene segnalata, quando
+lungo la strada l'indirizzo viene verificato, per esempio confrontandolo con un
+elenco di destinazioni ammesse. Le regole del modulo sono riepilogate nella
+Tabella~\ref{tab:regole-ssrf}.
 
 \begin{table}[htbp]
   \centering
   \small
   \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}lXl@{}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabularx}{\linewidth}{@{}l X l@{}}
     \toprule
     \textbf{Regola} & \textbf{Cosa segnala} & \textbf{Livello} \\
     \midrule
-    SS-001 & dato dell'utente nell'URL di una chiamata HTTP, in Python & codice \\
-    SS-002 & lo stesso, con le funzioni di rete della libreria standard di Python & codice \\
-    SS-003 & lo stesso, nelle applicazioni Node.js & codice \\
-    SS-004 & chiamata con URL dell'utente che segue le redirezioni in automatico & codice \\
+    SS-001--003 & input dell'utente nell'indirizzo di una richiesta di rete (una
+    regola per ciascun gruppo di librerie, in Python e in Node.js) & codice \\
+    SS-004 & richiesta verso un indirizzo dell'utente che segue in automatico i
+    reindirizzamenti & codice \\
     SS-005 & chiamata verso l'indirizzo del servizio di metadati cloud & codice \\
     SS-006 & parametro che rappresenta un URL senza vincoli sul formato o sulle
     destinazioni ammesse & contratto \\
@@ -1019,25 +1011,24 @@ diffusi nei due linguaggi (Tabella~\ref{tab:regole-ssrf}).
   \label{tab:regole-ssrf}
 \end{table}
 
-Due regole guardano oltre il semplice flusso. SS-004 segnala le chiamate che
-seguono le redirezioni in automatico, perché un indirizzo autorizzato può
-rimandare il server verso uno interno dopo che il controllo è già stato
-superato. SS-005 non segue un flusso, ma cerca nel codice gli indirizzi dei
-servizi di metadati dei principali provider cloud.
+Due regole vanno oltre il percorso dell'input. SS-004 segnala le chiamate che
+accettano di essere rimandate a un altro indirizzo: un server esterno
+autorizzato potrebbe infatti reindirizzare la richiesta verso la rete interna
+dopo che il controllo sull'indirizzo è già stato superato. SS-005 cerca invece
+direttamente nel codice l'indirizzo del servizio di metadati cloud, che
+un'applicazione non ha in genere motivo di interrogare.
 
 \paragraph{Il contratto}
-SS-006 lavora sulla specifica OpenAPI. Individua i parametri e i campi del
-corpo che rappresentano una destinazione, come \texttt{webhook} o
-\texttt{callback\_url}, e verifica che il contratto ne vincoli il valore: un
-formato URL dichiarato (\texttt{format: uri}) e un'espressione regolare che
-limiti le destinazioni ammesse. Se mancano entrambi la segnalazione è grave, se
-manca solo la seconda è lieve. Il contratto non dice se l'implementazione sia
-vulnerabile, ma mostra se l'interfaccia lascia aperta la porta già in fase di
-progetto.
+SS-006 lavora sulla specifica OpenAPI. Cerca i campi in cui il client indica
+un indirizzo, come \texttt{webhook} o \texttt{callback\_url}, e verifica che il
+contratto ne limiti i valori ammessi. Il contratto non dice se
+l'implementazione sia vulnerabile, ma mostra se l'interfaccia lascia aperta la
+porta già in fase di progetto.
 
 Resta fuori dalla portata del modulo la forma cieca, l'unica che OWASP
-considera difficile da rilevare: accertarla richiede di osservare le richieste
-che il server invia davvero, e quindi un sistema in esecuzione.
+considera difficile da rilevare: poiché la risposta non torna all'attaccante,
+per accorgersene bisogna osservare le richieste che il server invia davvero, e
+quindi un sistema in esecuzione.
 
 \subsection{API8 -- La configurazione confrontata con i valori di riferimento}
 \label{sec:rilevamento-secmisconfig}
@@ -1076,7 +1067,8 @@ $0{,}70$ vengono scartate prima di comporre il rapporto.
   \centering
   \small
   \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l >{\hsize=1.45\hsize}X l l@{}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabularx}{\linewidth}{@{}l X l l@{}}
     \toprule
     \textbf{Regola} & \textbf{Comportamento ricercato} & \textbf{Ambito} & \textbf{Severità} \\
     \midrule
@@ -1137,7 +1129,8 @@ Tabella~\ref{tab:regole-unsafe}.
   \centering
   \small
   \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}l l >{\hsize=1.5\hsize}X l@{}}
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabularx}{\linewidth}{@{}l l X l@{}}
     \toprule
     \textbf{Regola} & \textbf{CWE} & \textbf{Comportamento ricercato} & \textbf{Severità} \\
     \midrule
