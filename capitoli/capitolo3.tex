@@ -234,8 +234,11 @@ da identificativo, nome ufficiale e tipo di risorsa. Natura, severità ed
 esposizione pubblica provengono invece dal \emph{catalogo delle policy}: un file
 YAML esterno che costituisce parametro dell'analisi e non costante del codice,
 in accordo con la configurabilità richiesta nella
-Sottosezione~\ref{sec:requisiti}. Il modo in cui il catalogo risolve i
-singoli controlli è descritto nel Capitolo~\ref{cap:risultati}.
+Sottosezione~\ref{sec:requisiti}. Il catalogo risolve ciascun controllo
+fallito provando quattro regole in ordine: la mappatura esplicita
+dell'identificativo, il prefisso della famiglia di controlli, le parole chiave
+del nome ufficiale e, se nessuna si applica, un ripiego che lascia la
+segnalazione non classificata con severità \texttt{MEDIUM}.
 
 La confidenza del Finding non misura il controllo, che è deterministico sul
 file, ma quanto è stata precisa la sua interpretazione nel catalogo. L'adapter

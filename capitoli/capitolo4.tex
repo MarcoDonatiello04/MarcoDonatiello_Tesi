@@ -4,33 +4,25 @@
 \label{cap:risultati}
 
 Questo capitolo riporta la validazione dello strumento presentato nel
-Capitolo~\ref{cap:metodo} e stabilisce in che misura
-l'obiettivo della tesi sia stato raggiunto. Le evidenze sono di tre tipi e
-vanno lette in modo diverso. Le coppie di casi di prova dicono se ogni modulo
-riconosce la condizione per cui è stato costruito. Il codice non scritto per i
-moduli, cioè i repository esterni e crAPI, mostra come si comporta lo strumento
-quando la condizione non è stata preparata per lui. Un insieme di prova di tre applicazioni scritte da terzi,
-infine, è stato riservato alla validazione e analizzato con tutti i moduli in
-un'unica campagna. Dopo aver presentato le domande di ricerca e
-l'impostazione dello studio, il capitolo presenta i risultati dei due tipi di prova, li discute
-per categoria alla luce della classificazione, risponde alle domande di ricerca
-e si chiude con i limiti e le minacce alla validità.
+Capitolo~\ref{cap:metodo} e stabilisce in che misura l'obiettivo della tesi
+sia stato raggiunto. Dopo aver presentato le domande di ricerca e le evidenze
+raccolte, il capitolo riporta i risultati, li discute per categoria alla luce
+della classificazione, risponde alle domande di ricerca e si chiude con i
+limiti dello strumento.
 
 \section{Obiettivi e impostazione della validazione}
 \label{sec:ris-oggetto}
 
-\subsection{Obiettivi e domande di ricerca}
+\subsection{Domande di ricerca}
 \label{sec:research-questions}
 
 Come discusso nel Capitolo~\ref{cap:stato-arte}, le categorie dell'OWASP API
 Security Top 10 (2023) differiscono per il luogo in cui la violazione lascia
 traccia: alcune sono vulnerabilità \emph{tecniche}, riconoscibili negli
 artefatti di progetto, altre dipendono dalla logica di business. Lo studio
-applica sistematicamente questa distinzione alle dieci categorie e ne verifica
-le conseguenze con lo strumento descritto nel Capitolo~\ref{cap:metodo}, che
-combina l'analisi statica di più livelli con un'evidenza dinamica dove la sola
-ispezione statica non basta. Su questa base si formula la domanda di ricerca
-principale.
+applica questa distinzione alle dieci categorie e ne verifica le conseguenze
+con lo strumento descritto nel Capitolo~\ref{cap:metodo}. Su questa base si
+formula la domanda di ricerca principale.
 
 \rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023) si
   possono rilevare con l'analisi statica degli artefatti di progetto, e quali
@@ -41,10 +33,6 @@ La domanda si scompone in due interrogativi subordinati.
 \rqbox{1.1}{Per le categorie rilevabili staticamente, quali livelli di
 analisi occorre combinare per coprirle?}
 
-La domanda riguarda anche le condizioni di rischio che compaiono solo
-combinando più livelli, cioè segnali che presi singolarmente non
-costituiscono una violazione.
-
 \rqbox{1.2}{Per le categorie non rilevabili interamente con l'analisi statica,
   quale parte resta riconoscibile staticamente e di che natura è ciò che
 manca?}
@@ -52,187 +40,55 @@ manca?}
 Ciò che manca, il \emph{residuo}, può essere accertabile sul sistema in
 esecuzione, recuperabile estendendo l'analisi ad altri file del progetto,
 esplicitabile come parametro dell'analisi, oppure legato alla sola
-conoscenza del dominio applicativo; la Sottosezione~\ref{sec:criterio} ne
-dà la definizione precisa.
+conoscenza del dominio applicativo (Sottosezione~\ref{sec:criterio}).
 
-\subsection{Impostazione dello studio}
-\label{sec:impostazione}
-
-Rispondere alle domande richiede due passaggi distinti. Il primo è
-analitico: un criterio applicato in modo coerente alle dieci categorie
-stabilisce quali siano tecniche, ibride o di logica di business. Il secondo è
-costruttivo: per ogni categoria tecnica o ibrida si realizza un modulo che
-verifichi la condizione individuata dal criterio, e lo si mette
-alla prova. La costruzione mostra che la classificazione è applicabile in
-pratica, cioè che le condizioni previste si possono effettivamente
-verificare sul codice e sulle configurazioni; non ne dimostra da sola la correttezza, perché
-un difetto non rilevato può dipendere dai limiti dell'implementazione e non
-dal criterio. Lo studio assume perciò una forma costruttiva.
-
-Questo chiarisce il ruolo del sistema descritto nel
-Capitolo~\ref{cap:metodo}: è lo strumento
-con cui la classificazione viene resa operativa, non l'oggetto della
-ricerca. Ogni categoria ricondotta a una violazione strutturale deve avere
-una regola che la riconosca; ogni categoria esclusa deve restare,
-coerentemente, senza modulo, con una motivazione documentata. Il
-Capitolo~\ref{cap:metodo} ha descritto il criterio e i moduli che lo rendono
-operativo; questo capitolo li mette alla prova.
+Lo studio ha forma costruttiva: per ogni categoria tecnica o ibrida è stato
+realizzato un modulo che verifica la condizione individuata dal criterio, e lo
+si mette alla prova. Lo strumento è quindi il mezzo con cui la classificazione
+viene resa operativa, non l'oggetto della ricerca: se un modulo non rileva un
+difetto, la causa può stare nei limiti dell'implementazione e non nel criterio.
 
 \subsection{Le evidenze raccolte}
 \label{sec:ris-evidenze}
 
-La validazione deve fornire le evidenze sperimentali per rispondere alle due
-domande subordinate: determinare quale combinazione di livelli di analisi
-consenta la copertura delle categorie tecniche (\RQ{1.1}) e chiarire, per le
-categorie ibride, quale quota rimanga riconoscibile staticamente e quale sia la
-natura del residuo (\RQ{1.2}).
-
-Come riassunto nella Tabella~\ref{tab:ris-evidenze}, le evidenze raccolte si
-articolano su tre livelli complementari:
+Le evidenze sono di tre tipi e vanno lette in modo diverso.
 \begin{enumerate}
-  \item \textbf{Casi di prova dedicati:} per ciascun modulo dello strumento è stata
-    predisposta una coppia di scenari a specchio (una versione vulnerabile e una
-    irrobustita), coprendo sia l'infrastruttura IaC sia i servizi API sviluppati
-    nei framework supportati (Flask per Python ed Express per Node.js). Questa verifica
-    controlla puntualmente la capacità di ciascuna regola di rilevare la debolezza
-    target senza generare falsi allarmi;
-  \item \textbf{Codice esterno non dedicato:} repository pubblici ed esempi realistici
-    preesistenti (incluso il benchmark OWASP crAPI~\cite{owasp2026crapi}) consentono
-    di osservare il comportamento dello strumento su basi di codice non realizzate ad hoc;
-  \item \textbf{Insieme di prova indipendente:} una campagna di valutazione complessiva
-    condotta su tre applicazioni terze indipendenti --- sadcloud~\cite{nccgroup2021sadcloud}
-    per l'infrastruttura Terraform, VAmPI~\cite{erev0s2026vampi} e DVAPI~\cite{payatu2025dvapi}
-    per le API. In questa campagna globale tutti i moduli operano congiuntamente, e
-    l'accuratezza è misurata in termini di \emph{recall} (generale e nel perimetro)
-    e \emph{precisione minima}.
+  \item \textbf{Casi di prova dedicati:} per ogni modulo una coppia di
+    applicazioni gemelle, una vulnerabile e una irrobustita, in Flask o
+    Express, e per l'infrastruttura un insieme di manifest Terraform. Dicono
+    se ogni modulo riconosce la condizione per cui è stato costruito senza
+    segnalare la versione corretta.
+  \item \textbf{Codice non scritto per i moduli:} repository pubblici e il
+    benchmark OWASP crAPI~\cite{owasp2026crapi}. Mostrano come si comporta lo
+    strumento quando la condizione non è stata preparata per lui.
+  \item \textbf{Insieme di prova:} tre applicazioni di terzi riservate alla
+    validazione e analizzate con tutti i moduli in un'unica campagna:
+    sadcloud~\cite{nccgroup2021sadcloud} per l'infrastruttura Terraform,
+    VAmPI~\cite{erev0s2026vampi} e DVAPI~\cite{payatu2025dvapi} per le API.
 \end{enumerate}
 
-\begin{table}[htbp]
-  \centering
-  \small
-  \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.14\linewidth}@{}}
-    \toprule
-    \textbf{Modulo} & \textbf{Casi di prova} & \textbf{Codice non scritto per il modulo} & \textbf{Insieme di prova} \\
-    \midrule
-    IaC misconfiguration & manifest Terraform a protezione crescente & crAPI & sadcloud \\
-    API1 -- BOLA & coppia in Flask ed Express & repository etichettato; crAPI & VAmPI, DVAPI \\
-    API2 -- Broken Authentication & coppia gemella & -- & VAmPI, DVAPI \\
-    API3 -- BOPLA & coppia sul profilo utente & crAPI & VAmPI, DVAPI \\
-    API4 -- Unrestricted Resource Consumption & coppia gemella & -- & VAmPI, DVAPI \\
-    API5 -- BFLA & coppia con le sette debolezze & repository con specifica OpenAPI & VAmPI, DVAPI \\
-    API7 -- SSRF & coppia gemella & -- & VAmPI, DVAPI \\
-    API8 -- Security Misconfiguration & coppia gemella & -- & VAmPI, DVAPI \\
-    API10 -- Unsafe Consumption & coppia gemella & bersaglio realistico & VAmPI, DVAPI \\
-    \bottomrule
-  \end{tabularx}
-  \caption[Prove di cui si riportano gli esiti]{Prove di cui si riportano gli
-    esiti, per modulo. Un trattino indica che per quel modulo non si riportano
-  esiti su codice non scritto per il modulo.}
-  \label{tab:ris-evidenze}
-\end{table}
+Una segnalazione corrisponde a una vulnerabilità documentata quando riguarda
+la stessa categoria OWASP e lo stesso endpoint, identificato da metodo e
+percorso, qualunque sia il livello di analisi che l'ha prodotta.
 
-Per i casi di prova il riferimento di verità è noto per costruzione; per crAPI
-è stato ricostruito a mano su una revisione fissata, individuando nel codice i
-punti in cui si manifestano le vulnerabilità documentate dal progetto. Una
-segnalazione conta come corrispondente a una voce del riferimento quando
-riguarda la stessa categoria OWASP e lo stesso punto di esposizione
-dell'interfaccia, identificato da metodo e percorso normalizzato, qualunque sia
-il livello di analisi che l'ha prodotta; questa convenzione è stata fissata
-prima di osservare i risultati.
-
-A completamento dell'infrastruttura di test, una suite di prove d'unità automatizzate
-garantisce la robustezza e la correttezza logica dei singoli moduli e delle euristiche
-di analisi prima dell'esecuzione sui bersagli reali.
-
-\section{Risultati sui casi di prova}
+\section{Risultati}
 \label{sec:ris-casi}
 
-L'analisi dei casi di prova dedicati ha lo scopo di verificare la correttezza
-funzionale dei singoli moduli in condizioni controllate, confermando sia la
-capacità di rilevare le violazioni introdotte, sia l'assenza di falsi allarmi
-sulle corrispondenti versioni sicure.
+\subsection{Casi di prova}
 
-Sul fronte infrastrutturale, la Tabella~\ref{tab:iac-ranking} riporta i punteggi
-di rischio ottenuti sui manifest Terraform e conferma l'accuratezza del modello di
-rischio: le configurazioni aperte o prive di autorizzazione occupano le prime
-cinque posizioni, con punteggi fra 6,8 e 9,2, mentre i bucket protetti si fermano
-a 3,2, un punteggio dovuto ai soli irrobustimenti.
+Sui manifest Terraform il modello di rischio ordina le risorse come atteso: le
+cinque configurazioni aperte o prive di autorizzazione (ACL pubblica, chiave
+cablata in una Lambda, policy IAM \texttt{*} su \texttt{*}, metodi senza
+autorizzazione, blocchi di accesso disattivati) ottengono punteggi fra 6,8 e
+9,2, mentre i bucket protetti si fermano a 3,2, un punteggio dovuto ai soli
+irrobustimenti.
 
-L'ordinamento dipende dal catalogo delle policy, che assegna natura e severità
-a ciascun controllo fallito di Checkov secondo le regole della
-Tabella~\ref{tab:catalogo-policy}, provate in ordine: la mappatura esplicita,
-che nella configurazione usata copre 99 controlli, poi il prefisso e le parole
-chiave, e infine un ripiego predefinito che lascia la segnalazione non
-classificata con severità \texttt{MEDIUM}. La regola applicata determina anche
-la confidenza del Finding, massima per la mappatura esplicita e via via minore
-per le successive.
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}c l >{\hsize=0.95\hsize}X >{\hsize=1.05\hsize}X@{}}
-    \toprule
-    \textbf{\#} & \textbf{Regola} & \textbf{Quando si applica} &
-    \textbf{Esito assegnato (esempio)} \\
-    \midrule
-    1 & Mappatura esplicita & l'identificativo del controllo è elencato nel
-    catalogo & natura, severità e flag presi dal catalogo
-    \par\smallskip \texttt{CKV\_AWS\_20} $\rightarrow$ esposizione,
-    \texttt{CRITICAL}, pubblica \\
-    \addlinespace
-    2 & Prefisso & l'identificativo inizia con una famiglia nota &
-    esito della famiglia
-    \par\smallskip \texttt{CKV\_SECRET\_*} $\rightarrow$ esposizione,
-    \texttt{HIGH}, dati sensibili \\
-    \addlinespace
-    3 & Parole chiave & il nome ufficiale del controllo contiene termini noti
-    (i gruppi difensivi hanno la precedenza su quelli di esposizione) &
-    esito del gruppo
-    \par\smallskip \emph{logging}, \emph{versioning} $\rightarrow$
-    irrobustimento, \texttt{LOW} \\
-    \addlinespace
-    4 & Predefinito & nessuna delle regole precedenti si applica &
-    non classificato, \texttt{MEDIUM} \\
-    \bottomrule
-  \end{tabularx}
-  \caption[Risoluzione dei controlli nel catalogo delle policy]{Le quattro
-    regole vengono provate nell'ordine della colonna~\#: la prima che si applica
-    assegna natura, severità e contesto al controllo fallito di Checkov, e
-    determina anche la confidenza. Le esposizioni hanno severità predefinita
-    \texttt{HIGH}, gli irrobustimenti \texttt{LOW}, salvo indicazione esplicita
-  nel catalogo.}
-  \label{tab:catalogo-policy}
-\end{table}
-
-\begin{table}[htbp]
-  \centering
-  \begin{tabular}{@{}lcl@{}}
-    \toprule
-    \textbf{Risorsa} & \textbf{Punteggio} & \textbf{Natura} \\
-    \midrule
-    ACL pubblica e policy aperta & 9,2 & esposizione \\
-    Chiave cablata (Lambda) & 8,8 & esposizione \\
-    Policy IAM \texttt{*} su \texttt{*} & 8,6 & esposizione \\
-    Metodi senza autorizzazione & 7,4 & esposizione \\
-    Blocchi di accesso disattivati & 6,8 & esposizione \\
-    Bucket sicuri (due) & 3,2 & solo irrobustimenti \\
-    \bottomrule
-  \end{tabular}
-  \caption[Punteggi di rischio sul bersaglio Terraform]{Punteggi di rischio
-  delle voci del bersaglio Terraform, in ordine decrescente.}
-  \label{tab:iac-ranking}
-\end{table}
-
-Per i moduli applicativi, la Tabella~\ref{tab:ris-gemelle} riassume gli esiti ottenuti
-sulle coppie gemelle. I moduli statici (BOLA, BFLA, BOPLA, SSRF, Resource Consumption,
-Security Misconfiguration e Unsafe Consumption) rilevano la totalità delle debolezze
-introdotte senza produrre alcun falso positivo sulle versioni irrobustite. Nel caso della
-BOPLA si osserva inoltre la cooperazione tra i livelli: le segnalazioni dedotte dal contratto
-vengono confermate o ridimensionate in base al comportamento osservato a runtime. Per la
-Broken Authentication, le prove dinamiche identificano puntualmente le violazioni attive
-senza fallire sulle implementazioni corrette.
+La Tabella~\ref{tab:ris-gemelle} riassume gli esiti sulle applicazioni
+gemelle. Tutti i moduli rilevano le debolezze introdotte senza falsi positivi
+sulle versioni irrobustite. Nella BOPLA si vede inoltre la cooperazione fra i
+livelli: la segnalazione S04, vera sul contratto, è smentita dal sistema in
+esecuzione. Per la Broken Authentication, le cui prove sono dinamiche, cinque
+prove falliscono sulla versione vulnerabile e nessuna su quella corretta.
 
 \begin{table}[htbp]
   \centering
@@ -254,40 +110,40 @@ senza fallire sulle implementazioni corrette.
   \end{tabularx}
   \caption[Esiti sulle coppie gemelle]{Esiti sulle coppie gemelle. VP e FP
     indicano i veri e i falsi positivi; per la Broken Authentication, le cui
-    prove sono dinamiche, si riporta il numero di prove fallite. Il bersaglio
-    infrastrutturale, valutato
-    sull'ordinamento dei punteggi, è riportato nella
-  Tabella~\ref{tab:iac-ranking}.}
+  prove sono dinamiche, si riporta il numero di prove fallite.}
   \label{tab:ris-gemelle}
 \end{table}
 
-Questi esiti confermano che ciascun modulo risponde ai requisiti teorici in ambiente ideale;
-la reale efficacia dello strumento e i suoi confini applicativi emergono dal confronto con
-codice non scritto ad hoc, discusso nelle sezioni seguenti.
+Questi esiti dicono che ogni modulo fa ciò per cui è stato costruito; la sua
+efficacia reale emerge solo su codice non scritto ad hoc.
 
-\subsection{Risultati su codice non scritto per i moduli}
+\subsection{Codice non scritto per i moduli}
 
-\subsubsection{Repository esterni}
+\paragraph{Repository esterni}
+Su un repository con vulnerabilità etichettate, il livello statico della BOLA
+segnala tutti e quattro i metodi della risorsa vulnerabile e nessuno di quella
+protetta; uno dei quattro non compare nella specifica OpenAPI, e quindi non
+sarebbe stato raggiunto da un'analisi solo dinamica. Il livello dinamico
+conferma tre dei quattro metodi (GET, PUT e PATCH, non la cancellazione) e non
+segnala la risorsa protetta. Lo strumento segnala anche un endpoint di
+importazione che consente di cambiare il proprietario di un progetto: il caso
+non è fra quelli documentati né è stato raggiunto dalla prova dinamica, e
+resta quindi da verificare.
 
-Sul repository esterno, l'analisi statica della BOLA ha prodotto una segnalazione OA-001 per ciascuno dei quattro metodi della risorsa vulnerabile, senza segnalazioni sulla risorsa protetta. Uno dei metodi vulnerabili non era inoltre presente nella specifica OpenAPI, mostrando come l'analisi statica possa individuare casi che non sarebbero stati raggiunti dalla sola analisi dinamica.
+Su un secondo repository, accompagnato dalla specifica OpenAPI, la BFLA produce
+tre segnalazioni BF-006 su endpoint privi di autenticazione e di controllo del
+ruolo. Si tratta però di endpoint usati per preparare i dati delle prove
+automatiche, non di vulnerabilità; gli endpoint dell'applicazione non vengono
+segnalati.
 
-È stata rilevata anche un'ulteriore situazione potenzialmente riconducibile a una BOLA, relativa a un endpoint di importazione che permette a un utente autenticato di modificare il proprietario di un progetto. Il caso non è presente tra le vulnerabilità dichiarate dal repository e non è stato verificato durante la prova dinamica, quindi non viene considerato né un vero né un falso positivo.
-
-L'analisi dinamica della BOLA ha eseguito 108 prove e ha confermato gli accessi non autorizzati alla risorsa vulnerabile tramite GET, PUT e PATCH. Non sono invece emerse segnalazioni sulla risorsa protetta. La cancellazione della risorsa vulnerabile, individuata dall'analisi statica, non è stata confermata.
-
-Nel complesso, l'analisi statica ha individuato quattro metodi vulnerabili, mentre quella dinamica ne ha confermati tre.
-
-Sul repository accompagnato dalla specifica OpenAPI, l'analisi della BFLA ha prodotto tre segnalazioni BF-006 relative a endpoint privi di autenticazione e controllo del ruolo. Gli endpoint sono però utilizzati dal progetto per preparare e ripristinare i dati delle prove automatiche e non rappresentano quindi vulnerabilità dell'applicazione. Gli endpoint destinati al normale utilizzo dell'applicazione non hanno prodotto segnalazioni.
-
-La prova ha inoltre evidenziato un problema nella visualizzazione del metodo HTTP: per alcune segnalazioni viene indicato GET anche quando l'endpoint utilizza un metodo diverso. Il percorso rimane corretto, ma il metodo mostrato può risultare errato.
-
-\subsubsection{crAPI}
-
-Su crAPI, i risultati variano in base alla categoria analizzata. Per la parte infrastrutturale, le 240 segnalazioni iniziali sono state ridotte a 46 dopo il filtraggio e il raggruppamento. Sono stati individuati sia problemi reali sia un falso positivo relativo a credenziali che non appartengono a crAPI.
-
-Per la BOLA, l'analisi statica non ha prodotto segnalazioni. La BOPLA ha invece riconosciuto alcune proprietà protette, ma non tutti i casi presenti nell'applicazione.
-
-Il confronto con le vulnerabilità documentate da crAPI, riportato nella Tabella~\ref{tab:ris-crapi}, mostra che nessuna delle tredici sfide riconducibili alla Top 10 API è stata rilevata. Il risultato evidenzia quindi i limiti della rilevazione statica quando viene applicata a un'applicazione reale con strutture e modalità di implementazione diverse da quelle considerate nello sviluppo delle regole.
+\paragraph{crAPI}
+Sulla parte infrastrutturale di crAPI le 240 segnalazioni iniziali si riducono
+a 46 voci dopo filtraggio e raggruppamento, con problemi reali e un solo falso
+positivo. Sulle API, invece, come mostra la Tabella~\ref{tab:ris-crapi},
+nessuna delle sfide documentate riconducibile alla Top 10 viene rilevata: i
+livelli statici non coprono il servizio Java e non riconoscono le forme di
+codice usate da crAPI, come le viste Django definite come classi o i campi
+assegnati uno per uno.
 
 \begin{table}[htbp]
   \centering
@@ -314,28 +170,17 @@ Il confronto con le vulnerabilità documentate da crAPI, riportato nella Tabella
   \label{tab:ris-crapi}
 \end{table}
 
-Sul bersaglio realistico le regole dell'Unsafe Consumption non producono
-segnalazioni, un esito che riflette le caratteristiche architetturali del
-codice esaminato più che un difetto di copertura. UC-002 e UC-003 identificano
-il servizio esterno a partire da un indirizzo statico presente nel sorgente,
-mentre lì gli endpoint delle terze parti sono definiti solo a runtime e restano
-fuori dal perimetro dell'analisi statica. UC-001, che non dipende
-dall'indirizzo ma segue il flusso del dato dalla risposta della terza parte
-fino al punto di riuso, non trova punti di iniezione non protetti, come query
-costruite per concatenazione o oggetti creati da dizionari non filtrati: manca
-il bersaglio dell'iniezione differita. Lo stesso codice resta coperto, da
-un'angolazione complementare, dal modulo per la Server-Side Request Forgery
-(Sottosezione~\ref{sec:rilevamento-ssrf}). Proprio perché il difetto non c'è, però,
-questo bersaglio non dice nulla sulla sensibilità del modulo, che resta
-documentata dalle sole applicazioni gemelle.
+Sul bersaglio realistico usato per l'Unsafe Consumption le regole non producono
+segnalazioni, ma perché il difetto non c'è: gli indirizzi delle terze parti
+sono definiti solo a runtime e non esistono punti di iniezione non protetti.
+L'esito quindi non dice nulla sulla sensibilità del modulo.
 
 \subsection{Insieme di prova}
 \label{sec:ris-prova}
 
-La Tabella~\ref{tab:ris-prova} riporta, per ciascun bersaglio, le voci della
-scansione statica e le segnalazioni di ogni modulo. VAmPI compare due volte
-perché può essere avviata in modalità vulnerabile o sicura con lo stesso
-codice.
+La Tabella~\ref{tab:ris-prova} riporta le segnalazioni di ogni modulo sui
+bersagli dell'insieme di prova. VAmPI compare due volte perché può essere
+avviata in modalità vulnerabile o sicura con lo stesso codice.
 
 \begin{table}[htbp]
   \centering
@@ -371,16 +216,16 @@ libro di un altro (\texttt{GET /books/v1/\{titolo\}}), la vulnerabilità
 documentata da VAmPI; nella modalità sicura le stesse richieste vengono
 respinte. La differenza sta nel comportamento, non nel codice, e nessuna
 analisi statica potrebbe vederla. Su DVAPI la BOLA dinamica e la Broken
-Authentication non sono state eseguite per due limiti noti dello strumento: il
-formato dei token di DVAPI e la posizione del suo file delle dipendenze.
+Authentication non sono state eseguite per limiti dello strumento
+(Sezione~\ref{sec:ris-limiti}).
 
 La Tabella~\ref{tab:ris-metriche} confronta le segnalazioni con le
 vulnerabilità documentate da ciascun progetto. La \emph{recall} è la quota di
-vulnerabilità trovate; la \emph{recall nel perimetro} esclude quelle che lo
-strumento non può trovare per costruzione, ad esempio perché nessun modulo ne
-copre la categoria. La \emph{precisione minima} è la quota di segnalazioni che
-corrispondono a una vulnerabilità documentata: è una stima per difetto, perché
-conta come errate anche le segnalazioni non ancora esaminate a mano.
+vulnerabilità trovate; la \emph{recall nel perimetro} esclude quelle che
+nessun modulo può trovare per costruzione. La \emph{precisione minima} è la
+quota di segnalazioni che corrispondono a una vulnerabilità documentata: è una
+stima per difetto, perché conta come errate anche le segnalazioni non
+esaminate a mano.
 
 \begin{table}[htbp]
   \centering
@@ -405,17 +250,14 @@ I risultati sono molto diversi fra infrastruttura e API. Su sadcloud Checkov
 trova 51 delle 84 misconfiguration documentate: le trova quando il problema
 riguarda una singola risorsa, come un database non cifrato o un bucket
 pubblico, e le perde quando riguarda l'account nel suo insieme, come l'assenza
-di CloudTrail. La precisione minima si ferma al 25\% perché Checkov segnala
-anche molti irrobustimenti che il riferimento non elenca.
-
-Sulle API lo strumento trova poco. Delle tre corrispondenze, solo una
-riconosce davvero la vulnerabilità: la BOLA di VAmPI confermata dal livello
-dinamico. Le altre due coincidono con la voce documentata per categoria ed
-endpoint, ma Spectral vi segnala un problema diverso. Restano mancati, fra gli
-altri, il mass assignment di VAmPI e, su DVAPI, il caricamento di file senza
-limiti e la SSRF. Le precisioni minime sulle API sono molto basse perché gran
-parte delle segnalazioni viene dalle regole di Spectral sul contratto OpenAPI
-e, non essendo ancora stata esaminata a mano, conta come errata.
+di CloudTrail. Sulle API lo strumento trova poco: delle tre corrispondenze,
+solo la BOLA di VAmPI confermata dal livello dinamico riconosce davvero la
+vulnerabilità, mentre le altre due coincidono con la voce documentata per
+categoria ed endpoint ma segnalano un problema diverso. Restano mancati, fra
+gli altri, il mass assignment di VAmPI e, su DVAPI, il caricamento di file
+senza limiti e la SSRF. Le precisioni minime sono basse perché gran parte
+delle segnalazioni viene dalle regole sul contratto OpenAPI e, non essendo
+stata esaminata a mano, conta come errata.
 
 \section{Discussione per categoria}
 \label{sec:ris-categorie}
@@ -424,288 +266,154 @@ e, non essendo ancora stata esaminata a mano, conta come errata.
 \label{sec:ris-ibride}
 
 Le prove confermano la divisione del lavoro prevista dalla classificazione. La
-parte statica trova la condizione necessaria e raggiunge punti che la verifica
-dinamica non vedrebbe: i quattro veri positivi della BOLA su operazioni che il
-contratto dichiara protette, dove Spectral tace, e il metodo vulnerabile del
-repository esterno assente dalla specifica. La parte dinamica, dove c'è,
-restituisce ciò che il codice non può dire, come mostra la segnalazione S04
-della BOPLA, vera sul contratto e smentita dal sistema in esecuzione. Il
-livello dinamico della BOLA lo mostra su due bersagli in esecuzione: sul
-repository etichettato distingue la risorsa vulnerabile da quella protetta, e su
-VAmPI distingue due modalità che hanno lo stesso codice, cioè proprio ciò che
-l'analisi statica non può dire. Il meccanismo con cui conferme e smentite
-raggiungono la stessa voce del motore di correlazione resta invece verificato
-soltanto dalle prove d'unità, e la segnalazione sull'endpoint di importazione,
-che la scansione dinamica non ha raggiunto, è l'esempio concreto di un residuo
-dinamico rimasto aperto.
+parte statica trova la condizione necessaria, cioè l'assenza del controllo, e
+raggiunge punti che la verifica dinamica non vedrebbe, come il metodo del
+repository esterno assente dalla specifica. La parte dinamica restituisce ciò
+che il codice non può dire: smentisce la segnalazione S04 della BOPLA,
+distingue la risorsa vulnerabile da quella protetta sul repository etichettato
+e, su VAmPI, separa due modalità che hanno lo stesso codice.
 
-Nella BFLA il residuo resta aperto per costruzione, e le prove mostrano quanto
-sarebbe difficile chiuderlo. OWASP giudica facile la rilevabilità della
-categoria, perché le API sono strutturate e il modo di raggiungere una funzione
-è prevedibile~\cite{owasp2023api5}, ma il giudizio riguarda metà del problema:
-formulare la chiamata candidata è facile, stabilire se la risposta fosse dovuta
-non lo è, perché un \texttt{200 OK} attesta che l'operazione è stata eseguita,
-non che fosse legittimo eseguirla. Il contributo della letteratura non consiste
-nell'ispezionare il codice, ma nel ricostruire la specifica mancante,
-ricavandola dalle pagine raggiungibili da ciascun ruolo~\cite{sun2011static},
-dalla coerenza con cui i controlli sono applicati dentro una partizione per
-ruolo~\cite{son2011rolecast} o dal contesto di
-autorizzazione~\cite{monshizadeh2014mace}; un'alternativa rinuncia a inferire e
-scrive regole di sicurezza per le API REST, verificandole con fuzzing
-stateful~\cite{atlidakis2020checking}, mentre un lavoro recente affronta lo
-stesso problema in modalità black box~\cite{liu2025bacscan}. Le tre
-segnalazioni BF-006 sul repository esterno illustrano il punto: la regola
-stabilisce che quelle funzioni sono raggiungibili senza ruolo, non se debbano
-esserlo, e a deciderlo è chi conosce lo scopo degli endpoint.
+Nella BFLA il residuo resta aperto. Invocare una funzione riservata è facile,
+ma un \texttt{200 OK} attesta che l'operazione è stata eseguita, non che fosse
+legittimo eseguirla. La letteratura affronta il problema ricostruendo la
+specifica mancante dei ruoli~\cite{sun2011static,son2011rolecast,monshizadeh2014mace}
+o scrivendo regole di sicurezza da verificare con
+fuzzing~\cite{atlidakis2020checking}. Le tre segnalazioni BF-006 sul repository
+esterno illustrano il punto: la regola stabilisce che quelle funzioni sono
+raggiungibili senza ruolo, non se debbano esserlo, e a deciderlo è chi conosce
+lo scopo degli endpoint.
 
-Nella Broken Authentication il residuo si vede nella forma stessa degli esiti.
-Sulle applicazioni gemelle le prove distinguono la versione vulnerabile da
-quella irrobustita, ma circa metà resta inconcludente: una prova dinamica può
-accertare un difetto solo dove il meccanismo esiste e una sessione è
-disponibile. Su DVAPI il modulo non ha raggiunto la parte dinamica, e i suoi
-limiti sono discussi nella Sezione~\ref{sec:ris-limiti}.
+Nella Broken Authentication le prove dinamiche distinguono la versione
+vulnerabile da quella irrobustita, ma possono accertare un difetto solo dove il
+meccanismo esiste e una sessione è disponibile.
 
 \subsection{Categorie tecniche}
 \label{sec:ris-statiche}
 
-Per l'Unrestricted Resource Consumption, classificata come tecnica, le
-applicazioni gemelle danno un esito pieno, ma il limite principale del modulo è
-di natura metodologica e merita una discussione a parte. Il modulo non vede l'API in
-funzione: quanto costi davvero un endpoint, o se un tetto dichiarato venga poi
-rispettato, si scopre solo mettendo il sistema sotto carico e osservandone i
-tempi di risposta e le chiamate verso l'esterno. Le due fonti primarie sembrano
-qui contraddirsi, perché OWASP giudica facile la rilevabilità, dato che
-richieste con parametri di dimensione crescente e l'osservazione di stato, tempo
-e lunghezza della risposta bastano a far emergere il
-problema~\cite{owasp2023api4}, mentre CWE-770 giudica di utilità limitata
-l'analisi statica per le allocazioni prive di limite~\cite{cwe770}. La
-contraddizione è apparente: OWASP descrive un tester in \emph{black
-box}, CWE uno strumento che legge il codice. Sul versante dinamico
-l'evidenza è consolidata, dalla generazione di molte richieste in un intervallo
-breve al rilevamento per iniezione di
-carico~\cite{cwe770,antunes2008resource}; il modulo, lavorando per indizi, sa
-dire che un limite manca, ma non se la sua assenza basti a mettere in difficoltà
-il servizio. Una sua segnalazione va letta quindi come una protezione da
-aggiungere, e la severità dice quanto quella protezione conti, non quanto sia
-probabile un attacco.
+Per le quattro categorie tecniche le coppie gemelle danno esiti pieni,
+confermando che la condizione si legge negli artefatti. Resta però, per due di
+esse, una parte che solo il sistema in esecuzione può dire.
+Nell'Unrestricted Resource Consumption il modulo sa dire che un limite manca,
+ma non se la sua assenza basti a mettere in difficoltà il servizio: per questo
+servono prove di carico~\cite{owasp2023api4,antunes2008resource}. Una
+segnalazione va letta quindi come una protezione da aggiungere. Nell'Unsafe
+Consumption l'analisi statica individua la \emph{predisposizione} (validazione
+assente, canale in chiaro, redirezione seguita ciecamente), mentre la
+sfruttabilità richiederebbe di mettere il sistema davanti a un fornitore ostile
+e controllato.
 
-L'Unsafe Consumption presenta una copertura mista. L'analisi statica ne
-individua la \emph{predisposizione} --- la validazione assente, il canale in
-chiaro, la redirezione seguita ciecamente --- mentre la verifica della
-sfruttabilità effettiva richiede un piano dinamico che metta alla prova il
-sistema in esecuzione contro un fornitore ostile e controllato: un banco che
-osservi il traffico in uscita e risponda di proposito con dati malevoli o con
-una redirezione verso un host pericoloso. Una verifica del genere è possibile
-solo se il servizio reale consente di immettervi contenuti, oppure sostituendolo
-con un doppio in collaudo, che però verifica l'applicazione e non
-l'integrazione reale. Il residuo non coperto è quindi di natura dinamica, nel
-senso di \RQ{1.2}, e la sua verifica andrebbe integrata con quella della
-Server-Side Request Forgery. Per la Server-Side Request Forgery e la Security
-Misconfiguration gli esiti pieni sulle coppie gemelle confermano che la
-condizione si legge negli artefatti. Sull'insieme di prova, però, nessuna delle
-due trova la voce documentata di DVAPI: né la richiesta verso un URL arbitrario
-né la traccia dello stack restituita con un token non valido. I loro limiti
-sono discussi nella Sezione~\ref{sec:ris-limiti}.
+Sull'insieme di prova, invece, la Server-Side Request Forgery e la Security
+Misconfiguration non trovano le voci documentate di DVAPI: né la richiesta
+verso un URL arbitrario né la traccia dello stack restituita con un token non
+valido.
 
 \subsection{Categorie senza modulo}
 \label{sec:ris-scoperte}
 
-Due categorie restano prive di un modulo, e per ragioni diverse. Per API6:2023
-il rilevamento automatico si scontra con l'assenza di un
-oracolo: nessun file analizzabile, che sia codice, contratto o
-configurazione, risponde alla domanda se un dato flusso in una data azienda
-vada protetto, e la mancanza di una mappatura CWE registra il fatto che non
-esiste una debolezza del software da nominare. Le tecniche note per i difetti
-di logica applicativa cercano deviazioni da un comportamento
-atteso~\cite{felmetsger2010logic,pellegrino2014logic}, mentre qui il flusso
-viene percorso correttamente e l'attacco sta nel ripeterlo. Restano le
-contromisure comportamentali a runtime indicate da OWASP~\cite{owasp2023api6},
-che riconoscono l'automazione durante l'attacco anziché la vulnerabilità prima
-che avvenga. Nei termini del criterio, la categoria ricade quindi fra quelle
-di logica di business.
-
+API6:2023 ricade fra le categorie di logica di business: nessun file del
+progetto dice se un flusso vada protetto dall'abuso, e il flusso viene
+percorso correttamente, con l'attacco che sta nel ripeterlo. Restano le
+contromisure comportamentali a runtime indicate da OWASP~\cite{owasp2023api6}.
 API9:2023 resta invece fuori dalla tripartizione, perché presuppone che il
-sistema da valutare non sia noto (Sottosezione~\ref{sec:criterio}). OWASP ne
-giudica media la rilevabilità senza indicare un metodo, limitandosi a osservare
-che una documentazione obsoleta rende più difficile individuare e correggere le
-vulnerabilità~\cite{owasp2023api9}: il difetto ostacola il proprio rilevamento,
-perché la documentazione che servirebbe a trovarlo è proprio ciò che manca. Per via
-automatica si può soltanto confrontare rappresentazioni diverse dello stesso
-sistema: le rotte implementate nel codice ma non dichiarate nel contratto sono
-candidate a essere API ombra, quelle dichiarate ma non implementate segnalano
-documentazione obsoleta, e nessuna delle due è una vulnerabilità. Segnali di
-questo tipo compaiono nel sistema solo come effetto collaterale di altri moduli,
-nell'handler della BOLA assente dal contratto e nella funzione ombra della BFLA,
-e non costituiscono una copertura della categoria. Il confronto ha del resto un
-limite intrinseco, perché opera fra due rappresentazioni della stessa
-applicazione e non dice nulla sugli host su cui essa è distribuita: il primo
-scenario OWASP è precisamente il caso in cui codice e contratto coincidono e il
-difetto sta nella topologia di rete, il che richiede ricognizione
-infrastrutturale e non analisi del software.
+sistema da valutare non sia noto (Sottosezione~\ref{sec:criterio}): il
+confronto fra rotte del codice e contratto può suggerire API ombra o
+documentazione obsoleta, ma non dice nulla sugli host su cui l'applicazione è
+distribuita, che richiedono una ricognizione dell'infrastruttura.
 
 \section{Risposta alle domande di ricerca}
 \label{sec:ris-rq}
 
 \paragraph{Risposta a \RQ{1.1}}
-Per le categorie tecniche la combinazione di livelli non è un raffinamento, ma
-la condizione perché un giudizio sia possibile. Sulla parte infrastrutturale il
-manifest da solo non basta: servono il catalogo delle policy, che assegna a ogni
-controllo natura e severità, e la correlazione, che riunisce i controlli sulla
-stessa risorsa. Così le 86 segnalazioni del bersaglio Terraform si ordinano come
-atteso, e su crAPI 240 segnalazioni si riducono a 46 voci. Le quattro categorie
-tecniche hanno ora tutte un esito sulle coppie gemelle, pieno e senza falsi
-positivi: nove casi su nove per l'Unrestricted Resource Consumption, tre su tre
-per la Server-Side Request Forgery, sette su sette per la Security
-Misconfiguration, tre su tre per l'Unsafe Consumption. La condizione di rischio
-che emerge solo dalla congiunzione di segnali è quella dell'Unrestricted
-Resource Consumption, dove un limite assente dal codice diventa una
-segnalazione fondata solo se anche proxy e contratto non lo applicano. La
-Su codice di terzi il quadro si divide. Sulla parte infrastrutturale Checkov,
-con il catalogo delle policy, trova il 61\% delle misconfiguration documentate
-di sadcloud; sulle API, nessuna delle voci delle quattro categorie tecniche
-documentate da VAmPI e DVAPI viene trovata. La risposta a \RQ{1.1} è quindi
-confermata sui casi di prova e, per la parte infrastrutturale, anche su codice
-di terzi; per le categorie tecniche delle API non lo è ancora.
+Per le categorie tecniche servono, oltre al codice, il contratto OpenAPI e la
+configurazione di infrastruttura, e i segnali dei diversi livelli vanno
+correlati: un livello da solo non basta a dare un giudizio. L'esempio più
+chiaro è l'Unrestricted Resource Consumption, dove un limite assente dal
+codice diventa una segnalazione fondata solo se neanche proxy e contratto lo
+applicano. Sulla parte infrastrutturale il manifest va combinato con il
+catalogo delle policy, che distingue esposizioni e irrobustimenti, e con la
+correlazione, che riunisce i controlli sulla stessa risorsa: così su crAPI 240
+segnalazioni si riducono a 46 voci. Sui casi di prova questa combinazione
+funziona per tutte e quattro le categorie tecniche, senza falsi positivi. Su
+codice di terzi funziona per l'infrastruttura (61\% delle misconfiguration di
+sadcloud), ma non ancora per le API: nessuna delle vulnerabilità tecniche
+documentate da VAmPI e DVAPI viene trovata.
 
 \paragraph{Risposta a \RQ{1.2}}
-Nelle categorie ibride la parte statica riconosce la condizione necessaria,
-cioè l'assenza del controllo, anche dove la verifica dinamica non
-arriverebbe: lo mostrano i quattro veri positivi della BOLA su operazioni che il
-contratto dichiara protette e il metodo del repository esterno assente dalla
-specifica. Il residuo è di natura dinamica, e la campagna lo mostra nel modo più
-diretto. Le due modalità di VAmPI hanno lo stesso codice: i livelli statici le
-trattano allo stesso modo e solo il livello dinamico della BOLA le distingue.
-Sul repository etichettato il livello dinamico conferma tre dei quattro metodi
-che lo statico segnala e nessuno sulla risorsa protetta, mentre nella BOPLA la
-segnalazione S04, vera sul contratto, è smentita dal sistema in esecuzione.
-Nella BFLA il residuo è dinamico ma resta aperto: invocare la funzione è
-facile, ma un \texttt{200 OK} non dice se l'invocazione fosse legittima, e le
-segnalazioni BF-006 sugli endpoint di popolamento mostrano che a deciderlo è chi
-conosce lo scopo della funzione, un'informazione che il criterio esclude di
-fornire all'analisi. Nella Broken Authentication, infine, il residuo è dinamico
-e condizionato: le prove distinguono le applicazioni gemelle, ma accertano un
-difetto solo dove il meccanismo esiste e una sessione è disponibile.
+Nelle categorie ibride l'analisi statica riconosce la condizione necessaria,
+cioè l'assenza del controllo, anche dove la verifica dinamica non arriva. Ciò
+che manca è di natura dinamica: stabilire se l'accesso viene davvero concesso
+richiede di sollecitare il sistema in esecuzione con identità diverse. VAmPI
+lo mostra nel modo più diretto: le due modalità hanno lo stesso codice, i
+livelli statici le trattano allo stesso modo e solo il livello dinamico della
+BOLA le distingue. Il residuo assume però forme diverse nelle quattro
+categorie:
+\begin{itemize}
+  \item nella \textbf{BOLA} e nella \textbf{BOPLA} è accertabile a runtime: il
+    livello dinamico conferma tre dei quattro metodi segnalati sul repository
+    etichettato e smentisce la segnalazione S04 della BOPLA;
+  \item nella \textbf{Broken Authentication} è accertabile solo a condizione
+    che il meccanismo esista e una sessione sia disponibile;
+  \item nella \textbf{BFLA} resta aperto: una risposta positiva non dice se
+    l'invocazione fosse legittima, e decidere richiede di conoscere lo scopo
+    della funzione, un'informazione che il criterio non fornisce all'analisi.
+\end{itemize}
 
 \paragraph{Risposta a \RQ{1}}
-Delle dieci categorie, quattro si comportano come tecniche (API4, API7, API8 e
-API10) e si riconoscono sugli artefatti, come la IaC misconfiguration; quattro
-sono ibride (API1, API2, API3 e API5) e richiedono in aggiunta un'evidenza di
-natura dinamica, ottenuta sollecitando il sistema con identità diverse; API6 è
-di logica di business, e API9 resta fuori dalla classificazione perché
-presuppone un sistema non noto.
+Delle dieci categorie, quattro sono \emph{tecniche} (API4, API7, API8 e
+API10) e si riconoscono sugli artefatti, come le misconfiguration
+dell'infrastruttura; quattro sono \emph{ibride} (API1, API2, API3 e API5) e
+richiedono in aggiunta un'evidenza dinamica, ottenuta sollecitando il sistema
+con identità diverse; API6 è di \emph{logica di business}; API9 resta fuori
+dalla classificazione perché presuppone un sistema non noto.
 
 L'obiettivo della tesi è quindi raggiunto in parte. Lo è sul piano della
-classificazione, che trova conferma dove i moduli sono stati provati: sulle
-coppie gemelle ogni modulo distingue la versione vulnerabile da quella
-corretta, e sull'insieme di prova la differenza fra le due modalità di VAmPI
+classificazione: sulle coppie gemelle ogni modulo distingue la versione
+vulnerabile da quella corretta, e su VAmPI la differenza fra le due modalità
 emerge esattamente dove la classificazione la colloca, nel livello dinamico di
 una categoria ibrida. Non lo è ancora sul piano della generalità: su crAPI i
-livelli statici non segnalano nessuna delle sfide documentate, soprattutto per
-il linguaggio e la forma del codice, e sull'insieme di prova la recall nel
-perimetro è del 40\% su VAmPI e del 17\% su DVAPI, con una sola debolezza delle
-API riconosciuta per quello che è, contro il 61\% sulla parte infrastrutturale
-di sadcloud. La classificazione indica fin dove lo strumento può arrivare; il
-divario fra quel limite e ciò che lo strumento raggiunge oggi su codice di terzi
-è il risultato più importante della validazione, e il punto da cui partire per
-estenderlo.
+livelli statici non segnalano nessuna delle sfide documentate, e
+sull'insieme di prova la recall nel perimetro è del 40\% su VAmPI e del 17\% su
+DVAPI, contro il 61\% sull'infrastruttura di sadcloud. La classificazione
+indica fin dove lo strumento può arrivare; il divario fra quel limite e ciò
+che lo strumento raggiunge oggi su codice di terzi è il punto da cui partire
+per estenderlo.
 
-\section{Limiti e minacce alla validità}
+\section{Limiti}
 \label{sec:ris-limiti}
-\label{sec:ris-minacce}
 
 \paragraph{Presenza, non correttezza}
-L'analisi statica accerta la presenza di un controllo, non la sua correttezza:
-è il residuo che la classificazione assegna alle categorie ibride. Nella BOLA un
-filtro sul campo sbagliato viene accettato come legame, e una funzione chiamata
-\texttt{authorize} viene accettata senza esaminarne il contenuto. Nella BFLA una
-riga che cita il ruolo senza bloccare l'esecuzione, come un messaggio di log,
-viene scambiata per una protezione, e nel contratto qualsiasi schema di
-sicurezza basta a sopprimere BF-001.
+L'analisi statica accerta la presenza di un controllo, non la sua correttezza.
+Nella BOLA un filtro sul campo sbagliato viene accettato come legame, e una
+funzione chiamata \texttt{authorize} viene accettata senza esaminarne il
+contenuto; nella BFLA una riga che cita il ruolo senza bloccare l'esecuzione
+viene scambiata per una protezione.
 
-\paragraph{Nomi, forme d'uso e perimetro}
+\paragraph{Forme di codice e perimetro}
 Identità, controlli e funzioni riservate sono riconosciuti attraverso nomi e
-forme d'uso diffusi nei framework più comuni: ciò che se ne discosta può
-sfuggire, e un percorso dal nome allarmante ma legittimo può essere segnalato a
-torto. Lo stesso vale per l'unità di analisi. Il livello statico della BOLA
-esamina un file alla volta; BF-007 e l'Unrestricted Resource Consumption
-seguono i dati solo dentro una funzione; la BFLA non analizza le viste definite
-come classi e la BOPLA non analizza il codice Java. Per la Server-Side Request
-Forgery restano fuori la forma cieca e i flussi che attraversano code
-asincrone. Il caso di crAPI mostra quanto questi confini pesino su un
-bersaglio realistico.
+forme d'uso comuni nei framework supportati: ciò che se ne discosta può
+sfuggire. Il livello statico della BOLA esamina un file alla volta, la BFLA
+non analizza le viste definite come classi e la BOPLA non analizza il codice
+Java. Il caso di crAPI mostra quanto questi confini pesino su un bersaglio
+realistico.
 
 \paragraph{Configurazione}
-Un controllo che non riesce a valutare un'espressione tace anziché fallire,
-come \texttt{CKV\_AWS\_70}; il catalogo delle policy va aggiornato a ogni nuova
-versione di Checkov; il manifest mostra ciò che dichiara, non ciò che è
-attivo. Soprattutto, il flag di esposizione dice che una risorsa è
-raggiungibile da chiunque, non se debba esserlo: un bucket che serve contenuti
-pubblici viene segnalato come uno che espone dati riservati, e le segnalazioni
-BF-006 ripropongono lo stesso limite sulle funzioni.
+Il manifest mostra ciò che dichiara, non ciò che è attivo, e il flag di
+esposizione dice che una risorsa è raggiungibile da chiunque, non se debba
+esserlo: un bucket che serve contenuti pubblici viene segnalato come uno che
+espone dati riservati.
 
-\paragraph{Parte dinamica e integrazione}
+\paragraph{Parte dinamica}
 La parte dinamica richiede identità autenticate. Senza una sessione la Broken
-Authentication si riduce alla componente statica, e la BOPLA, che non riceve
-credenziali dal cruscotto né dalla scansione complessiva, lascia le proprie
-segnalazioni da verificare. Il livello dinamico della BOLA richiede identità
-reali, fornite da un bersaglio cooperante o da un traffico di esercizio i cui
-token riportino il claim \texttt{sub}: DVAPI, che usa \texttt{userId}, ne
-resta escluso. Sui bersagli esterni, privi di ripristino dello stato, il
-livello dinamico prova inoltre i soli metodi che non modificano i dati, e le
-violazioni che si manifestano solo con \texttt{PUT}, \texttt{PATCH} o
-\texttt{DELETE} non vengono sollecitate. Il modello linguistico usato dalla
-Broken Authentication introduce una fonte di non determinismo, che la campagna
-ha reso visibile: sullo stesso repository etichettato il modulo ha prodotto una
-segnalazione in un'esecuzione e nessuna nella successiva. L'integrazione è
-ancora parziale: il rilevatore statico della BOLA non è registrato nei runner
-della pipeline, e la Broken Authentication produce un proprio rapporto,
-separato dal motore di correlazione.
+Authentication si riduce alla componente statica, e la BOPLA lascia le proprie
+segnalazioni da verificare. Il livello dinamico della BOLA richiede token con
+il claim \texttt{sub}: DVAPI, che usa \texttt{userId}, ne resta escluso. Sui
+bersagli esterni, inoltre, vengono provati solo i metodi che non modificano i
+dati.
 
 \paragraph{Il prezzo del criterio}
 Il criterio vieta di indicare all'analisi ciò che va protetto. Nella BOPLA una
 proprietà è quindi protetta solo se l'applicazione la tratta come tale in
-qualche punto, e un dato sensibile restituito a tutti senza alcun controllo di
-ruolo non viene segnalato. È una conseguenza voluta: un elenco fisso di campi
+qualche punto, e un dato sensibile restituito a tutti senza alcun controllo
+non viene segnalato. È una conseguenza voluta: un elenco fisso di campi
 sensibili avrebbe funzionato sulle applicazioni di prova e su nessun altro
 sistema.
-
-\paragraph{Minacce alla validità}
-La minaccia principale alla validità interna è che casi di prova e regole hanno
-lo stesso autore: i risultati pieni sulle coppie gemelle attestano la
-conformità dell'implementazione alle intenzioni, non la sua efficacia su codice
-reale. Le esecuzioni su codice esterno la attenuano solo in parte, perché
-riguardano un repository per la BOLA e uno per la BFLA, e in entrambi il
-riferimento di verità si è rivelato incompleto o ambiguo; il conteggio dei veri
-e dei falsi positivi dipende quindi da che cosa si decide di considerare
-vulnerabile. Il meccanismo che porta sulla stessa voce del motore di
-correlazione conferme e smentite della BOLA è verificato solo dalle 68 prove
-d'unità del livello dinamico, che simulano ZAP e le chiamate HTTP.
-
-L'insieme di prova era pensato per eliminare la circolarità, ma questa prima
-campagna la attenua soltanto. Lo strumento non è stato congelato prima
-dell'esecuzione, come richiede il protocollo, e chi lo sviluppa ha visto i
-risultati; durante la campagna sono stati corretti difetti dell'ambiente di
-prova, non delle regole, fra cui il file di cattura del traffico condiviso fra
-il bersaglio interno e quelli esterni, e le scansioni interessate sono state
-ripetute. Le deviazioni sono annotate nel registro del protocollo, e la campagna
-andrà ripetuta con lo strumento congelato.
-
-Le metriche dipendono poi da scelte che conviene dichiarare. La regola di
-corrispondenza guarda la categoria e il punto di esposizione, non la debolezza:
-può contare come trovata una voce coperta da una segnalazione diversa sullo
-stesso endpoint, come accade con due delle tre corrispondenze sulle API, e può
-contare come mancata una debolezza rilevata sotto un'altra categoria, come
-l'assenza di limiti di frequenza su VAmPI. Le decisioni manuali, cioè le
-corrispondenze di sadcloud, le voci globali e il perimetro, sono state prese da
-chi ha sviluppato lo strumento e sono registrate con il motivo, ma andrebbero
-riviste da una persona esterna. La precisione, infine, è riportata solo come
-limite inferiore, perché le segnalazioni che non corrispondono ad alcuna voce
-non sono state classificate.
-
-Quanto alla validità esterna, crAPI, VAmPI e DVAPI sono bersagli didattici,
-costruiti perché le loro vulnerabilità siano riconoscibili, e crAPI cade in
-larga parte fuori dal perimetro dei livelli statici: i risultati non si
-estendono senza cautela ad applicazioni reali, né l'assenza di segnalazioni su
-un bersaglio privo del difetto prova la sensibilità di un modulo. Le revisioni
-fissate dei bersagli e la versione dichiarata di Checkov sostengono invece la
-riproducibilità.
