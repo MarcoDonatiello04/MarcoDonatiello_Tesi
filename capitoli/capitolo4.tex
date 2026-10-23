@@ -25,17 +25,18 @@ con lo strumento descritto nel Capitolo~\ref{cap:metodo}. Su questa base si
 formula la domanda di ricerca principale.
 
 \rqbox{1}{Quali categorie dell'OWASP API Security Top 10 (2023) si
-  possono rilevare con l'analisi statica degli artefatti di progetto, e quali
-richiedono un'evidenza che questi non contengono?}
+  possono rilevare interamente con l'analisi statica degli artefatti di
+  progetto, quali solo in parte e quali per nulla, perché dipendono dalla
+logica di business dell'applicazione?}
 
 La domanda si scompone in due interrogativi subordinati.
 
-\rqbox{1.1}{Per le categorie rilevabili staticamente, quali livelli di
-analisi occorre combinare per coprirle?}
+\rqbox{1.1}{Per le categorie rilevabili interamente con l'analisi statica,
+quali livelli di analisi occorre combinare per coprirle?}
 
-\rqbox{1.2}{Per le categorie non rilevabili interamente con l'analisi statica,
-  quale parte resta riconoscibile staticamente e di che natura è ciò che
-manca?}
+\rqbox{1.2}{Per le categorie rilevabili solo in parte, quale condizione
+  riconosce l'analisi statica e di che natura è ciò che resta da
+accertare?}
 
 Ciò che manca, il \emph{residuo}, può essere accertabile sul sistema in
 esecuzione, recuperabile estendendo l'analisi ad altri file del progetto,
