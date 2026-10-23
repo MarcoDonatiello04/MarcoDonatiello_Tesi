@@ -122,7 +122,10 @@ Il repository cooperante (\texttt{repo\_target}) è una piccola API Flask,
 accompagnata da una specifica OpenAPI, che il progetto usa per provare la BOLA
 dinamica. Dichiara nel codice una risorsa vulnerabile
 (\texttt{/api/projects/\{id\}}) e una protetta (\texttt{/api/invoices/\{id\}}),
-e i livelli statici vi vengono applicati senza modifiche. Il livello statico
+e i livelli statici vi vengono applicati senza modifiche. I risultati che
+seguono vengono dalla campagna del 1° ottobre 2026: in quella finale il server
+del repository non è stato avviato, perché la sua porta era occupata da un
+servizio del sistema operativo. Il livello statico
 della BOLA segnala tutti e quattro i metodi della risorsa vulnerabile e nessuno di quella
 protetta; uno dei quattro non compare nella specifica OpenAPI, e quindi non
 sarebbe stato raggiunto da un'analisi solo dinamica. Il livello dinamico
@@ -135,10 +138,26 @@ con cui la BOLA dinamica prepara e ripristina i dati delle prove, non di
 vulnerabilità; gli endpoint dell'applicazione non vengono segnalati.
 
 \paragraph{crAPI}
-Sulla parte infrastrutturale di crAPI le 240 segnalazioni iniziali si riducono
-a 46 voci dopo filtraggio e raggruppamento, con problemi reali e un solo falso
-positivo. Sulle API, invece, come mostra la Tabella~\ref{tab:ris-crapi},
-nessuna delle sfide documentate riconducibile alla Top 10 viene rilevata.
+Su crAPI sono stati eseguiti la scansione statica, i moduli statici e la
+Broken Authentication contro l'istanza in esecuzione; non la BOLA dinamica, per
+la quale manca un traffico d'esercizio con due utenti di crAPI. Sulla parte
+infrastrutturale le 240 segnalazioni iniziali di Checkov si riducono a 46 voci
+dopo filtraggio e raggruppamento, con problemi reali e un solo falso positivo.
+Il contratto OpenAPI non viene invece analizzato: è scritto in JSON, e l'adapter
+di Spectral riconosce solo i contratti in YAML.
+
+Sulle API, come mostra la Tabella~\ref{tab:ris-crapi}, lo strumento trova una
+sola delle sfide documentate e ne coglie in parte un'altra. La SSRF della sfida
+11 è segnalata da SS-001 nel servizio Django dell'officina, dove l'indirizzo
+\texttt{mechanic\_api} del corpo della richiesta viene passato a
+\texttt{requests.get}. Nella stessa chiamata la Resource Consumption segnala
+l'assenza di un timeout: è una delle condizioni del DoS della sfida 6, che però
+nasce dalla ripetizione della chiamata, fino a cento volte, chiesta dal client.
+La Broken Authentication rileva che il login non si blocca dopo 50 tentativi
+falliti, ma non le sfide della categoria: le prove sulla falsificazione dei JWT
+passano, e quella sul codice OTP resta inconcludente perché l'endpoint risponde
+con un errore. Le sfide di BOLA, BOPLA e BFLA cadono nel servizio Java o in
+forme di codice che le regole non riconoscono.
 
 \begin{table}[htbp]
   \centering
@@ -148,20 +167,20 @@ nessuna delle sfide documentate riconducibile alla Top 10 viene rilevata.
     \toprule
     \textbf{Sfida di crAPI} & \textbf{Cat.} & \textbf{Esito} & \textbf{Motivo} \\
     \midrule
-    1 -- veicolo di un altro utente & API1 & non segnalata & servizio Java, fuori dal livello statico; livello dinamico non eseguito su crAPI \\
-    2 -- report dei meccanici altrui & API1 & non segnalata & vista Django definita come classe, identificativo nella query \\
-    4, 5 -- dati altrui e proprietà interne esposti & API3 & non segnalate & nessuna segnalazione statica \\
-    8--10 -- mass assignment su ordini, saldo e video & API3 & non segnalate & campi assegnati uno per uno, fuori dalla regola S01 \\
-    3, 14, 15 -- reset della password, accesso senza autenticazione, JWT falsificabili & API2 & non valutate & esiti del modulo non riportati \\
-    6 -- DoS tramite ``contact mechanic'' & API4 & non valutata & esiti del modulo non riportati \\
-    7 -- cancellazione di un video altrui & API5 & non valutata & modulo non eseguito su crAPI \\
-    11 -- richiesta verso un host esterno & API7 & non valutata & esiti del modulo non riportati \\
+    1 -- veicolo di un altro utente & API1 & non trovata & servizio Java, fuori dal livello statico; livello dinamico non eseguito \\
+    2 -- report dei meccanici altrui & API1 & non trovata & vista Django definita come classe, identificativo nella query \\
+    4, 5 -- dati altrui e proprietà interne esposti & API3 & non trovate & nessuna segnalazione statica \\
+    8--10 -- mass assignment su ordini, saldo e video & API3 & non trovate & campi assegnati uno per uno, fuori dalla regola S01 \\
+    3, 14, 15 -- reset della password, accesso senza autenticazione, JWT falsificabili & API2 & non trovate & prove sui JWT superate, prova sull'OTP inconcludente \\
+    6 -- DoS tramite ``contact mechanic'' & API4 & trovata in parte & segnalata la chiamata senza timeout, non la ripetizione \\
+    7 -- cancellazione di un video altrui & API5 & non trovata & endpoint nel servizio Java \\
+    11 -- richiesta verso un host esterno & API7 & \textbf{trovata} & SS-001 su \texttt{mechanic\_api} \\
     12, 13, 16--18 -- iniezioni e chatbot & -- & fuori perimetro & non appartengono alla Top 10 API \\
     \bottomrule
   \end{tabularx}
   \caption[Riferimento di verità di crAPI ed esiti dello strumento]{Sfide
     documentate da crAPI alla revisione~1.1.5, categoria OWASP ed esito dello
-  strumento.}
+  strumento nella campagna del 23 ottobre 2026.}
   \label{tab:ris-crapi}
 \end{table}
 
@@ -174,7 +193,8 @@ L'esito quindi non dice nulla sulla sensibilità del modulo.
 \label{sec:ris-prova}
 
 La Tabella~\ref{tab:ris-prova} riporta le segnalazioni di ogni modulo sui
-bersagli dell'insieme di prova. VAmPI compare due volte perché può essere
+bersagli dell'insieme di prova nella campagna finale, eseguita il 23 ottobre
+2026 con la versione corrente dello strumento. VAmPI compare due volte perché può essere
 avviata in modalità vulnerabile o sicura con lo stesso codice.
 
 \begin{table}[htbp]
@@ -192,7 +212,7 @@ avviata in modalità vulnerabile o sicura con lo stesso codice.
     BOPLA & 0 & 0 & 0 & 0 \\
     Resource Consumption & 3 & 3 & 3 & 0 \\
     BFLA & 0 & 0 & 1 & 0 \\
-    SSRF & 10 & 10 & 0 & 0 \\
+    SSRF & 0 & 0 & 0 & 0 \\
     Security Misconfiguration & 5 & 5 & 3 & 1 \\
     Unsafe Consumption & 0 & 0 & 0 & 0 \\
     \bottomrule
@@ -201,9 +221,8 @@ avviata in modalità vulnerabile o sicura con lo stesso codice.
     segnalazioni per modulo sui bersagli dell'insieme di prova. Un trattino
     indica che il modulo non si applica: sadcloud non ha un'applicazione in
     esecuzione. La BOLA dinamica ha eseguito 12 prove su ciascuna modalità
-    di VAmPI. Le 10 segnalazioni SSRF su VAmPI e quella della Security
-    Misconfiguration su sadcloud sono falsi positivi (si veda il dettaglio più
-  avanti).}
+    di VAmPI. La segnalazione della Security Misconfiguration su sadcloud è
+  un falso positivo (si veda il dettaglio più avanti).}
   \label{tab:ris-prova}
 \end{table}
 
@@ -274,7 +293,7 @@ vulnerabilità documentata, ma il cruscotto (Sezione~\ref{sec:cruscotto}) ne
 mostra molte di più. Di seguito si riassume che cosa segnalano; l'elenco
 completo, voce per voce, è nell'Appendice~\ref{app:segnalazioni}.
 
-Su VAmPI le segnalazioni sono 48: 28 della scansione statica e 20 dei moduli.
+Su VAmPI le segnalazioni sono 38: 28 della scansione statica e 10 dei moduli.
 Delle 24 di Spectral, 14 riguardano tag non dichiarati nel contratto e 8
 operazioni prive di uno schema di sicurezza; una di queste è la corrispondenza
 con l'enumerazione degli utenti al login. Checkov segnala il Dockerfile senza
@@ -287,9 +306,7 @@ debug di Flask attiva, l'assenza di intestazioni di sicurezza e di una politica
 CORS, una versione di Flask con una vulnerabilità nota (CVE-2023-30861) e una
 dipendenza senza versione fissata, e la Resource Consumption segnala i container
 senza limiti di memoria e l'assenza di un limite alla dimensione del corpo delle
-richieste. Le 10 segnalazioni SSRF sono invece falsi positivi: indicano dati
-letti dal corpo della richiesta che finiscono in query al database o nella
-costruzione degli oggetti, non in richieste verso l'esterno. La modalità sicura
+richieste. La modalità sicura
 produce le stesse segnalazioni, tranne la BOLA dinamica.
 
 Su DVAPI le segnalazioni sono 80: 73 statiche e 7 dei moduli. Il contratto di
@@ -378,7 +395,7 @@ sono rilevati nel codice applicativo e 3 nei file di configurazione: i limiti
 di memoria dei container, la dimensione massima delle richieste e il timeout
 del server, che si trovano nel \texttt{docker-compose}, nel proxy o nella
 configurazione dell'applicazione. Sull'insieme di prova la configurazione pesa
-di più: 8 delle 24 segnalazioni, comprese le dipendenze con vulnerabilità note.
+di più: 8 delle 14 segnalazioni, comprese le dipendenze con vulnerabilità note.
 Le regole che leggono il contratto (le quattro della Resource Consumption e
 SS-006) non producono segnalazioni in nessuna delle prove.
 
@@ -394,16 +411,16 @@ SS-006) non producono segnalazioni in nessuna delle prove.
     \midrule
     Resource Consumption & 6 & 3 & 0 & 1 & 5 & 0 \\
     Security Misconfiguration & 7 & 0 & 0 & 5 & 3 & 0 \\
-    SSRF & 3 & 0 & 0 & 10 & 0 & 0 \\
+    SSRF & 3 & 0 & 0 & 0 & 0 & 0 \\
     Unsafe Consumption & 3 & 0 & 0 & 0 & 0 & 0 \\
     \midrule
-    Totale & 19 & 3 & 0 & 16 & 8 & 0 \\
+    Totale & 19 & 3 & 0 & 6 & 8 & 0 \\
     \bottomrule
   \end{tabular}
   \caption[Segnalazioni dei moduli tecnici per livello]{Segnalazioni dei
     moduli tecnici per livello di analisi. Sulle coppie gemelle sono tutte veri
     positivi; sull'insieme di prova nessuna corrisponde a una vulnerabilità
-    documentata, e le 10 della SSRF sono falsi positivi. La configurazione
+    documentata. La configurazione
     comprende container, proxy, impostazioni dell'applicazione e manifest
     delle dipendenze.}
   \label{tab:ris-livelli}
@@ -429,7 +446,7 @@ distribuita, che richiedono una ricognizione dell'infrastruttura.
 Le prove indicano due livelli necessari: il codice applicativo e i file di
 configurazione del sistema (container, proxy, impostazioni dell'applicazione,
 dipendenze). Il codice da solo non basta: sulle coppie gemelle 3 dei 22 casi
-dei moduli tecnici, e sull'insieme di prova 8 delle 24 segnalazioni, si
+dei moduli tecnici, e sull'insieme di prova 8 delle 14 segnalazioni, si
 trovano solo nella configurazione (Tabella~\ref{tab:ris-livelli}). Il
 contratto OpenAPI non ha invece contribuito ad alcuna segnalazione, e la
 correlazione fra livelli prevista dal progetto, per cui un limite assente dal
@@ -439,7 +456,8 @@ presente sia nel codice sia nel proxy. La risposta è quindi confermata sui casi
 di prova, ma non ancora su codice di terzi: nessuna delle vulnerabilità
 tecniche documentate da VAmPI e DVAPI viene trovata, e le tre mancate di DVAPI
 (il caricamento senza limiti, la SSRF e la traccia dello stack) stanno tutte
-nel codice.
+nel codice. L'unica vulnerabilità tecnica trovata su codice di terzi è la SSRF
+di crAPI, anch'essa nel codice.
 
 \paragraph{Risposta a \RQ{1.2}}
 Nelle categorie ibride l'analisi statica riconosce la condizione necessaria,
@@ -484,8 +502,8 @@ L'obiettivo della tesi è quindi raggiunto in parte. Lo è sul piano della
 classificazione: sulle coppie gemelle ogni modulo distingue la versione
 vulnerabile da quella corretta, e su VAmPI la differenza fra le due modalità
 emerge esattamente dove la classificazione la colloca, nel livello dinamico di
-una categoria ibrida. Non lo è ancora sul piano della generalità: su crAPI i
-livelli statici non segnalano nessuna delle sfide documentate, e
+una categoria ibrida. Non lo è ancora sul piano della generalità: su crAPI lo
+strumento trova una sola delle sfide documentate, la SSRF, e
 sull'insieme di prova lo strumento riconosce una sola vulnerabilità delle API,
 la BOLA di VAmPI (recall nel perimetro del 20\% su VAmPI e dello 0\% su DVAPI),
 contro il 61\% sull'infrastruttura di sadcloud. La classificazione
@@ -504,7 +522,8 @@ bloccare l'esecuzione viene scambiata per una protezione. Identità, controlli e
 funzioni riservate sono inoltre riconosciuti attraverso nomi e forme d'uso
 comuni nei framework supportati, e ciò che se ne discosta può sfuggire: il
 livello statico della BOLA esamina un file alla volta, la BFLA non analizza le
-viste definite come classi e la BOPLA non analizza il codice Java. Il caso di
+viste definite come classi, la BOPLA non analizza il codice Java e Spectral non
+legge i contratti scritti in JSON. Il caso di
 crAPI mostra quanto questi confini pesino su un bersaglio realistico. Sul
 versante infrastrutturale, il manifest mostra ciò che dichiara e non ciò che è
 attivo, e il flag di esposizione dice che una risorsa è raggiungibile da

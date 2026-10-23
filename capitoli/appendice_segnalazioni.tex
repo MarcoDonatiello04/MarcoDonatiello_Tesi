@@ -1,12 +1,12 @@
 % !TEX root = ../main.tex
-% File generato da script/gen_appendice.py a partire da validation/risultati/2026-10-01_<bersaglio>/:
+% File generato da script/gen_appendice.py a partire da validation/risultati/2026-10-23_<bersaglio>/:
 % non modificarlo a mano, rigeneralo.
 
 \chapter{Segnalazioni complete sull'insieme di prova}
 \label{app:segnalazioni}
 
 Questa appendice elenca tutte le segnalazioni che il cruscotto mostra per i bersagli
-dell'insieme di prova nella campagna del 1° ottobre 2026, di cui il
+dell'insieme di prova nella campagna finale del 23 ottobre 2026, di cui il
 Capitolo~\ref{cap:risultati} riporta i conteggi. Per ciascuna si indicano l'origine
 (scanner statico o modulo), la regola, la severità, il punto segnalato (endpoint, file o
 risorsa) e una descrizione sintetica. Per la BOLA dinamica si riportano solo le prove che
@@ -16,7 +16,7 @@ le segnalazioni coincidono con quelle della modalità vulnerabile, tranne la BOL
 che non conferma alcun accesso.
 
 \section*{VAmPI (modalità vulnerabile)}
-La scansione statica produce 28 voci e i moduli Core 20 segnalazioni.
+La scansione statica produce 28 voci e i moduli Core 10 segnalazioni.
 
 \begingroup\linespread{1.0}\footnotesize\selectfont\setlength{\tabcolsep}{4pt}
 \begin{longtable}{@{}r >{\raggedright\arraybackslash}p{0.11\linewidth} >{\raggedright\arraybackslash}p{0.2\linewidth} l >{\raggedright\arraybackslash}p{0.25\linewidth} >{\raggedright\arraybackslash}p{0.25\linewidth}@{}}
@@ -63,19 +63,9 @@ La scansione statica produce 28 voci e i moduli Core 20 segnalazioni.
 33 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}006} & Media & \texttt{.\allowbreak{}} & missing cors policy\\
 34 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}007} & Alta & \texttt{requirements.\allowbreak{}txt:2} & vulnerable dependency\\
 35 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}007} & Media & \texttt{requirements.\allowbreak{}txt:6} & vulnerable dependency\\
-36 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}books.\allowbreak{}py:30} & direct url from input\\
-37 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}books.\allowbreak{}py:34} & direct url from input\\
-38 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}books.\allowbreak{}py:34} & direct url from input\\
-39 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:55} & direct url from input\\
-40 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:92} & direct url from input\\
-41 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:93} & direct url from input\\
-42 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:102} & direct url from input\\
-43 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:108} & direct url from input\\
-44 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:146} & direct url from input\\
-45 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:148} & direct url from input\\
-46 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yaml} & no container resource limit\\
-47 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yaml} & no container resource limit\\
-48 & Res.\ Cons. & \texttt{RC-\allowbreak{}008} & Media & \texttt{config.\allowbreak{}py} & no body size limit\\
+36 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yaml} & no container resource limit\\
+37 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yaml} & no container resource limit\\
+38 & Res.\ Cons. & \texttt{RC-\allowbreak{}008} & Media & \texttt{config.\allowbreak{}py} & no body size limit\\
 \end{longtable}
 \endgroup
 

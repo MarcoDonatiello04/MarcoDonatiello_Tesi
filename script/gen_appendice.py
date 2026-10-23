@@ -1,7 +1,7 @@
 """Genera l'appendice LaTeX con tutte le segnalazioni mostrate in dashboard per l'insieme di prova.
 
-Fonte: validation/risultati/2026-10-01_<bersaglio>/{unified_security_report,core_findings}.json
-Uso: python3 gen_appendice.py <radice-strumento> <file-tex-di-uscita>
+Fonte: validation/risultati/<data>_<bersaglio>/{unified_security_report,core_findings}.json
+Uso: python3 gen_appendice.py <radice-strumento> <file-tex-di-uscita> [data, es. 2026-10-23]
 """
 
 import json
@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1]) / "validation" / "risultati"
 OUT = Path(sys.argv[2])
+DATE = sys.argv[3] if len(sys.argv) > 3 else "2026-10-23"
 
 TARGETS = [
     ("vampi", "VAmPI (modalità vulnerabile)"),
@@ -57,7 +58,7 @@ def short_path(p: str, target: str) -> str:
 
 def static_rows(target: str) -> list[tuple]:
     rows = []
-    for f in json.loads((ROOT / f"2026-10-01_{target}/unified_security_report.json").read_text()):
+    for f in json.loads((ROOT / f"{DATE}_{target}/unified_security_report.json").read_text()):
         api = f.get("api") or {}
         loc = f.get("location") or {}
         if api.get("endpoint"):
@@ -76,7 +77,7 @@ def static_rows(target: str) -> list[tuple]:
 
 def core_rows(target: str) -> list[tuple]:
     rows = []
-    data = json.loads((ROOT / f"2026-10-01_{target}/core_findings.json").read_text())["findings"]
+    data = json.loads((ROOT / f"{DATE}_{target}/core_findings.json").read_text())["findings"]
     for mod, findings in data.items():
         for f in findings:
             if mod == "bola":
@@ -114,14 +115,14 @@ def table(rows: list[tuple], caption: str, label: str) -> str:
 
 parts = [
     "% !TEX root = ../main.tex",
-    "% File generato da script/gen_appendice.py a partire da validation/risultati/2026-10-01_<bersaglio>/:",
+    f"% File generato da script/gen_appendice.py a partire da validation/risultati/{DATE}_<bersaglio>/:",
     "% non modificarlo a mano, rigeneralo.",
     "",
     r"\chapter{Segnalazioni complete sull'insieme di prova}",
     r"\label{app:segnalazioni}",
     "",
     "Questa appendice elenca tutte le segnalazioni che il cruscotto mostra per i bersagli",
-    "dell'insieme di prova nella campagna del 1° ottobre 2026, di cui il",
+    "dell'insieme di prova nella campagna finale del 23 ottobre 2026, di cui il",
     r"Capitolo~\ref{cap:risultati} riporta i conteggi. Per ciascuna si indicano l'origine",
     "(scanner statico o modulo), la regola, la severità, il punto segnalato (endpoint, file o",
     "risorsa) e una descrizione sintetica. Per la BOLA dinamica si riportano solo le prove che",
