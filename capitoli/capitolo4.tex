@@ -195,7 +195,9 @@ avviata in modalità vulnerabile o sicura con lo stesso codice.
   \caption[Esiti sull'insieme di prova]{Voci della scansione statica e
     segnalazioni per modulo sui bersagli dell'insieme di prova. Un trattino
     indica che il modulo non si applica: sadcloud non ha un'applicazione in
-  esecuzione.}
+    esecuzione. Le 10 segnalazioni SSRF su VAmPI e quella della Security
+    Misconfiguration su sadcloud sono falsi positivi (si veda il dettaglio più
+  avanti).}
   \label{tab:ris-prova}
 \end{table}
 
@@ -210,29 +212,39 @@ Authentication non sono state eseguite per limiti dello strumento
 (Sezione~\ref{sec:ris-limiti}).
 
 La Tabella~\ref{tab:ris-metriche} confronta le segnalazioni con le
-vulnerabilità documentate da ciascun progetto. La \emph{recall} è la quota di
-vulnerabilità trovate; la \emph{recall nel perimetro} esclude quelle che
-nessun modulo può trovare per costruzione. La \emph{precisione minima} è la
-quota di segnalazioni che corrispondono a una vulnerabilità documentata: è una
-stima per difetto, perché conta come errate anche le segnalazioni non
-esaminate a mano.
+vulnerabilità documentate da ciascun progetto. Le voci \emph{fuori perimetro}
+sono quelle che nessun modulo può trovare per costruzione, per esempio perché
+richiedono metodi che sui bersagli esterni non vengono provati. Una voce è
+\emph{corrispondente} quando una segnalazione ha la stessa categoria e lo
+stesso endpoint, secondo la regola fissata in anticipo; è \emph{riconosciuta}
+quando la segnalazione descrive anche lo stesso problema. La distinzione
+conta: su VAmPI e DVAPI due corrispondenze su tre vengono da regole di Spectral
+che segnalano, sullo stesso endpoint, un problema diverso da quello
+documentato. La \emph{recall} è calcolata sulle voci nel perimetro, prima sulle
+corrispondenti e poi sulle riconosciute. La \emph{precisione minima} è la quota
+di segnalazioni corrispondenti: è una stima per difetto, perché conta come
+errate anche le segnalazioni non esaminate a mano.
 
 \begin{table}[htbp]
   \centering
   \small
   \linespread{1.0}\selectfont
+  \setlength{\tabcolsep}{5pt}
   \begin{tabular}{@{}lccccccc@{}}
     \toprule
-    \textbf{Bersaglio} & \textbf{Voci} & \textbf{VP} & \textbf{FN} & \textbf{Fuori perim.} & \textbf{Recall} & \textbf{Recall nel perim.} & \textbf{Prec. minima} \\
+    & & & & & \multicolumn{2}{c}{\textbf{Recall nel perimetro}} & \\
+    \cmidrule(lr){6-7}
+    \textbf{Bersaglio} & \textbf{Voci} & \textbf{Fuori perim.} & \textbf{Corrisp.} & \textbf{Ricon.} & \textbf{corrisp.} & \textbf{ricon.} & \textbf{Prec. minima} \\
     \midrule
-    VAmPI & 8 & 2 & 3 & 3 & 25\% & 40\% & 11\% \\
-    DVAPI & 9 & 1 & 5 & 3 & 11\% & 17\% & 2\% \\
-    sadcloud & 84 & 51 & 33 & 0 & 61\% & 61\% & 25\% \\
+    VAmPI & 8 & 3 & 2 & 1 & 40\% & 20\% & 11\% \\
+    DVAPI & 9 & 3 & 1 & 0 & 17\% & 0\% & 2\% \\
+    sadcloud & 84 & 0 & 51 & 51 & 61\% & 61\% & 25\% \\
     \bottomrule
   \end{tabular}
   \caption[Metriche di accuratezza sull'insieme di prova]{Metriche di
     accuratezza sull'insieme di prova. Le voci fuori dalla Top 10 (una per VAmPI,
-  una per DVAPI) sono escluse.}
+    una per DVAPI) sono escluse. Su sadcloud le corrispondenze fra controlli
+  Checkov e voci sono stabilite a mano, quindi coincidono con le riconosciute.}
   \label{tab:ris-metriche}
 \end{table}
 
@@ -240,10 +252,11 @@ I risultati sono molto diversi fra infrastruttura e API. Su sadcloud Checkov
 trova 51 delle 84 misconfiguration documentate: le trova quando il problema
 riguarda una singola risorsa, come un database non cifrato o un bucket
 pubblico, e le perde quando riguarda l'account nel suo insieme, come l'assenza
-di CloudTrail. Sulle API lo strumento trova poco: delle tre corrispondenze,
-solo la BOLA di VAmPI confermata dal livello dinamico riconosce davvero la
-vulnerabilità, mentre le altre due coincidono con la voce documentata per
-categoria ed endpoint ma segnalano un problema diverso. Restano mancati, fra
+di CloudTrail. Sulle API lo strumento trova poco: l'unica vulnerabilità
+riconosciuta è la BOLA di VAmPI confermata dal livello dinamico. Le altre due
+corrispondenze riguardano l'enumerazione degli utenti al login di VAmPI e le
+sfide non pubblicate di DVAPI, ma Spectral vi segnala soltanto un'operazione
+priva di schema di sicurezza e una non documentata. Restano mancati, fra
 gli altri, il mass assignment di VAmPI e, su DVAPI, il caricamento di file
 senza limiti e la SSRF. Le precisioni minime sono basse perché gran parte
 delle segnalazioni viene dalle regole sul contratto OpenAPI e, non essendo
@@ -411,16 +424,20 @@ meccanismo esiste e una sessione è disponibile.
 \label{sec:ris-statiche}
 
 Per le quattro categorie tecniche le coppie gemelle danno esiti pieni,
-confermando che la condizione si legge negli artefatti. Resta però, per due di
-esse, una parte che solo il sistema in esecuzione può dire.
-Nell'Unrestricted Resource Consumption il modulo sa dire che un limite manca,
-ma non se la sua assenza basti a mettere in difficoltà il servizio: per questo
-servono prove di carico~\cite{owasp2023api4,antunes2008resource}. Una
+confermando che la violazione si legge negli artefatti. Per due di esse il
+sistema in esecuzione direbbe qualcosa in più, ma non sulla violazione: sul suo
+impatto. Nell'Unrestricted Resource Consumption la violazione è l'assenza del
+limite, e il modulo la stabilisce; quanto il servizio ne soffra davvero si
+misura solo con prove di carico~\cite{owasp2023api4,antunes2008resource}. Una
 segnalazione va letta quindi come una protezione da aggiungere. Nell'Unsafe
-Consumption l'analisi statica individua la \emph{predisposizione} (validazione
-assente, canale in chiaro, redirezione seguita ciecamente), mentre la
-sfruttabilità richiederebbe di mettere il sistema davanti a un fornitore ostile
-e controllato.
+Consumption la violazione è il consumo dei dati di terze parti senza
+validazione, su un canale in chiaro o seguendo le redirezioni alla cieca, e si
+legge nel codice; quanto sia sfruttabile dipende dal comportamento del
+fornitore, che si potrebbe osservare solo mettendo il sistema davanti a un
+fornitore ostile e controllato. In entrambi i casi la categoria resta quindi
+tecnica nel senso del criterio (Sottosezione~\ref{sec:criterio}): il predicato
+sugli artefatti basta a stabilire la violazione, anche se non ne misura le
+conseguenze.
 
 Sull'insieme di prova, invece, la Server-Side Request Forgery e la Security
 Misconfiguration non trovano le voci documentate di DVAPI: né la richiesta
@@ -517,12 +534,23 @@ categorie:
 \end{itemize}
 
 \paragraph{Risposta a \RQ{1}}
-Delle dieci categorie, quattro sono \emph{tecniche} (API4, API7, API8 e
-API10) e si riconoscono sugli artefatti, come le misconfiguration
-dell'infrastruttura; quattro sono \emph{ibride} (API1, API2, API3 e API5) e
-richiedono in aggiunta un'evidenza dinamica, ottenuta sollecitando il sistema
-con identità diverse; API6 è di \emph{logica di business}; API9 resta fuori
-dalla classificazione perché presuppone un sistema non noto.
+Delle dieci categorie:
+\begin{itemize}
+  \item quattro si rilevano \textbf{interamente} con l'analisi statica, e sono
+    quelle che il criterio chiama \emph{tecniche}: API4, API7, API8 e API10.
+    Gli artefatti bastano a stabilire la violazione, come per le
+    misconfiguration dell'infrastruttura; il sistema in esecuzione può dirne
+    l'impatto, non l'esistenza;
+  \item quattro si rilevano \textbf{solo in parte}, e sono le \emph{ibride}:
+    API1, API2, API3 e API5. L'analisi statica riconosce l'assenza del
+    controllo, ma per stabilire la violazione serve un'evidenza dinamica,
+    ottenuta sollecitando il sistema con identità diverse;
+  \item una \textbf{non si rileva} con l'analisi degli artefatti, perché
+    dipende dalla \emph{logica di business}: API6;
+  \item API9 resta fuori dalla classificazione, perché presuppone un sistema
+    che l'organizzazione non conosce e che quindi non ha artefatti da
+    analizzare.
+\end{itemize}
 
 L'obiettivo della tesi è quindi raggiunto in parte. Lo è sul piano della
 classificazione: sulle coppie gemelle ogni modulo distingue la versione
@@ -530,8 +558,9 @@ vulnerabile da quella corretta, e su VAmPI la differenza fra le due modalità
 emerge esattamente dove la classificazione la colloca, nel livello dinamico di
 una categoria ibrida. Non lo è ancora sul piano della generalità: su crAPI i
 livelli statici non segnalano nessuna delle sfide documentate, e
-sull'insieme di prova la recall nel perimetro è del 40\% su VAmPI e del 17\% su
-DVAPI, contro il 61\% sull'infrastruttura di sadcloud. La classificazione
+sull'insieme di prova lo strumento riconosce una sola vulnerabilità delle API,
+la BOLA di VAmPI (recall nel perimetro del 20\% su VAmPI e dello 0\% su DVAPI),
+contro il 61\% sull'infrastruttura di sadcloud. La classificazione
 indica fin dove lo strumento può arrivare; il divario fra quel limite e ciò
 che lo strumento raggiunge oggi su codice di terzi è il punto da cui partire
 per estenderlo.
