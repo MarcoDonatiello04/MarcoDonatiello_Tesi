@@ -1,0 +1,231 @@
+% !TEX root = ../main.tex
+% File generato da script/gen_appendice.py a partire da validation/risultati/2026-10-01_<bersaglio>/:
+% non modificarlo a mano, rigeneralo.
+
+\chapter{Segnalazioni complete sull'insieme di prova}
+\label{app:segnalazioni}
+
+Questa appendice elenca tutte le segnalazioni che la dashboard mostra per i bersagli
+dell'insieme di prova nella campagna del 1° ottobre 2026, di cui il
+Capitolo~\ref{cap:risultati} riporta i conteggi. Per ciascuna si indicano l'origine
+(scanner statico o modulo), la regola, la severità, il punto segnalato (endpoint, file o
+risorsa) e una descrizione sintetica. Per la BOLA dinamica si riportano solo le prove che
+hanno confermato un accesso non autorizzato; le prove superate sono visibili in dashboard
+ma non contano come segnalazioni. La modalità sicura di VAmPI non ha una tabella propria:
+le segnalazioni coincidono con quelle della modalità vulnerabile, tranne la BOLA dinamica,
+che non conferma alcun accesso.
+
+\section*{VAmPI (modalità vulnerabile)}
+La scansione statica produce 28 voci e i moduli Core 20 segnalazioni.
+
+\begingroup\linespread{1.0}\footnotesize\selectfont\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}r >{\raggedright\arraybackslash}p{0.11\linewidth} >{\raggedright\arraybackslash}p{0.2\linewidth} l >{\raggedright\arraybackslash}p{0.25\linewidth} >{\raggedright\arraybackslash}p{0.25\linewidth}@{}}
+\caption{Segnalazioni su VAmPI (modalità vulnerabile)}\label{tab:app-vampi}\\
+\toprule
+\# & \textbf{Origine} & \textbf{Regola} & \textbf{Sev.} & \textbf{Punto} & \textbf{Descrizione}\\
+\midrule\endfirsthead
+\toprule
+\# & \textbf{Origine} & \textbf{Regola} & \textbf{Sev.} & \textbf{Punto} & \textbf{Descrizione}\\
+\midrule\endhead
+\bottomrule\endfoot
+1 & Checkov & \texttt{CKV\_\allowbreak{}DOCKER\_\allowbreak{}3} & Media & \texttt{Dockerfile:1} & Ensure that a user for the container has been created\\
+2 & Checkov & \texttt{CKV\_\allowbreak{}SECRET\_\allowbreak{}9} & Alta & \texttt{openapi\_\allowbreak{}specs/\allowbreak{}openapi3.\allowbreak{}yml:193} & JSON Web Token\\
+3 & Checkov & \texttt{CKV\_\allowbreak{}OPENAPI\_\allowbreak{}5} & Alta & \texttt{openapi\_\allowbreak{}specs/\allowbreak{}openapi3.\allowbreak{}yml:1} & Ensure that security operations is not empty.\\
+4 & Checkov & \texttt{CKV\_\allowbreak{}OPENAPI\_\allowbreak{}21} & Bassa & \texttt{openapi\_\allowbreak{}specs/\allowbreak{}openapi3.\allowbreak{}yml:78} & Ensure that arrays have a maximum number of items\\
+5 & Spectral & \texttt{info-\allowbreak{}contact} & Media & \texttt{openapi\_\allowbreak{}specs/\allowbreak{}openapi3.\allowbreak{}yml:7} & Info object must have "contact" object.\\
+6 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+7 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}} & Operation tags must be defined in global tags.\\
+8 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}books/\allowbreak{}v1} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+9 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}books/\allowbreak{}v1} & Operation tags must be defined in global tags.\\
+10 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{POST /\allowbreak{}books/\allowbreak{}v1} & Operation tags must be defined in global tags.\\
+11 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}books/\allowbreak{}v1/\allowbreak{}\{book\_\allowbreak{}title\}} & Operation tags must be defined in global tags.\\
+12 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}createdb} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+13 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}createdb} & Operation tags must be defined in global tags.\\
+14 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}me} & Operation tags must be defined in global tags.\\
+15 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}users/\allowbreak{}v1} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+16 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}users/\allowbreak{}v1} & Operation tags must be defined in global tags.\\
+17 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\_\allowbreak{}debug} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+18 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\_\allowbreak{}debug} & Operation tags must be defined in global tags.\\
+19 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{POST /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}login} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+20 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{POST /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}login} & Operation tags must be defined in global tags.\\
+21 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{POST /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}register} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+22 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{POST /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}register} & Operation tags must be defined in global tags.\\
+23 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{DELETE /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\{username\}} & Operation tags must be defined in global tags.\\
+24 & Spectral & \texttt{owasp-\allowbreak{}api1-\allowbreak{}object-\allowbreak{}level-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\{username\}} & Le operazioni su singolo oggetto (path con parametro \{id\}) devono dichiarare un requisito di security: senza, l'oggetto è esposto a BOLA (OWASP API1).\\
+25 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\{username\}} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+26 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{GET /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\{username\}} & Operation tags must be defined in global tags.\\
+27 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{PUT /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\{username\}/\allowbreak{}email} & Operation tags must be defined in global tags.\\
+28 & Spectral & \texttt{operation-\allowbreak{}tag-\allowbreak{}defined} & Media & \texttt{PUT /\allowbreak{}users/\allowbreak{}v1/\allowbreak{}\{username\}/\allowbreak{}password} & Operation tags must be defined in global tags.\\
+29 & BOLA dinamica & \texttt{-\allowbreak{}-\allowbreak{}} & Alta & \texttt{GET /\allowbreak{}books/\allowbreak{}v1/\allowbreak{}libro\_\allowbreak{}di\_\allowbreak{}tesi\_\allowbreak{}victim} & accesso orizzontale confermato (risposta 200 all'attaccante)\\
+30 & Broken Auth. & \texttt{T03} & Media & \texttt{applicazione} & Brute Force e Rate Limiting: Nessun meccanismo di rate limiting rilevato dopo 50 tentativi falliti.\\
+31 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}002} & Alta & \texttt{app.\allowbreak{}py:17} & debug mode enabled\\
+32 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}004} & Media & \texttt{.\allowbreak{}} & missing security headers\\
+33 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}006} & Media & \texttt{.\allowbreak{}} & missing cors policy\\
+34 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}007} & Alta & \texttt{requirements.\allowbreak{}txt:2} & vulnerable dependency\\
+35 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}007} & Media & \texttt{requirements.\allowbreak{}txt:6} & vulnerable dependency\\
+36 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}books.\allowbreak{}py:30} & direct url from input\\
+37 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}books.\allowbreak{}py:34} & direct url from input\\
+38 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}books.\allowbreak{}py:34} & direct url from input\\
+39 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:55} & direct url from input\\
+40 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:92} & direct url from input\\
+41 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:93} & direct url from input\\
+42 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:102} & direct url from input\\
+43 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:108} & direct url from input\\
+44 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:146} & direct url from input\\
+45 & SSRF & \texttt{SS-\allowbreak{}001} & Critica & \texttt{api\_\allowbreak{}views/\allowbreak{}users.\allowbreak{}py:148} & direct url from input\\
+46 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yaml} & no container resource limit\\
+47 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yaml} & no container resource limit\\
+48 & Res.\ Cons. & \texttt{RC-\allowbreak{}008} & Media & \texttt{config.\allowbreak{}py} & no body size limit\\
+\end{longtable}
+\endgroup
+
+\section*{DVAPI}
+La scansione statica produce 73 voci e i moduli Core 7 segnalazioni.
+
+\begingroup\linespread{1.0}\footnotesize\selectfont\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}r >{\raggedright\arraybackslash}p{0.11\linewidth} >{\raggedright\arraybackslash}p{0.2\linewidth} l >{\raggedright\arraybackslash}p{0.25\linewidth} >{\raggedright\arraybackslash}p{0.25\linewidth}@{}}
+\caption{Segnalazioni su DVAPI}\label{tab:app-dvapi}\\
+\toprule
+\# & \textbf{Origine} & \textbf{Regola} & \textbf{Sev.} & \textbf{Punto} & \textbf{Descrizione}\\
+\midrule\endfirsthead
+\toprule
+\# & \textbf{Origine} & \textbf{Regola} & \textbf{Sev.} & \textbf{Punto} & \textbf{Descrizione}\\
+\midrule\endhead
+\bottomrule\endfoot
+1 & Checkov & \texttt{CKV\_\allowbreak{}DOCKER\_\allowbreak{}7} & Bassa & \texttt{Dockerfile:1} & Ensure the base image uses a non latest version tag\\
+2 & Checkov & \texttt{CKV\_\allowbreak{}DOCKER\_\allowbreak{}3} & Media & \texttt{Dockerfile:1} & Ensure that a user for the container has been created\\
+3 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}login} & API Endpoint Rilevato\\
+4 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}register} & API Endpoint Rilevato\\
+5 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}api/\allowbreak{}profile} & API Endpoint Rilevato\\
+6 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}profile} & API Endpoint Rilevato\\
+7 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}addNote} & API Endpoint Rilevato\\
+8 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}api/\allowbreak{}getNote} & API Endpoint Rilevato\\
+9 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}api/\allowbreak{}scores} & API Endpoint Rilevato\\
+10 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}admin/\allowbreak{}updateStatus} & API Endpoint Rilevato\\
+11 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}profile/\allowbreak{}upload} & API Endpoint Rilevato\\
+12 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}addNoteWit\allowbreak{}hLink} & API Endpoint Rilevato\\
+13 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}allChallenges} & API Endpoint Rilevato\\
+14 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}api/\allowbreak{}getSolves} & API Endpoint Rilevato\\
+15 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}flag/\allowbreak{}submit} & API Endpoint Rilevato\\
+16 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}addTicket} & API Endpoint Rilevato\\
+17 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}api/\allowbreak{}getTicket} & API Endpoint Rilevato\\
+18 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}api/\allowbreak{}user/\allowbreak{}\{username\}} & API Endpoint Rilevato\\
+19 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{DELETE /\allowbreak{}api/\allowbreak{}user/\allowbreak{}\{username\}} & API Endpoint Rilevato\\
+20 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}certificate} & API Endpoint Rilevato\\
+21 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{POST /\allowbreak{}certificate} & API Endpoint Rilevato\\
+22 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}} & API Endpoint Rilevato\\
+23 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}login} & API Endpoint Rilevato\\
+24 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}register} & API Endpoint Rilevato\\
+25 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}scoreboard} & API Endpoint Rilevato\\
+26 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}profile} & API Endpoint Rilevato\\
+27 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}challenges} & API Endpoint Rilevato\\
+28 & Semgrep & \texttt{api-\allowbreak{}route-\allowbreak{}discovery} & Info & \texttt{GET /\allowbreak{}user/\allowbreak{}\{username\}} & API Endpoint Rilevato\\
+29 & Semgrep & \texttt{unauthenti\allowbreak{}cated-\allowbreak{}api-\allowbreak{}route} & Media & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}FileSaver.\allowbreak{}js} & Endpoint API non protetto rilevato (Statico)\\
+30 & Semgrep & \texttt{unauthenti\allowbreak{}cated-\allowbreak{}api-\allowbreak{}route} & Media & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}index.\allowbreak{}js} & Endpoint API non protetto rilevato (Statico)\\
+31 & Semgrep & \texttt{unauthenti\allowbreak{}cated-\allowbreak{}api-\allowbreak{}route} & Media & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}style.\allowbreak{}css} & Endpoint API non protetto rilevato (Statico)\\
+32 & Semgrep & \texttt{unauthenti\allowbreak{}cated-\allowbreak{}api-\allowbreak{}route} & Media & \texttt{GET /\allowbreak{}Sanchez-\allowbreak{}Regular.\allowbreak{}ttf} & Endpoint API non protetto rilevato (Statico)\\
+33 & Semgrep & \texttt{unauthenti\allowbreak{}cated-\allowbreak{}api-\allowbreak{}route} & Media & \texttt{GET /\allowbreak{}logout} & Endpoint API non protetto rilevato (Statico)\\
+34 & Semgrep & \texttt{unauthenti\allowbreak{}cated-\allowbreak{}api-\allowbreak{}route} & Media & \texttt{GET *} & Endpoint API non protetto rilevato (Statico)\\
+35 & Spectral & \texttt{unrecognized-\allowbreak{}format} & Media & \texttt{src/\allowbreak{}swagger/\allowbreak{}DVAPI.\allowbreak{}postman\_\allowbreak{}collection.\allowbreak{}yaml} & The provided document does not match any of the registered formats [OpenAPI 2.0 (Swagger), OpenAPI 3.x, OpenAPI 3.0.x, OpenAPI 3.1.x]\\
+36 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET *} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+37 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET *} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+38 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+39 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}FileSaver.\allowbreak{}js} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+40 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}FileSaver.\allowbreak{}js} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+41 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}index.\allowbreak{}js} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+42 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}index.\allowbreak{}js} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+43 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}style.\allowbreak{}css} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+44 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}Cert-\allowbreak{}Generator-\allowbreak{}master/\allowbreak{}style.\allowbreak{}css} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+45 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}Sanchez-\allowbreak{}Regular.\allowbreak{}ttf} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+46 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}Sanchez-\allowbreak{}Regular.\allowbreak{}ttf} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+47 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}addNote} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+48 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}addNoteWit\allowbreak{}hLink} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+49 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}addTicket} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+50 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}admin/\allowbreak{}updateStatus} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+51 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}allChallenges} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+52 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}flag/\allowbreak{}submit} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+53 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}api/\allowbreak{}getNote} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+54 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}api/\allowbreak{}getSolves} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+55 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}getTicket} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+56 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}login} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+57 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}api/\allowbreak{}profile} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+58 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}profile} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+59 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}profile/\allowbreak{}upload} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+60 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}api/\allowbreak{}register} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+61 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}api/\allowbreak{}scores} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+62 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{DELETE /\allowbreak{}api/\allowbreak{}user/\allowbreak{}\{username\}} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+63 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}api/\allowbreak{}user/\allowbreak{}\{username\}} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+64 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}certificate} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+65 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{POST /\allowbreak{}certificate} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+66 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}challenges} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+67 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}login} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+68 & Spectral & \texttt{owasp-\allowbreak{}api2-\allowbreak{}operation-\allowbreak{}security} & Alta & \texttt{GET /\allowbreak{}logout} & Ogni endpoint documentato deve dichiarare un meccanismo di security (Auth).\\
+69 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}logout} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+70 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}profile} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+71 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}register} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+72 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}scoreboard} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+73 & Spectral & \texttt{owasp-\allowbreak{}api9-\allowbreak{}documented-\allowbreak{}endpoint} & Media & \texttt{GET /\allowbreak{}user/\allowbreak{}\{username\}} & Ogni operazione API deve avere una property 'description' per favorire la documentazione (mitiga Shadow/Zombie API).\\
+74 & BFLA & \texttt{BF-\allowbreak{}005} & Media & \texttt{src/\allowbreak{}index.\allowbreak{}js:25} & missing deny by default\\
+75 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}004} & Media & \texttt{.\allowbreak{}} & missing security headers\\
+76 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}006} & Media & \texttt{.\allowbreak{}} & missing cors policy\\
+77 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}007} & Alta & \texttt{src/\allowbreak{}package.\allowbreak{}json} & vulnerable dependency\\
+78 & Res.\ Cons. & \texttt{RC-\allowbreak{}004} & Alta & \texttt{src/\allowbreak{}controllers/\allowbreak{}controllers.\allowbreak{}js:562} & graphql batching unlimited\\
+79 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yml} & no container resource limit\\
+80 & Res.\ Cons. & \texttt{RC-\allowbreak{}007} & Media & \texttt{docker-\allowbreak{}compose.\allowbreak{}yml} & no container resource limit\\
+\end{longtable}
+\endgroup
+
+\section*{sadcloud}
+La scansione statica produce 38 voci e i moduli Core 1 segnalazioni.
+
+\begingroup\linespread{1.0}\footnotesize\selectfont\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}r >{\raggedright\arraybackslash}p{0.11\linewidth} >{\raggedright\arraybackslash}p{0.2\linewidth} l >{\raggedright\arraybackslash}p{0.25\linewidth} >{\raggedright\arraybackslash}p{0.25\linewidth}@{}}
+\caption{Segnalazioni su sadcloud}\label{tab:app-sadcloud}\\
+\toprule
+\# & \textbf{Origine} & \textbf{Regola} & \textbf{Sev.} & \textbf{Punto} & \textbf{Descrizione}\\
+\midrule\endfirsthead
+\toprule
+\# & \textbf{Origine} & \textbf{Regola} & \textbf{Sev.} & \textbf{Punto} & \textbf{Descrizione}\\
+\midrule\endhead
+\bottomrule\endfoot
+1 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}17} & Critica & \texttt{module.\allowbreak{}rds.\allowbreak{}aws\_\allowbreak{}db\_\allowbreak{}instance.\allowbreak{}main[0]} & Ensure all data stored in RDS is not publicly accessible\\
+2 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}124} & Bassa & \texttt{module.\allowbreak{}cloudforma\allowbreak{}tion.\allowbreak{}aws\_\allowbreak{}cloudforma\allowbreak{}tion\_\allowbreak{}stack.\allowbreak{}secret[0]} & Ensure that CloudFormation stacks are sending event notifications to an SNS topic\\
+3 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}252} & Media & \texttt{module.\allowbreak{}cloudtrail.\allowbreak{}aws\_\allowbreak{}cloudtrail.\allowbreak{}duplicate[0]} & Ensure CloudTrail defines an SNS Topic\\
+4 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}24} & Critica & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}all\_\allowbreak{}ports\_\allowbreak{}to\_\allowbreak{}all[0]} & Ensure no security groups allow ingress from 0.0.0.0:0 to port 22\\
+5 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}all\_\allowbreak{}ports\_\allowbreak{}to\_\allowbreak{}self[0]} & Ensure every security group and rule has a description\\
+6 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}24} & Critica & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}icmp\_\allowbreak{}to\_\allowbreak{}all[0]} & Ensure no security groups allow ingress from 0.0.0.0:0 to port 22\\
+7 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}24} & Critica & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}known\_\allowbreak{}port\_\allowbreak{}to\_\allowbreak{}all[0]} & Ensure no security groups allow ingress from 0.0.0.0:0 to port 22\\
+8 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}opens\_\allowbreak{}plaintext\_\allowbreak{}port[0]} & Ensure every security group and rule has a description\\
+9 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}24} & Critica & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}opens\_\allowbreak{}port\_\allowbreak{}range[0]} & Ensure no security groups allow ingress from 0.0.0.0:0 to port 22\\
+10 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}opens\_\allowbreak{}port\_\allowbreak{}to\_\allowbreak{}all[0]} & Ensure every security group and rule has a description\\
+11 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}whitelists\_\allowbreak{}aws\_\allowbreak{}ip\_\allowbreak{}from\_\allowbreak{}banned\_\allowbreak{}region[0]} & Ensure every security group and rule has a description\\
+12 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}whitelists\_\allowbreak{}aws[0]} & Ensure every security group and rule has a description\\
+13 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}whitelists\_\allowbreak{}unknown\_\allowbreak{}cidrs[0]} & Ensure every security group and rule has a description\\
+14 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}unused\_\allowbreak{}security\_\allowbreak{}group[0]} & Ensure every security group and rule has a description\\
+15 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}unneeded\_\allowbreak{}security\_\allowbreak{}group[0]} & Ensure every security group and rule has a description\\
+16 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}unexpected\_\allowbreak{}security\_\allowbreak{}group[0]} & Ensure every security group and rule has a description\\
+17 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}23} & Bassa & \texttt{module.\allowbreak{}ec2.\allowbreak{}aws\_\allowbreak{}security\_\allowbreak{}group.\allowbreak{}overlapping\_\allowbreak{}security\_\allowbreak{}group[0]} & Ensure every security group and rule has a description\\
+18 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}32} & Alta & \texttt{module.\allowbreak{}ecr.\allowbreak{}aws\_\allowbreak{}ecr\_\allowbreak{}repository\_\allowbreak{}policy.\allowbreak{}mainecrpolicy[0]} & Ensure ECR policy is not set to public\\
+19 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}39} & Alta & \texttt{module.\allowbreak{}eks.\allowbreak{}aws\_\allowbreak{}eks\_\allowbreak{}cluster.\allowbreak{}example[0]} & Ensure Amazon EKS public endpoint disabled\\
+20 & Checkov & \texttt{CKV2\_\allowbreak{}AWS\_\allowbreak{}6} & Alta & \texttt{module.\allowbreak{}s3.\allowbreak{}aws\_\allowbreak{}s3\_\allowbreak{}bucket.\allowbreak{}main} & Ensure that S3 bucket has a Public Access block\\
+21 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}286} & Critica & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}group\_\allowbreak{}policy.\allowbreak{}inline\_\allowbreak{}group\_\allowbreak{}policy[0]} & Ensure IAM policies does not allow privilege escalation\\
+22 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}273} & Media & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}user.\allowbreak{}inline\_\allowbreak{}user[0]} & Ensure access is controlled through SSO and not AWS IAM defined users\\
+23 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}286} & Critica & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}user\_\allowbreak{}policy.\allowbreak{}inline\_\allowbreak{}user\_\allowbreak{}policy[0]} & Ensure IAM policies does not allow privilege escalation\\
+24 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}286} & Critica & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}role\_\allowbreak{}policy.\allowbreak{}inline\_\allowbreak{}role\_\allowbreak{}policy[0]} & Ensure IAM policies does not allow privilege escalation\\
+25 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}60} & Media & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}role.\allowbreak{}allow\_\allowbreak{}all[0]} & Ensure IAM role allows only specific services or principals to assume it\\
+26 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}60} & Media & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}role.\allowbreak{}allow\_\allowbreak{}all\_\allowbreak{}and\_\allowbreak{}no\_\allowbreak{}mfa[0]} & Ensure IAM role allows only specific services or principals to assume it\\
+27 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}63} & Critica & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}policy.\allowbreak{}policy[0]} & Ensure no IAM policies documents allow "*" as a statement's actions\\
+28 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}63} & Critica & \texttt{module.\allowbreak{}iam.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}policy.\allowbreak{}admin\_\allowbreak{}not\_\allowbreak{}indicated\_\allowbreak{}policy[0]} & Ensure no IAM policies documents allow "*" as a statement's actions\\
+29 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}33} & Media & \texttt{module.\allowbreak{}kms.\allowbreak{}aws\_\allowbreak{}kms\_\allowbreak{}key.\allowbreak{}exposed[0]} & Ensure KMS key policy does not contain wildcard (*) principal\\
+30 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}283} & Media & \texttt{module.\allowbreak{}s3.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}policy\_\allowbreak{}document.\allowbreak{}getonly} & Ensure no IAM policies documents allow ALL or any AWS principal permissions to the resource\\
+31 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}283} & Media & \texttt{module.\allowbreak{}s3.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}policy\_\allowbreak{}document.\allowbreak{}public} & Ensure no IAM policies documents allow ALL or any AWS principal permissions to the resource\\
+32 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}283} & Media & \texttt{module.\allowbreak{}sns.\allowbreak{}aws\_\allowbreak{}iam\_\allowbreak{}policy\_\allowbreak{}document.\allowbreak{}sns-\allowbreak{}topic-\allowbreak{}policy} & Ensure no IAM policies documents allow ALL or any AWS principal permissions to the resource\\
+33 & Checkov & \texttt{CKV2\_\allowbreak{}AWS\_\allowbreak{}6} & Alta & \texttt{module.\allowbreak{}cloudtrail.\allowbreak{}aws\_\allowbreak{}s3\_\allowbreak{}bucket.\allowbreak{}logging} & Ensure that S3 bucket has a Public Access block\\
+34 & Checkov & \texttt{CKV2\_\allowbreak{}AWS\_\allowbreak{}6} & Alta & \texttt{module.\allowbreak{}elbv2.\allowbreak{}aws\_\allowbreak{}s3\_\allowbreak{}bucket.\allowbreak{}access\_\allowbreak{}logging[0]} & Ensure that S3 bucket has a Public Access block\\
+35 & Checkov & \texttt{CKV2\_\allowbreak{}AWS\_\allowbreak{}6} & Alta & \texttt{module.\allowbreak{}s3.\allowbreak{}aws\_\allowbreak{}s3\_\allowbreak{}bucket.\allowbreak{}getonly[0]} & Ensure that S3 bucket has a Public Access block\\
+36 & Checkov & \texttt{CKV2\_\allowbreak{}AWS\_\allowbreak{}6} & Alta & \texttt{module.\allowbreak{}s3.\allowbreak{}aws\_\allowbreak{}s3\_\allowbreak{}bucket.\allowbreak{}public[0]} & Ensure that S3 bucket has a Public Access block\\
+37 & Checkov & \texttt{CKV\_\allowbreak{}AWS\_\allowbreak{}20} & Critica & \texttt{AWS::S3::Bucket.\allowbreak{}S3Bucket} & Ensure the S3 bucket does not allow READ permissions to everyone\\
+38 & Checkov & \texttt{CKV\_\allowbreak{}SECRET\_\allowbreak{}2} & Critica & \texttt{25910f981e\allowbreak{}85ca04baf3\allowbreak{}59199dd0bd\allowbreak{}4a3ae738b6} & AWS Access Key\\
+39 & Sec.\ Misconf. & \texttt{SC-\allowbreak{}004} & Media & \texttt{.\allowbreak{}} & missing security headers\\
+\end{longtable}
+\endgroup

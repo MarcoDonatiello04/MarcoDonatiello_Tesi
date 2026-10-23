@@ -5,10 +5,10 @@
 
 Questo capitolo riporta la validazione dello strumento presentato nel
 Capitolo~\ref{cap:metodo} e stabilisce in che misura l'obiettivo della tesi
-sia stato raggiunto. Dopo aver presentato le domande di ricerca e le evidenze
-raccolte, il capitolo riporta i risultati, li discute per categoria alla luce
-della classificazione, risponde alle domande di ricerca e si chiude con i
-limiti dello strumento.
+sia stato raggiunto. A tale scopo, il capitolo definisce innanzitutto le
+domande di ricerca e descrive le evidenze raccolte; riporta quindi i risultati,
+li discute per categoria alla luce della classificazione, risponde alle domande
+di ricerca e si chiude con l'analisi dei limiti dello strumento.
 
 \section{Obiettivi e impostazione della validazione}
 \label{sec:ris-oggetto}
@@ -37,11 +37,6 @@ quali livelli di analisi occorre combinare per coprirle?}
 \rqbox{1.2}{Per le categorie rilevabili solo in parte, quale condizione
   riconosce l'analisi statica e di che natura è ciò che resta da
 accertare?}
-
-Ciò che manca, il \emph{residuo}, può essere accertabile sul sistema in
-esecuzione, recuperabile estendendo l'analisi ad altri file del progetto,
-esplicitabile come parametro dell'analisi, oppure legato alla sola
-conoscenza del dominio applicativo (Sottosezione~\ref{sec:criterio}).
 
 Lo studio ha forma costruttiva: per ogni categoria tecnica o ibrida è stato
 realizzato un modulo che verifica la condizione individuata dal criterio, e lo
@@ -126,10 +121,7 @@ segnala tutti e quattro i metodi della risorsa vulnerabile e nessuno di quella
 protetta; uno dei quattro non compare nella specifica OpenAPI, e quindi non
 sarebbe stato raggiunto da un'analisi solo dinamica. Il livello dinamico
 conferma tre dei quattro metodi (GET, PUT e PATCH, non la cancellazione) e non
-segnala la risorsa protetta. Lo strumento segnala anche un endpoint di
-importazione che consente di cambiare il proprietario di un progetto: il caso
-non è fra quelli documentati né è stato raggiunto dalla prova dinamica, e
-resta quindi da verificare.
+segnala la risorsa protetta.
 
 Su un secondo repository, accompagnato dalla specifica OpenAPI, la BFLA produce
 tre segnalazioni BF-006 su endpoint privi di autenticazione e di controllo del
@@ -141,10 +133,7 @@ segnalati.
 Sulla parte infrastrutturale di crAPI le 240 segnalazioni iniziali si riducono
 a 46 voci dopo filtraggio e raggruppamento, con problemi reali e un solo falso
 positivo. Sulle API, invece, come mostra la Tabella~\ref{tab:ris-crapi},
-nessuna delle sfide documentate riconducibile alla Top 10 viene rilevata: i
-livelli statici non coprono il servizio Java e non riconoscono le forme di
-codice usate da crAPI, come le viste Django definite come classi o i campi
-assegnati uno per uno.
+nessuna delle sfide documentate riconducibile alla Top 10 viene rilevata.
 
 \begin{table}[htbp]
   \centering
@@ -259,6 +248,136 @@ gli altri, il mass assignment di VAmPI e, su DVAPI, il caricamento di file
 senza limiti e la SSRF. Le precisioni minime sono basse perché gran parte
 delle segnalazioni viene dalle regole sul contratto OpenAPI e, non essendo
 stata esaminata a mano, conta come errata.
+
+\paragraph{Le segnalazioni nel dettaglio}
+Le metriche considerano solo le segnalazioni che corrispondono a una
+vulnerabilità documentata, ma la dashboard ne mostra molte di più. Di seguito
+si riassume che cosa segnalano; l'elenco completo, voce per voce, è
+nell'Appendice~\ref{app:segnalazioni}.
+
+Su VAmPI le segnalazioni sono 48: 28 della scansione statica e 20 dei moduli.
+Delle 24 di Spectral, 14 riguardano tag non dichiarati nel contratto e 8
+operazioni prive di uno schema di sicurezza; una di queste è la corrispondenza
+con l'enumerazione degli utenti al login. Checkov segnala il Dockerfile senza
+un utente dedicato, un token JWT d'esempio scritto nel contratto, l'assenza di
+uno schema di sicurezza globale e un array senza numero massimo di elementi.
+Fra i moduli, la BOLA dinamica conferma l'accesso a \texttt{GET
+/books/v1/\{titolo\}}, la Broken Authentication rileva che il login non si blocca
+dopo 50 tentativi falliti, la Security Misconfiguration trova la modalità di
+debug di Flask attiva, l'assenza di intestazioni di sicurezza e di una politica
+CORS, una versione di Flask con una vulnerabilità nota (CVE-2023-30861) e una
+dipendenza senza versione fissata, e la Resource Consumption segnala i container
+senza limiti di memoria e l'assenza di un limite alla dimensione del corpo delle
+richieste. Le 10 segnalazioni SSRF sono invece falsi positivi: indicano dati
+letti dal corpo della richiesta che finiscono in query al database o nella
+costruzione degli oggetti, non in richieste verso l'esterno. La modalità sicura
+produce le stesse segnalazioni, tranne la BOLA dinamica.
+
+Su DVAPI le segnalazioni sono 80: 73 statiche e 7 dei moduli. Il contratto di
+DVAPI è una collezione Postman e non un documento OpenAPI, perciò Spectral lo
+dichiara non riconosciuto e applica le proprie regole alle rotte trovate da
+Semgrep nel codice: 32 segnalazioni riguardano operazioni non documentate, fra
+cui la corrispondenza con la voce di API9, e 6 operazioni senza schema di
+sicurezza. Semgrep trova 32 rotte, 6 delle quali raggiungibili senza
+autenticazione; quattro di queste sono file statici dell'interfaccia. Fra i moduli, la BFLA rileva
+l'assenza di un diniego predefinito nell'applicazione Express, la Security
+Misconfiguration le intestazioni di sicurezza e la politica CORS mancanti e una
+versione di Express con una vulnerabilità nota (CVE-2024-29041), e la Resource
+Consumption il batching GraphQL senza limiti e i container senza limiti di
+memoria.
+
+Su sadcloud Checkov produce 38 voci, una per risorsa: 19 esposizioni, 12
+irrobustimenti e 7 non classificate. Le più gravi sono database e bucket
+accessibili pubblicamente, l'accesso SSH aperto a tutta Internet, politiche IAM
+con azioni \texttt{*} o che consentono l'escalation dei privilegi e una chiave
+di accesso AWS scritta nel codice. L'unica segnalazione dei moduli, l'assenza di
+intestazioni di sicurezza, è un falso positivo, perché sadcloud non contiene
+un'applicazione web.
+
+\section{Visualizzazione dei risultati nella dashboard}
+\label{sec:ris-dashboard}
+
+Tutti i risultati descritti finora sono consultabili nella dashboard dello
+strumento, che legge i rapporti salvati di ciascun bersaglio. Le figure di
+questa sezione mostrano i risultati della campagna sull'insieme di prova.
+
+La pagina iniziale (Figura~\ref{fig:dash-home}) permette di avviare una
+scansione e riassume l'ultima scansione del bersaglio selezionato: quanti moduli
+sono stati eseguiti, quante segnalazioni hanno prodotto e l'esito di ciascun
+modulo. Per VAmPI in modalità vulnerabile i nove moduli producono 20
+segnalazioni.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_home.png}
+  \caption[Pagina iniziale della dashboard]{Pagina iniziale della dashboard,
+  con il riepilogo dell'ultima scansione di VAmPI in modalità vulnerabile.}
+  \label{fig:dash-home}
+\end{figure}
+
+Da qui si accede a una pagina per ciascun sistema di analisi. La pagina di
+Checkov (Figura~\ref{fig:dash-checkov}) elenca le voci della scansione
+infrastrutturale, ordinate per natura e punteggio di rischio, con il conteggio
+per severità. Aprendo una voce compare la remediation: descrizione del
+problema, impatto, procedura di mitigazione e un esempio di codice corretto.
+La remediation proviene da una base di conoscenza locale ed è generica per la
+famiglia del controllo: nella figura, per un database RDS pubblico, l'esempio di
+codice riguarda un bucket S3.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_checkov.png}
+  \caption[Risultati di Checkov e remediation]{Risultati di Checkov su sadcloud.
+  La prima voce, un database RDS accessibile pubblicamente, è aperta e mostra la
+  remediation proposta.}
+  \label{fig:dash-checkov}
+\end{figure}
+
+La pagina di Semgrep (Figura~\ref{fig:dash-semgrep}) mostra le rotte trovate
+nel codice, che formano l'inventario usato dagli altri livelli, e quelle che
+non sembrano richiedere autenticazione. La pagina di Spectral
+(Figura~\ref{fig:dash-spectral}) riporta le violazioni del contratto OpenAPI,
+ciascuna con la regola, la riga del contratto e la severità.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_semgrep.png}
+  \caption[Risultati di Semgrep]{Risultati di Semgrep su DVAPI: le rotte
+  rilevate nel codice Express.}
+  \label{fig:dash-semgrep}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_spectral.png}
+  \caption[Risultati di Spectral]{Risultati di Spectral sul contratto OpenAPI di
+  VAmPI.}
+  \label{fig:dash-spectral}
+\end{figure}
+
+I moduli dedicati alle categorie OWASP hanno una pagina comune
+(Figura~\ref{fig:dash-core}), con tempo di esecuzione, stato e numero di
+segnalazioni di ciascun modulo. Sotto, il dettaglio per modulo elenca le singole
+segnalazioni; la Figura~\ref{fig:dash-bola} mostra quello della BOLA dinamica su
+VAmPI, con la richiesta dell'attaccante che ottiene il libro di un altro utente
+(risposta \texttt{200}) e le prove in cui l'accesso viene respinto.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_core.png}
+  \caption[Riepilogo dei moduli]{Riepilogo dei moduli sulla scansione completa
+  di VAmPI in modalità vulnerabile.}
+  \label{fig:dash-core}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_bola.png}
+  \caption[Dettaglio della BOLA dinamica]{Dettaglio della BOLA dinamica su VAmPI:
+  la prima voce è l'accesso non autorizzato confermato, le successive sono prove
+  superate.}
+  \label{fig:dash-bola}
+\end{figure}
 
 \section{Discussione per categoria}
 \label{sec:ris-categorie}
@@ -382,39 +501,30 @@ per estenderlo.
 \section{Limiti}
 \label{sec:ris-limiti}
 
-\paragraph{Presenza, non correttezza}
-L'analisi statica accerta la presenza di un controllo, non la sua correttezza.
-Nella BOLA un filtro sul campo sbagliato viene accettato come legame, e una
-funzione chiamata \texttt{authorize} viene accettata senza esaminarne il
-contenuto; nella BFLA una riga che cita il ruolo senza bloccare l'esecuzione
-viene scambiata per una protezione.
+Il limite principale dello strumento è che l'analisi statica accerta la
+presenza di un controllo, non la sua correttezza: nella BOLA un filtro sul
+campo sbagliato o una funzione chiamata \texttt{authorize} vengono accettati
+senza esaminarne il contenuto, e nella BFLA una riga che cita il ruolo senza
+bloccare l'esecuzione viene scambiata per una protezione. Identità, controlli e
+funzioni riservate sono inoltre riconosciuti attraverso nomi e forme d'uso
+comuni nei framework supportati, e ciò che se ne discosta può sfuggire: il
+livello statico della BOLA esamina un file alla volta, la BFLA non analizza le
+viste definite come classi e la BOPLA non analizza il codice Java. Il caso di
+crAPI mostra quanto questi confini pesino su un bersaglio realistico. Sul
+versante infrastrutturale, il manifest mostra ciò che dichiara e non ciò che è
+attivo, e il flag di esposizione dice che una risorsa è raggiungibile da
+chiunque, non se debba esserlo: un bucket che serve contenuti pubblici viene
+segnalato come uno che espone dati riservati.
 
-\paragraph{Forme di codice e perimetro}
-Identità, controlli e funzioni riservate sono riconosciuti attraverso nomi e
-forme d'uso comuni nei framework supportati: ciò che se ne discosta può
-sfuggire. Il livello statico della BOLA esamina un file alla volta, la BFLA
-non analizza le viste definite come classi e la BOPLA non analizza il codice
-Java. Il caso di crAPI mostra quanto questi confini pesino su un bersaglio
-realistico.
-
-\paragraph{Configurazione}
-Il manifest mostra ciò che dichiara, non ciò che è attivo, e il flag di
-esposizione dice che una risorsa è raggiungibile da chiunque, non se debba
-esserlo: un bucket che serve contenuti pubblici viene segnalato come uno che
-espone dati riservati.
-
-\paragraph{Parte dinamica}
-La parte dinamica richiede identità autenticate. Senza una sessione la Broken
-Authentication si riduce alla componente statica, e la BOPLA lascia le proprie
-segnalazioni da verificare. Il livello dinamico della BOLA richiede token con
-il claim \texttt{sub}: DVAPI, che usa \texttt{userId}, ne resta escluso. Sui
-bersagli esterni, inoltre, vengono provati solo i metodi che non modificano i
-dati.
-
-\paragraph{Il prezzo del criterio}
-Il criterio vieta di indicare all'analisi ciò che va protetto. Nella BOPLA una
-proprietà è quindi protetta solo se l'applicazione la tratta come tale in
-qualche punto, e un dato sensibile restituito a tutti senza alcun controllo
-non viene segnalato. È una conseguenza voluta: un elenco fisso di campi
-sensibili avrebbe funzionato sulle applicazioni di prova e su nessun altro
-sistema.
+La parte dinamica, a sua volta, richiede identità autenticate. Senza una
+sessione la Broken Authentication si riduce alla componente statica e la BOPLA
+lascia le proprie segnalazioni da verificare; il livello dinamico della BOLA
+richiede token con il claim \texttt{sub}, e per questo DVAPI, che usa
+\texttt{userId}, ne resta escluso. Sui bersagli esterni, infine, vengono
+provati solo i metodi che non modificano i dati. Un ultimo limite è il prezzo
+del criterio, che vieta di indicare all'analisi ciò che va protetto: nella
+BOPLA una proprietà è considerata protetta solo se l'applicazione la tratta
+come tale in qualche punto, e un dato sensibile restituito a tutti senza alcun
+controllo non viene segnalato. È una conseguenza voluta, perché un elenco fisso
+di campi sensibili avrebbe funzionato sulle applicazioni di prova e su nessun
+altro sistema.
