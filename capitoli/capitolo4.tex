@@ -427,6 +427,43 @@ Misconfiguration non trovano le voci documentate di DVAPI: né la richiesta
 verso un URL arbitrario né la traccia dello stack restituita con un token non
 valido.
 
+La Tabella~\ref{tab:ris-livelli} indica da quale livello vengono le
+segnalazioni dei quattro moduli tecnici. Sulle coppie gemelle 19 dei 22 casi
+sono rilevati nel codice applicativo e 3 nei file di configurazione: i limiti
+di memoria dei container, la dimensione massima delle richieste e il timeout
+del server, che si trovano nel \texttt{docker-compose}, nel proxy o nella
+configurazione dell'applicazione. Sull'insieme di prova la configurazione pesa
+di più: 8 delle 24 segnalazioni, comprese le dipendenze con vulnerabilità note.
+Le regole che leggono il contratto (le quattro della Resource Consumption e
+SS-006) non producono segnalazioni in nessuna delle prove.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \linespread{1.0}\selectfont
+  \begin{tabular}{@{}lcccccc@{}}
+    \toprule
+    & \multicolumn{3}{c}{\textbf{Coppie gemelle}} & \multicolumn{3}{c}{\textbf{VAmPI e DVAPI}} \\
+    \cmidrule(lr){2-4}\cmidrule(l){5-7}
+    \textbf{Modulo} & \textbf{Codice} & \textbf{Config.} & \textbf{Contratto} & \textbf{Codice} & \textbf{Config.} & \textbf{Contratto} \\
+    \midrule
+    Resource Consumption & 6 & 3 & 0 & 1 & 5 & 0 \\
+    Security Misconfiguration & 7 & 0 & 0 & 5 & 3 & 0 \\
+    SSRF & 3 & 0 & 0 & 10 & 0 & 0 \\
+    Unsafe Consumption & 3 & 0 & 0 & 0 & 0 & 0 \\
+    \midrule
+    Totale & 19 & 3 & 0 & 16 & 8 & 0 \\
+    \bottomrule
+  \end{tabular}
+  \caption[Segnalazioni dei moduli tecnici per livello]{Segnalazioni dei
+    moduli tecnici per livello di analisi. Sulle coppie gemelle sono tutte veri
+    positivi; sull'insieme di prova nessuna corrisponde a una vulnerabilità
+    documentata, e le 10 della SSRF sono falsi positivi. La configurazione
+    comprende container, proxy, impostazioni dell'applicazione e manifest
+    delle dipendenze.}
+  \label{tab:ris-livelli}
+\end{table}
+
 \subsection{Categorie senza modulo}
 \label{sec:ris-scoperte}
 
@@ -444,19 +481,20 @@ distribuita, che richiedono una ricognizione dell'infrastruttura.
 \label{sec:ris-rq}
 
 \paragraph{Risposta a \RQ{1.1}}
-Per le categorie tecniche servono, oltre al codice, il contratto OpenAPI e la
-configurazione di infrastruttura, e i segnali dei diversi livelli vanno
-correlati: un livello da solo non basta a dare un giudizio. L'esempio più
-chiaro è l'Unrestricted Resource Consumption, dove un limite assente dal
-codice diventa una segnalazione fondata solo se neanche proxy e contratto lo
-applicano. Sulla parte infrastrutturale il manifest va combinato con il
-catalogo delle policy, che distingue esposizioni e irrobustimenti, e con la
-correlazione, che riunisce i controlli sulla stessa risorsa: così su crAPI 240
-segnalazioni si riducono a 46 voci. Sui casi di prova questa combinazione
-funziona per tutte e quattro le categorie tecniche, senza falsi positivi. Su
-codice di terzi funziona per l'infrastruttura (61\% delle misconfiguration di
-sadcloud), ma non ancora per le API: nessuna delle vulnerabilità tecniche
-documentate da VAmPI e DVAPI viene trovata.
+Le prove indicano due livelli necessari: il codice applicativo e i file di
+configurazione del sistema (container, proxy, impostazioni dell'applicazione,
+dipendenze). Il codice da solo non basta: sulle coppie gemelle 3 dei 22 casi
+dei moduli tecnici, e sull'insieme di prova 8 delle 24 segnalazioni, si
+trovano solo nella configurazione (Tabella~\ref{tab:ris-livelli}). Il
+contratto OpenAPI non ha invece contribuito ad alcuna segnalazione, e la
+correlazione fra livelli prevista dal progetto, per cui un limite assente dal
+codice non viene segnalato se lo impone il proxy, non è stata messa alla prova
+dagli esperimenti: nella versione corretta della coppia gemella il limite è
+presente sia nel codice sia nel proxy. La risposta è quindi confermata sui casi
+di prova, ma non ancora su codice di terzi: nessuna delle vulnerabilità
+tecniche documentate da VAmPI e DVAPI viene trovata, e le tre mancate di DVAPI
+(il caricamento senza limiti, la SSRF e la traccia dello stack) stanno tutte
+nel codice.
 
 \paragraph{Risposta a \RQ{1.2}}
 Nelle categorie ibride l'analisi statica riconosce la condizione necessaria,
