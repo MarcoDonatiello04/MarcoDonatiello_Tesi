@@ -135,7 +135,9 @@ parts = [
 for target, name in TARGETS:
     s, c = static_rows(target), core_rows(target)
     parts.append(rf"\section*{{{name}}}")
-    parts.append(f"La scansione statica produce {len(s)} voci e i moduli Core {len(c)} segnalazioni.")
+    parts.append(f"La scansione statica produce {len(s)} voci e i moduli Core {len(c)} "
+                 f"{'segnalazione' if len(c) == 1 else 'segnalazioni'}; "
+                 f"la Tabella~\\ref{{tab:app-{target}}} le elenca tutte.")
     parts.append("")
     parts.append(table(s + c, f"Segnalazioni su {name}", f"tab:app-{target}"))
     print(target, "statiche", len(s), "core", len(c))

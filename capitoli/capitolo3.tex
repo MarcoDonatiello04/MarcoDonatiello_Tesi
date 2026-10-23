@@ -1155,7 +1155,7 @@ decine di minuti.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_home.png}
+  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_home.pdf}
   \caption[Pagina iniziale del cruscotto]{Pagina iniziale del cruscotto, con il
   riepilogo dell'ultima scansione di VAmPI in modalità vulnerabile.}
   \label{fig:dash-home}
@@ -1172,15 +1172,16 @@ per un database RDS pubblico, l'esempio di codice riguarda un bucket S3.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_checkov.png}
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_checkov.pdf}
   \caption[Risultati di Checkov e remediation]{Risultati di Checkov su sadcloud.
   La prima voce, un database RDS accessibile pubblicamente, è aperta e mostra la
   remediation proposta.}
   \label{fig:dash-checkov}
 \end{figure}
 
-La pagina di Semgrep (Figura~\ref{fig:dash-semgrep}) mostra le rotte trovate
-nel codice, che formano l'inventario usato dagli altri livelli, e quelle che non
+La Figura~\ref{fig:dash-semgrep-spectral} riporta le pagine dedicate
+all'analisi del codice e del contratto. Quella di Semgrep
+(Figura~\ref{fig:dash-semgrep}) mostra le rotte trovate nel codice, che formano l'inventario usato dagli altri livelli, e quelle che non
 sembrano richiedere autenticazione. La pagina di Spectral
 (Figura~\ref{fig:dash-spectral}) riporta le violazioni del contratto OpenAPI,
 ciascuna con la regola, la riga del contratto e la severità.
@@ -1189,10 +1190,10 @@ ciascuna con la regola, la riga del contratto e la severità.
   \centering
   \subfloat[Semgrep su DVAPI: le rotte rilevate nel codice
   Express.\label{fig:dash-semgrep}]{%
-    \includegraphics[width=0.8\linewidth,trim={0 560 0 0},clip]{figure/dashboard/dashboard_semgrep.png}}\\[6pt]
+    \includegraphics[width=0.8\linewidth,trim={0 560 0 0},clip]{figure/dashboard/dashboard_semgrep.pdf}}\\[6pt]
   \subfloat[Spectral sul contratto OpenAPI di
   VAmPI.\label{fig:dash-spectral}]{%
-    \includegraphics[width=0.8\linewidth,trim={0 420 0 270},clip]{figure/dashboard/dashboard_spectral.png}}
+    \includegraphics[width=0.8\linewidth,trim={0 420 0 270},clip]{figure/dashboard/dashboard_spectral.pdf}}
   \caption[Risultati di Semgrep e Spectral]{Le pagine del cruscotto per
   l'analisi del codice e del contratto.}
   \label{fig:dash-semgrep-spectral}
@@ -1207,7 +1208,7 @@ VAmPI, con la richiesta dell'attaccante che ottiene il libro di un altro utente
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_core.png}
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_core.pdf}
   \caption[Riepilogo dei moduli]{Riepilogo dei moduli sulla scansione completa
   di VAmPI in modalità vulnerabile.}
   \label{fig:dash-core}
@@ -1215,7 +1216,7 @@ VAmPI, con la richiesta dell'attaccante che ottiene il libro di un altro utente
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_bola.png}
+  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_bola.pdf}
   \caption[Dettaglio della BOLA dinamica]{Dettaglio della BOLA dinamica su VAmPI:
   la prima voce è l'accesso non autorizzato confermato, le successive sono prove
   superate.}

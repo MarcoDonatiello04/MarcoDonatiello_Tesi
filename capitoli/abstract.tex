@@ -3,7 +3,35 @@
 \begin{titlepage}
 \begin{abstract}
 %
-Il testo dell'abstract qui...
+Le API sono oggi il principale punto di accesso ai servizi cloud, e l'OWASP API
+Security Top 10 (2023) ne elenca i rischi più critici. Non tutte le dieci
+categorie, però, lasciano una traccia negli artefatti di progetto: alcune si
+riconoscono nel codice, nel contratto OpenAPI o nella configurazione, altre
+dipendono dal comportamento del sistema in esecuzione o dalla logica di business.
+Gli strumenti di analisi statica non distinguono questi casi, e una loro
+segnalazione, o la sua assenza, non dice quanto la categoria sia davvero
+coperta.
+
+La tesi propone un criterio che classifica le dieci categorie in tecniche,
+rilevabili interamente con l'analisi statica, ibride, rilevabili solo in parte,
+e di logica di business, non rilevabili sugli artefatti. Per rendere il criterio
+operativo è stato realizzato uno strumento che combina scanner esistenti
+(Checkov, Semgrep e Spectral) con un modulo di rilevamento per ciascuna categoria
+tecnica o ibrida, e che affianca all'analisi statica una verifica dinamica dove
+questa non basta. Lo strumento è stato validato su coppie di applicazioni
+gemelle, una vulnerabile e una corretta, sul benchmark crAPI e su un insieme di
+prova di tre applicazioni di terzi: VAmPI, DVAPI e sadcloud.
+
+Quattro categorie risultano tecniche, quattro ibride e una di logica di
+business, mentre API9 resta fuori dalla classificazione. Sulle coppie gemelle
+ogni modulo distingue la versione vulnerabile da quella corretta senza falsi
+positivi, e su VAmPI, che ha lo stesso codice nelle due modalità, solo la
+verifica dinamica separa quella vulnerabile da quella sicura, come la
+classificazione prevede. Su codice di terzi lo strumento trova il 61\% delle
+misconfiguration documentate dell'infrastruttura di sadcloud, ma riconosce
+poche vulnerabilità delle API: la BOLA di VAmPI e la SSRF di crAPI. Il divario
+dipende soprattutto dalle forme di codice che le regole conoscono, e indica la
+direzione in cui estendere lo strumento.
 %
 \\[1cm]
 \end{abstract}
