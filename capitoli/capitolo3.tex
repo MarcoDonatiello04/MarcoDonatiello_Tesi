@@ -1138,3 +1138,86 @@ Vale la stessa soglia di confidenza del modulo precedente, e il rapporto indica,
 riassume i risultati per severità e categoria.
 
 L'insieme dei moduli descritti completa così la strategia di rilevamento del capitolo, fondata sulla combinazione di analisi statica multi-layer (codice, contratti OpenAPI e definizioni IaC) e verifica dinamica mirata per le categorie ibride.
+
+\section{Il cruscotto dei risultati}
+\label{sec:cruscotto}
+
+Il livello di presentazione è un cruscotto web che legge i rapporti salvati di
+ciascun bersaglio e ne mostra i risultati; nelle schermate le segnalazioni sono
+chiamate \emph{findings}. Le figure di questa sezione riportano i risultati
+della campagna di validazione descritta nel Capitolo~\ref{cap:risultati}.
+
+La pagina iniziale (Figura~\ref{fig:dash-home}) permette di avviare una
+scansione e riassume l'ultima scansione del bersaglio selezionato: quanti moduli
+sono stati eseguiti, quante segnalazioni hanno prodotto e l'esito di ciascun
+modulo. La scansione rapida esclude la BOLA dinamica, che da sola richiede
+decine di minuti.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_home.png}
+  \caption[Pagina iniziale del cruscotto]{Pagina iniziale del cruscotto, con il
+  riepilogo dell'ultima scansione di VAmPI in modalità vulnerabile.}
+  \label{fig:dash-home}
+\end{figure}
+
+Da qui si accede a una pagina per ciascun sistema di analisi. La pagina di
+Checkov (Figura~\ref{fig:dash-checkov}) elenca le voci della scansione
+infrastrutturale, ordinate per natura e punteggio di rischio
+(Sottosezione~\ref{sec:correlazione}), con il conteggio per severità. Aprendo
+una voce compare la remediation: descrizione del problema, impatto, procedura di
+mitigazione e un esempio di codice corretto. La remediation proviene dalla base
+di conoscenza locale ed è generica per la famiglia del controllo: nella figura,
+per un database RDS pubblico, l'esempio di codice riguarda un bucket S3.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_checkov.png}
+  \caption[Risultati di Checkov e remediation]{Risultati di Checkov su sadcloud.
+  La prima voce, un database RDS accessibile pubblicamente, è aperta e mostra la
+  remediation proposta.}
+  \label{fig:dash-checkov}
+\end{figure}
+
+La pagina di Semgrep (Figura~\ref{fig:dash-semgrep}) mostra le rotte trovate
+nel codice, che formano l'inventario usato dagli altri livelli, e quelle che non
+sembrano richiedere autenticazione. La pagina di Spectral
+(Figura~\ref{fig:dash-spectral}) riporta le violazioni del contratto OpenAPI,
+ciascuna con la regola, la riga del contratto e la severità.
+
+\begin{figure}[htbp]
+  \centering
+  \subfloat[Semgrep su DVAPI: le rotte rilevate nel codice
+  Express.\label{fig:dash-semgrep}]{%
+    \includegraphics[width=0.8\linewidth,trim={0 560 0 0},clip]{figure/dashboard/dashboard_semgrep.png}}\\[6pt]
+  \subfloat[Spectral sul contratto OpenAPI di
+  VAmPI.\label{fig:dash-spectral}]{%
+    \includegraphics[width=0.8\linewidth,trim={0 420 0 270},clip]{figure/dashboard/dashboard_spectral.png}}
+  \caption[Risultati di Semgrep e Spectral]{Le pagine del cruscotto per
+  l'analisi del codice e del contratto.}
+  \label{fig:dash-semgrep-spectral}
+\end{figure}
+
+I moduli dedicati alle categorie OWASP hanno una pagina comune
+(Figura~\ref{fig:dash-core}), con tempo di esecuzione, stato e numero di
+segnalazioni di ciascun modulo. Sotto, il dettaglio per modulo elenca le singole
+segnalazioni; la Figura~\ref{fig:dash-bola} mostra quello della BOLA dinamica su
+VAmPI, con la richiesta dell'attaccante che ottiene il libro di un altro utente
+(risposta \texttt{200}) e le prove in cui l'accesso viene respinto.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_core.png}
+  \caption[Riepilogo dei moduli]{Riepilogo dei moduli sulla scansione completa
+  di VAmPI in modalità vulnerabile.}
+  \label{fig:dash-core}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_bola.png}
+  \caption[Dettaglio della BOLA dinamica]{Dettaglio della BOLA dinamica su VAmPI:
+  la prima voce è l'accesso non autorizzato confermato, le successive sono prove
+  superate.}
+  \label{fig:dash-bola}
+\end{figure}

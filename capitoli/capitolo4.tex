@@ -54,9 +54,11 @@ Le evidenze sono di tre tipi e vanno lette in modo diverso.
     Express, e per l'infrastruttura un insieme di manifest Terraform. Dicono
     se ogni modulo riconosce la condizione per cui è stato costruito senza
     segnalare la versione corretta.
-  \item \textbf{Codice non scritto per i moduli:} repository pubblici e il
-    benchmark OWASP crAPI~\cite{owasp2026crapi}. Mostrano come si comporta lo
-    strumento quando la condizione non è stata preparata per lui.
+  \item \textbf{Codice non scritto per le regole:} il repository cooperante
+    del progetto, scritto per provare la BOLA dinamica ma non per i livelli
+    statici, e il benchmark OWASP crAPI~\cite{owasp2026crapi}. Mostrano come si
+    comporta lo strumento quando la condizione non è stata preparata per le
+    sue regole.
   \item \textbf{Insieme di prova:} tre applicazioni di terzi riservate alla
     validazione e analizzate con tutti i moduli in un'unica campagna:
     sadcloud~\cite{nccgroup2021sadcloud} per l'infrastruttura Terraform,
@@ -68,7 +70,7 @@ la stessa categoria OWASP e lo stesso endpoint, identificato da metodo e
 percorso, qualunque sia il livello di analisi che l'ha prodotta.
 
 \section{Risultati}
-\label{sec:ris-casi}
+\label{sec:ris-risultati}
 
 \subsection{Casi di prova}
 
@@ -113,21 +115,24 @@ prove falliscono sulla versione vulnerabile e nessuna su quella corretta.
 Questi esiti dicono che ogni modulo fa ciò per cui è stato costruito; la sua
 efficacia reale emerge solo su codice non scritto ad hoc.
 
-\subsection{Codice non scritto per i moduli}
+\subsection{Codice non scritto per le regole}
 
-\paragraph{Repository esterni}
-Su un repository con vulnerabilità etichettate, il livello statico della BOLA
-segnala tutti e quattro i metodi della risorsa vulnerabile e nessuno di quella
+\paragraph{Repository cooperante}
+Il repository cooperante (\texttt{repo\_target}) è una piccola API Flask,
+accompagnata da una specifica OpenAPI, che il progetto usa per provare la BOLA
+dinamica. Dichiara nel codice una risorsa vulnerabile
+(\texttt{/api/projects/\{id\}}) e una protetta (\texttt{/api/invoices/\{id\}}),
+e i livelli statici vi vengono applicati senza modifiche. Il livello statico
+della BOLA segnala tutti e quattro i metodi della risorsa vulnerabile e nessuno di quella
 protetta; uno dei quattro non compare nella specifica OpenAPI, e quindi non
 sarebbe stato raggiunto da un'analisi solo dinamica. Il livello dinamico
 conferma tre dei quattro metodi (GET, PUT e PATCH, non la cancellazione) e non
 segnala la risorsa protetta.
 
-Su un secondo repository, accompagnato dalla specifica OpenAPI, la BFLA produce
-tre segnalazioni BF-006 su endpoint privi di autenticazione e di controllo del
-ruolo. Si tratta però di endpoint usati per preparare i dati delle prove
-automatiche, non di vulnerabilità; gli endpoint dell'applicazione non vengono
-segnalati.
+Sullo stesso repository la BFLA produce tre segnalazioni BF-006 su endpoint
+privi di autenticazione e di controllo del ruolo. Si tratta però degli endpoint
+con cui la BOLA dinamica prepara e ripristina i dati delle prove, non di
+vulnerabilità; gli endpoint dell'applicazione non vengono segnalati.
 
 \paragraph{crAPI}
 Sulla parte infrastrutturale di crAPI le 240 segnalazioni iniziali si riducono
@@ -181,7 +186,7 @@ avviata in modalità vulnerabile o sicura con lo stesso codice.
     \textbf{Modulo} & \textbf{VAmPI vuln.} & \textbf{VAmPI sicuro} & \textbf{DVAPI} & \textbf{sadcloud} \\
     \midrule
     Scansione statica (voci) & 28 & 28 & 73 & 38 \\
-    BOLA, livello dinamico & 1 su 12 prove & 0 su 12 prove & non eseguita & -- \\
+    BOLA, livello dinamico & 1 & 0 & non eseguita & -- \\
     BOLA, livello statico & 0 & 0 & 0 & 0 \\
     Broken Authentication & 1 & 1 & non eseguita & -- \\
     BOPLA & 0 & 0 & 0 & 0 \\
@@ -195,7 +200,8 @@ avviata in modalità vulnerabile o sicura con lo stesso codice.
   \caption[Esiti sull'insieme di prova]{Voci della scansione statica e
     segnalazioni per modulo sui bersagli dell'insieme di prova. Un trattino
     indica che il modulo non si applica: sadcloud non ha un'applicazione in
-    esecuzione. Le 10 segnalazioni SSRF su VAmPI e quella della Security
+    esecuzione. La BOLA dinamica ha eseguito 12 prove su ciascuna modalità
+    di VAmPI. Le 10 segnalazioni SSRF su VAmPI e quella della Security
     Misconfiguration su sadcloud sono falsi positivi (si veda il dettaglio più
   avanti).}
   \label{tab:ris-prova}
@@ -264,9 +270,9 @@ stata esaminata a mano, conta come errata.
 
 \paragraph{Le segnalazioni nel dettaglio}
 Le metriche considerano solo le segnalazioni che corrispondono a una
-vulnerabilità documentata, ma la dashboard ne mostra molte di più. Di seguito
-si riassume che cosa segnalano; l'elenco completo, voce per voce, è
-nell'Appendice~\ref{app:segnalazioni}.
+vulnerabilità documentata, ma il cruscotto (Sezione~\ref{sec:cruscotto}) ne
+mostra molte di più. Di seguito si riassume che cosa segnalano; l'elenco
+completo, voce per voce, è nell'Appendice~\ref{app:segnalazioni}.
 
 Su VAmPI le segnalazioni sono 48: 28 della scansione statica e 20 dei moduli.
 Delle 24 di Spectral, 14 riguardano tag non dichiarati nel contratto e 8
@@ -307,91 +313,6 @@ di accesso AWS scritta nel codice. L'unica segnalazione dei moduli, l'assenza di
 intestazioni di sicurezza, è un falso positivo, perché sadcloud non contiene
 un'applicazione web.
 
-\section{Visualizzazione dei risultati nella dashboard}
-\label{sec:ris-dashboard}
-
-Tutti i risultati descritti finora sono consultabili nella dashboard dello
-strumento, che legge i rapporti salvati di ciascun bersaglio. Le figure di
-questa sezione mostrano i risultati della campagna sull'insieme di prova.
-
-La pagina iniziale (Figura~\ref{fig:dash-home}) permette di avviare una
-scansione e riassume l'ultima scansione del bersaglio selezionato: quanti moduli
-sono stati eseguiti, quante segnalazioni hanno prodotto e l'esito di ciascun
-modulo. Per VAmPI in modalità vulnerabile i nove moduli producono 20
-segnalazioni.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_home.png}
-  \caption[Pagina iniziale della dashboard]{Pagina iniziale della dashboard,
-  con il riepilogo dell'ultima scansione di VAmPI in modalità vulnerabile.}
-  \label{fig:dash-home}
-\end{figure}
-
-Da qui si accede a una pagina per ciascun sistema di analisi. La pagina di
-Checkov (Figura~\ref{fig:dash-checkov}) elenca le voci della scansione
-infrastrutturale, ordinate per natura e punteggio di rischio, con il conteggio
-per severità. Aprendo una voce compare la remediation: descrizione del
-problema, impatto, procedura di mitigazione e un esempio di codice corretto.
-La remediation proviene da una base di conoscenza locale ed è generica per la
-famiglia del controllo: nella figura, per un database RDS pubblico, l'esempio di
-codice riguarda un bucket S3.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_checkov.png}
-  \caption[Risultati di Checkov e remediation]{Risultati di Checkov su sadcloud.
-  La prima voce, un database RDS accessibile pubblicamente, è aperta e mostra la
-  remediation proposta.}
-  \label{fig:dash-checkov}
-\end{figure}
-
-La pagina di Semgrep (Figura~\ref{fig:dash-semgrep}) mostra le rotte trovate
-nel codice, che formano l'inventario usato dagli altri livelli, e quelle che
-non sembrano richiedere autenticazione. La pagina di Spectral
-(Figura~\ref{fig:dash-spectral}) riporta le violazioni del contratto OpenAPI,
-ciascuna con la regola, la riga del contratto e la severità.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_semgrep.png}
-  \caption[Risultati di Semgrep]{Risultati di Semgrep su DVAPI: le rotte
-  rilevate nel codice Express.}
-  \label{fig:dash-semgrep}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_spectral.png}
-  \caption[Risultati di Spectral]{Risultati di Spectral sul contratto OpenAPI di
-  VAmPI.}
-  \label{fig:dash-spectral}
-\end{figure}
-
-I moduli dedicati alle categorie OWASP hanno una pagina comune
-(Figura~\ref{fig:dash-core}), con tempo di esecuzione, stato e numero di
-segnalazioni di ciascun modulo. Sotto, il dettaglio per modulo elenca le singole
-segnalazioni; la Figura~\ref{fig:dash-bola} mostra quello della BOLA dinamica su
-VAmPI, con la richiesta dell'attaccante che ottiene il libro di un altro utente
-(risposta \texttt{200}) e le prove in cui l'accesso viene respinto.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figure/dashboard/dashboard_core.png}
-  \caption[Riepilogo dei moduli]{Riepilogo dei moduli sulla scansione completa
-  di VAmPI in modalità vulnerabile.}
-  \label{fig:dash-core}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{figure/dashboard/dashboard_bola.png}
-  \caption[Dettaglio della BOLA dinamica]{Dettaglio della BOLA dinamica su VAmPI:
-  la prima voce è l'accesso non autorizzato confermato, le successive sono prove
-  superate.}
-  \label{fig:dash-bola}
-\end{figure}
-
 \section{Discussione per categoria}
 \label{sec:ris-categorie}
 
@@ -401,9 +322,9 @@ VAmPI, con la richiesta dell'attaccante che ottiene il libro di un altro utente
 Le prove confermano la divisione del lavoro prevista dalla classificazione. La
 parte statica trova la condizione necessaria, cioè l'assenza del controllo, e
 raggiunge punti che la verifica dinamica non vedrebbe, come il metodo del
-repository esterno assente dalla specifica. La parte dinamica restituisce ciò
+repository cooperante assente dalla specifica. La parte dinamica restituisce ciò
 che il codice non può dire: smentisce la segnalazione S04 della BOPLA,
-distingue la risorsa vulnerabile da quella protetta sul repository etichettato
+distingue la risorsa vulnerabile da quella protetta sul repository cooperante
 e, su VAmPI, separa due modalità che hanno lo stesso codice.
 
 Nella BFLA il residuo resta aperto. Invocare una funzione riservata è facile,
@@ -412,7 +333,7 @@ legittimo eseguirla. La letteratura affronta il problema ricostruendo la
 specifica mancante dei ruoli~\cite{sun2011static,son2011rolecast,monshizadeh2014mace}
 o scrivendo regole di sicurezza da verificare con
 fuzzing~\cite{atlidakis2020checking}. Le tre segnalazioni BF-006 sul repository
-esterno illustrano il punto: la regola stabilisce che quelle funzioni sono
+cooperante illustrano il punto: la regola stabilisce che quelle funzioni sono
 raggiungibili senza ruolo, non se debbano esserlo, e a deciderlo è chi conosce
 lo scopo degli endpoint.
 
@@ -439,10 +360,17 @@ tecnica nel senso del criterio (Sottosezione~\ref{sec:criterio}): il predicato
 sugli artefatti basta a stabilire la violazione, anche se non ne misura le
 conseguenze.
 
-Sull'insieme di prova, invece, la Server-Side Request Forgery e la Security
-Misconfiguration non trovano le voci documentate di DVAPI: né la richiesta
-verso un URL arbitrario né la traccia dello stack restituita con un token non
-valido.
+Sull'insieme di prova, invece, i moduli tecnici non trovano nessuna delle tre
+voci documentate di DVAPI che rientrano nel loro perimetro, e per la stessa
+ragione: il codice usa una forma che le regole non conoscono. La richiesta
+verso un URL arbitrario passa per la libreria \texttt{request} di Node.js,
+mentre la regola della SSRF per JavaScript riconosce solo \texttt{fetch} e
+\texttt{axios}. La traccia dello stack viene restituita da un blocco
+\texttt{catch} di Express, mentre SC-003 esamina i gestori d'errore di Flask.
+Il caricamento dei file passa per \texttt{express-fileupload}, mentre la regola
+sull'upload controlla i limiti di \texttt{multer}. Sono quindi limiti di
+copertura delle regole, non della classificazione: la violazione è nel codice,
+ma in una forma che le regole non prevedono.
 
 La Tabella~\ref{tab:ris-livelli} indica da quale livello vengono le
 segnalazioni dei quattro moduli tecnici. Sulle coppie gemelle 19 dei 22 casi
@@ -525,7 +453,7 @@ categorie:
 \begin{itemize}
   \item nella \textbf{BOLA} e nella \textbf{BOPLA} è accertabile a runtime: il
     livello dinamico conferma tre dei quattro metodi segnalati sul repository
-    etichettato e smentisce la segnalazione S04 della BOPLA;
+    cooperante e smentisce la segnalazione S04 della BOPLA;
   \item nella \textbf{Broken Authentication} è accertabile solo a condizione
     che il meccanismo esista e una sessione sia disponibile;
   \item nella \textbf{BFLA} resta aperto: una risposta positiva non dice se
@@ -595,3 +523,9 @@ come tale in qualche punto, e un dato sensibile restituito a tutti senza alcun
 controllo non viene segnalato. È una conseguenza voluta, perché un elenco fisso
 di campi sensibili avrebbe funzionato sulle applicazioni di prova e su nessun
 altro sistema.
+
+Va infine ricordato chi ha prodotto le prove. Casi di prova, regole, repository
+cooperante e decisioni manuali sulle corrispondenze sono opera di chi ha
+sviluppato lo strumento, e la campagna sull'insieme di prova è stata eseguita
+senza congelarlo prima. Solo crAPI, VAmPI, DVAPI e sadcloud sono codice di
+terzi, e sono i risultati su di essi a misurare quanto lo strumento generalizzi.
