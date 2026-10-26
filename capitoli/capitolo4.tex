@@ -294,122 +294,62 @@ di accesso AWS scritta nel codice. L'unica segnalazione dei moduli, l'assenza di
 intestazioni di sicurezza, è un falso positivo, perché sadcloud non contiene
 un'applicazione web.
 
-\section{Discussione per categoria}
+\subsection{Discussione per categoria}
 \label{sec:ris-categorie}
 
-\subsection{Categorie ibride}
+\subsubsection{Categorie ibride}
 \label{sec:ris-ibride}
 
-Le prove confermano la divisione del lavoro prevista dalla classificazione. La
-parte statica trova la condizione necessaria, cioè l'assenza del controllo, e
-raggiunge punti che una verifica puramente dinamica potrebbe non coprire. La
-parte dinamica restituisce ciò che il codice non può dire: smentisce la
-segnalazione S04 della BOPLA e, su VAmPI, separa due modalità che condividono
-lo stesso codice.
+I risultati sono coerenti con la divisione del lavoro prevista dalla classificazione. L'analisi statica individua condizioni potenzialmente vulnerabili nel codice, mentre quella dinamica permette di verificarne il comportamento effettivo e, in alcuni casi, di smentire le segnalazioni statiche. È quanto emerge dalla BOPLA, per la quale il test dinamico smentisce la segnalazione S04, e da VAmPI, dove consente di distinguere due comportamenti che condividono la stessa struttura del codice.
 
-Nella BFLA il residuo resta aperto. Invocare una funzione riservata è facile,
-ma un \texttt{200 OK} attesta che l'operazione è stata eseguita, non che fosse
-legittimo eseguirla. La letteratura affronta il problema ricostruendo la
-specifica mancante dei ruoli~\cite{sun2011static,son2011rolecast,monshizadeh2014mace}
-o scrivendo regole di sicurezza da verificare con
-fuzzing~\cite{atlidakis2020checking}. La regola stabilisce se una funzione sia
-raggiungibile senza un controllo di ruolo, non se debba esserlo: a deciderlo
-può essere solo chi conosce il dominio applicativo e lo scopo degli endpoint.
+Nella BFLA rimane invece un limite legato alla conoscenza del dominio applicativo. Il sistema può individuare funzioni raggiungibili senza controlli sui ruoli riconosciuti dalle regole, ma non può stabilire automaticamente se tali controlli siano necessari. Una risposta HTTP 200 conferma che l'operazione è stata eseguita, non che l'utente fosse autorizzato a eseguirla. La letteratura affronta il problema ricostruendo la specifica dei ruoli~\cite{sun2011static,son2011rolecast,monshizadeh2014mace} oppure definendo regole di sicurezza da verificare mediante fuzzing~\cite{atlidakis2020checking}. Per stabilire se una funzione debba essere riservata a determinati utenti è tuttavia necessario conoscere le regole applicative e lo scopo degli endpoint.
 
-Nella Broken Authentication le prove dinamiche distinguono la versione
-vulnerabile da quella irrobustita, ma possono accertare un difetto solo dove il
-meccanismo esiste e una sessione è disponibile.
+Nella Broken Authentication, le prove dinamiche distinguono la versione vulnerabile da quella irrobustita. La verifica resta però limitata ai meccanismi di autenticazione effettivamente presenti e ai casi in cui è possibile disporre di una sessione per eseguire i test.
 
-\subsection{Categorie tecniche}
+\subsubsection{Categorie tecniche}
 \label{sec:ris-statiche}
 
-Per le quattro categorie tecniche le coppie gemelle danno esiti pieni,
-confermando che la violazione si legge negli artefatti. Per due di esse il
-sistema in esecuzione direbbe qualcosa in più, ma non sulla violazione: sul suo
-impatto. Nell'Unrestricted Resource Consumption la violazione è l'assenza del
-limite, e il modulo la stabilisce; quanto il servizio ne soffra davvero si
-misura solo con prove di carico~\cite{owasp2023api4,antunes2008resource}. Una
-segnalazione va letta quindi come una protezione da aggiungere. Nell'Unsafe
-Consumption la violazione è il consumo dei dati di terze parti senza
-validazione, su un canale in chiaro o seguendo le redirezioni alla cieca, e si
-legge nel codice; quanto sia sfruttabile dipende dal comportamento del
-fornitore, che si potrebbe osservare solo mettendo il sistema davanti a un
-fornitore ostile e controllato. Il modulo realizzato implementa tre regole di
-analisi statica AST (UC-001 per l'assenza di sanitizzazione su dati terzi passati
-a query o costruttori, UC-002 per il trasporto in chiaro HTTP anziché HTTPS, e UC-003
-per il redirect following con dati sensibili) che sulla micro-applicazione gemella
-hanno conseguito una recall del 100\% con zero falsi positivi sulla variante sicura.
-La sua mancata attivazione sui bersagli esterni dell'insieme di prova e sulla
-repository complessa di crAPI~\cite{owasp2026crapi} è pienamente coerente: crAPI
-è stata disegnata sulla Top 10 del 2019 (dove la voce API10 riguardava il logging
-e il monitoraggio anziché il consumo di API) e i suoi microservizi di rete sono
-in Java e Go, mentre VAmPI e DVAPI non integrano dipendenze esterne.
-In entrambi i casi la categoria resta quindi
-tecnica nel senso del criterio (Sottosezione~\ref{sec:criterio}): il predicato
-sugli artefatti basta a stabilire la violazione, anche se non ne misura le
-conseguenze.
+Per le quattro categorie tecniche, le coppie gemelle producono risultati completi, coerenti con la possibilità di individuare le violazioni direttamente negli artefatti dell'applicazione. L'analisi statica permette infatti di riconoscere determinate condizioni vulnerabili, ma non sempre di stabilirne le conseguenze. Nell'Unrestricted Resource Consumption, il modulo verifica l'assenza dei limiti previsti, mentre l'impatto sul servizio richiederebbe prove di carico~\cite{owasp2023api4,antunes2008resource}. La segnalazione indica quindi la necessità di verificare e, se necessario, introdurre le protezioni mancanti. Nell'Unsafe Consumption, il modulo individua condizioni come l'assenza di validazione dei dati provenienti da terze parti, l'uso di HTTP anziché HTTPS e la gestione non sicura delle redirezioni. La loro effettiva sfruttabilità dipende anche dal comportamento del fornitore e richiederebbe ulteriori prove in un ambiente controllato.
 
-Sull'insieme di prova, invece, i moduli tecnici non trovano nessuna delle tre
-voci documentate di DVAPI che rientrano nel loro perimetro, e per la stessa
-ragione: il codice usa una forma che le regole non conoscono. La richiesta
-verso un URL arbitrario passa per la libreria \texttt{request} di Node.js,
-mentre la regola della SSRF per JavaScript riconosce solo \texttt{fetch} e
-\texttt{axios}. La traccia dello stack viene restituita da un blocco
-\texttt{catch} di Express, mentre SC-003 esamina i gestori d'errore di Flask.
-Il caricamento dei file passa per \texttt{express-fileupload}, mentre la regola
-sull'upload controlla i limiti di \texttt{multer}. Sono quindi limiti di
-copertura delle regole, non della classificazione: la violazione è nel codice,
-ma in una forma che le regole non prevedono.
+Il modulo realizzato per l'Unsafe Consumption implementa tre regole di analisi statica AST: UC-001, per l'assenza di sanitizzazione sui dati di terze parti utilizzati in query o costruttori; UC-002, per il trasporto in chiaro tramite HTTP anziché HTTPS; UC-003, per il redirect following in presenza di dati sensibili. Sulla micro-applicazione gemella, le tre regole hanno raggiunto una recall del 100\%, senza falsi positivi sulla variante sicura.
 
-La Tabella~\ref{tab:ris-livelli} indica da quale livello vengono le
-segnalazioni dei quattro moduli tecnici. Sulle coppie gemelle 19 dei 22 casi
-sono rilevati nel codice applicativo e 3 nei file di configurazione: i limiti
-di memoria dei container, la dimensione massima delle richieste e il timeout
-del server, che si trovano nel \texttt{docker-compose}, nel proxy o nella
-configurazione dell'applicazione. Sull'insieme di prova la configurazione pesa
-di più: 8 delle 14 segnalazioni, comprese le dipendenze con vulnerabilità note.
-Le regole che leggono il contratto (le quattro della Resource Consumption e
-SS-006) non producono segnalazioni in nessuna delle prove.
+La mancata attivazione delle regole sui bersagli esterni dell'insieme di prova e sulla repository complessa di crAPI~\cite{owasp2026crapi} è coerente con le tecnologie e le dipendenze presenti in questi progetti. crAPI è stata infatti progettata sulla Top 10 del 2019, nella quale la voce API10 riguardava il logging e il monitoraggio anziché il consumo di API. Inoltre, i suoi microservizi di rete sono sviluppati in Java e Go, mentre VAmPI e DVAPI non integrano dipendenze esterne. In questi casi, quindi, non sono presenti condizioni riconducibili alle regole implementate.
+
+Anche sull'insieme di prova, tuttavia, emergono limiti di copertura per gli altri moduli tecnici. Nessuna delle tre vulnerabilità documentate di DVAPI riconducibili al loro perimetro viene rilevata, perché il codice utilizza costrutti e librerie che le regole non riconoscono. La richiesta verso un URL arbitrario passa attraverso la libreria \texttt{request} di Node.js, mentre la regola SSRF per JavaScript riconosce soltanto \texttt{fetch} e \texttt{axios}. La restituzione della traccia dello stack avviene tramite un blocco \texttt{catch} di Express, mentre SC-003 esamina i gestori degli errori di Flask. Infine, il caricamento dei file utilizza \texttt{express-fileupload}, mentre la regola corrispondente controlla i limiti di \texttt{multer}. Questi casi evidenziano quindi un limite nella copertura delle regole implementate: la rilevazione dipende anche dalle librerie e dai costrutti riconosciuti. L'assenza di segnalazioni non dimostra pertanto l'assenza della vulnerabilità, ma può indicare che la sua implementazione non rientra nelle forme attualmente considerate dal sistema.
+
+La Tabella~\ref{tab:segnalazioni-moduli-tecnici} mostra la provenienza delle segnalazioni dei quattro moduli tecnici. Sulle coppie gemelle, 19 delle 22 segnalazioni provengono dal codice applicativo e 3 dai file di configurazione, che contengono impostazioni come i limiti di memoria dei container, la dimensione massima delle richieste e i timeout. Nell'insieme di prova, invece, la configurazione rappresenta la fonte principale, con 8 segnalazioni su 14, comprese quelle relative a dipendenze con vulnerabilità note. Le restanti 6 provengono dal codice applicativo.
+
+Nessuna segnalazione proviene dal livello del contratto API. Questo risultato mostra che, nei casi esaminati, le regole basate sul contratto non hanno contribuito alla rilevazione. Nel complesso, la distribuzione delle segnalazioni conferma l'importanza di analizzare sia il codice sia le configurazioni, senza però permettere di generalizzare questi risultati oltre l'insieme di prova considerato.
 
 \begin{table}[htbp]
-  \centering
-  \small
-  \linespread{1.0}\selectfont
-  \begin{tabular}{@{}lcccccc@{}}
-    \toprule
-    & \multicolumn{3}{c}{\textbf{Coppie gemelle}} & \multicolumn{3}{c}{\textbf{VAmPI e DVAPI}} \\
-    \cmidrule(lr){2-4}\cmidrule(l){5-7}
-    \textbf{Modulo} & \textbf{Codice} & \textbf{Config.} & \textbf{Contratto} & \textbf{Codice} & \textbf{Config.} & \textbf{Contratto} \\
-    \midrule
-    Resource Consumption & 6 & 3 & 0 & 1 & 5 & 0 \\
-    Security Misconfiguration & 7 & 0 & 0 & 5 & 3 & 0 \\
-    SSRF & 3 & 0 & 0 & 0 & 0 & 0 \\
-    Unsafe Consumption & 3 & 0 & 0 & 0 & 0 & 0 \\
-    \midrule
-    Totale & 19 & 3 & 0 & 6 & 8 & 0 \\
-    \bottomrule
-  \end{tabular}
-  \caption[Segnalazioni dei moduli tecnici per livello]{Segnalazioni dei
-    moduli tecnici per livello di analisi. Sulle coppie gemelle sono tutte veri
-    positivi; sull'insieme di prova nessuna corrisponde a una vulnerabilità
-    documentata. La configurazione
-    comprende container, proxy, impostazioni dell'applicazione e manifest
-    delle dipendenze.}
-  \label{tab:ris-livelli}
+    \centering
+    \caption{Segnalazioni dei moduli tecnici per livello di analisi. Sulle coppie gemelle sono tutte veri positivi; sull'insieme di prova nessuna corrisponde a una vulnerabilità documentata. La configurazione comprende container, proxy, impostazioni dell'applicazione e manifest delle dipendenze.}
+    \label{tab:segnalazioni-moduli-tecnici}
+    \label{tab:ris-livelli}
+    \begin{tabular}{lccc|ccc}
+        \hline
+        & \multicolumn{3}{c|}{Coppie gemelle} & \multicolumn{3}{c}{Insieme di prova} \\
+        \cline{2-7}
+        Modulo & Codice & Config. & Contratto & Codice & Config. & Contratto \\
+        \hline
+        Resource Consumption & 6 & 3 & 0 & 1 & 5 & 0 \\
+        Security Misconfiguration & 7 & 0 & 0 & 5 & 3 & 0 \\
+        SSRF & 3 & 0 & 0 & 0 & 0 & 0 \\
+        Unsafe Consumption & 3 & 0 & 0 & 0 & 0 & 0 \\
+        \hline
+        Totale & 19 & 3 & 0 & 6 & 8 & 0 \\
+        \hline
+    \end{tabular}
 \end{table}
 
-\subsection{Categorie senza modulo}
+\subsubsection{Categorie senza modulo}
 \label{sec:ris-scoperte}
 
-API6:2023 ricade fra le categorie di logica di business: nessun file del
-progetto dice se un flusso vada protetto dall'abuso, e il flusso viene
-percorso correttamente, con l'attacco che sta nel ripeterlo. Restano le
-contromisure comportamentali a runtime indicate da OWASP~\cite{owasp2023api6}.
-API9:2023 resta invece fuori dalla tripartizione, perché presuppone che il
-sistema da valutare non sia noto (Sottosezione~\ref{sec:criterio}): il
-confronto fra rotte del codice e contratto può suggerire API ombra o
-documentazione obsoleta, ma non dice nulla sugli host su cui l'applicazione è
-distribuita, che richiedono una ricognizione dell'infrastruttura.
+API6:2023 riguarda l'abuso dei flussi di business e non può essere valutata soltanto verificando la presenza di controlli nel codice. Un'operazione può essere eseguita correttamente e risultare comunque abusabile se viene ripetuta oltre i limiti previsti dal contesto applicativo. Per questo motivo, la categoria richiede verifiche comportamentali a runtime, come quelle indicate da OWASP~\cite{owasp2023api6}.
+
+API9:2023 non rientra invece nella tripartizione adottata, perché richiede informazioni che non sono necessariamente disponibili nel codice o nel contratto API (Sottosezione~\ref{sec:criterio}). Il confronto tra le rotte implementate e la documentazione può evidenziare API non documentate o descrizioni obsolete, ma non consente di ricostruire l'inventario effettivo dei servizi esposti nell'infrastruttura. Per questa verifica è necessaria una ricognizione degli ambienti di distribuzione.
+
+Nel complesso, i risultati mostrano che la scelta dell'approccio di analisi dipende dalla natura della vulnerabilità. Le categorie tecniche possono essere affrontate verificando il codice e le configurazioni, mentre quelle ibride richiedono anche prove sul comportamento dell'applicazione. Restano inoltre casi in cui la rilevazione automatica è limitata dalla necessità di conoscere le regole del dominio applicativo o lo stato effettivo dell'infrastruttura. I test confermano quindi l'utilità dell'approccio adottato nei casi esaminati, evidenziando al tempo stesso la necessità di ampliare la copertura delle regole e integrare verifiche ulteriori quando gli artefatti disponibili non sono sufficienti.
 
 \section{Risposta alle domande di ricerca}
 \label{sec:ris-rq}
