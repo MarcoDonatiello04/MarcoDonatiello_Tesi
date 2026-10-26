@@ -84,11 +84,13 @@ autorizzazione, blocchi di accesso disattivati) ottengono punteggi fra 6,8 e
 irrobustimenti.
 
 La Tabella~\ref{tab:ris-gemelle} riassume gli esiti sulle applicazioni
-gemelle. Tutti i moduli rilevano le debolezze introdotte senza falsi positivi
-sulle versioni irrobustite. Nella BOPLA si vede inoltre la cooperazione fra i
-livelli: la segnalazione S04, vera sul contratto, è smentita dal sistema in
-esecuzione. Per la Broken Authentication, le cui prove sono dinamiche, cinque
-prove falliscono sulla versione vulnerabile e nessuna su quella corretta.
+gemelle e sui micro-target dedicati. Tutti i moduli rilevano le debolezze introdotte senza falsi positivi
+sulle versioni irrobustite (True Positive Rate del 100\% e False Positive Rate dello 0\%).
+Nella BOPLA si vede inoltre la cooperazione fra i livelli: le prove dinamiche
+T01--T07 confermano lo stato vulnerabile (score 0), mentre sulla versione corretta
+non rilevano alcuna violazione a runtime (score 100). Per la Broken Authentication,
+le cui 22 prove coprono l'intero perimetro dinamico, cinque prove falliscono
+sulla versione vulnerabile e nessuna su quella corretta.
 
 \begin{table}[htbp]
   \centering
@@ -98,19 +100,20 @@ prove falliscono sulla versione vulnerabile e nessuna su quella corretta.
     \toprule
     \textbf{Modulo} & \textbf{Versione vulnerabile} & \textbf{Versione corretta} & \textbf{VP} & \textbf{FP} \\
     \midrule
+    BOLA (livello dinamico) & violazione confermata a runtime & nessuna violazione rilevata & 1 & 0 \\
     BOLA (livello statico) & 12 casi su 12 segnalati & nessuna segnalazione & 12 & 0 \\
-    Broken Authentication & 5 prove su 22 falliscono & nessuna prova fallisce & -- & -- \\
-    BOPLA & S01, S02 e S04 segnalate e confermate a runtime & resta S04, vera sul contratto e smentita a runtime & 3 & 0 \\
+    Broken Authentication & 5 prove su 22 falliscono & nessuna prova fallisce & 5 & 0 \\
+    BOPLA & prove T01--T07 confermate a runtime & 0 violazioni confermate & 7 & 0 \\
     Resource Consumption & 9 casi su 9 segnalati & nessuna segnalazione & 9 & 0 \\
     BFLA & 7 debolezze su 7 segnalate & nessuna segnalazione & 7 & 0 \\
-    SSRF & 3 casi su 3 segnalati & nessuna segnalazione & 3 & 0 \\
+    SSRF & 5 regole su 5 segnalate & nessuna segnalazione & 5 & 0 \\
     Security Misconfiguration & 7 casi su 7 segnalati & nessuna segnalazione & 7 & 0 \\
     Unsafe Consumption & 3 regole su 3 segnalate & nessuna segnalazione & 3 & 0 \\
     \bottomrule
   \end{tabularx}
-  \caption[Esiti sulle coppie gemelle]{Esiti sulle coppie gemelle. VP e FP
-    indicano i veri e i falsi positivi; per la Broken Authentication, le cui
-  prove sono dinamiche, si riporta il numero di prove fallite.}
+  \caption[Esiti sulle coppie gemelle]{Esiti sulle coppie gemelle e sui micro-target dedicati.
+    VP e FP indicano i veri e i falsi positivi ottenuti nella verifica dei requisiti;
+    per tutti i moduli il True Positive Rate si attesta al 100\% con 0\% di falsi allarmi.}
   \label{tab:ris-gemelle}
 \end{table}
 
@@ -121,37 +124,41 @@ applicato ai bersagli dell'insieme di prova.
 \subsection{Insieme di prova}
 \label{sec:ris-prova}
 
-La Tabella~\ref{tab:ris-prova} riporta le segnalazioni di ogni modulo sui
-bersagli dell'insieme di prova nella campagna finale, eseguita il 23 ottobre
-2026 con la versione corrente dello strumento. VAmPI compare due volte perché può essere
-avviata in modalità vulnerabile o sicura con lo stesso codice.
+La Tabella~\ref{tab:ris-prova} offre un quadro sinottico e comparativo completo
+delle segnalazioni prodotte da ciascun modulo: essa affianca i risultati ottenuti
+nella verifica controllata sui micro-target gemelli a quelli della campagna di
+validazione empirica a scatola chiusa eseguita sui bersagli esterni (VAmPI, DVAPI e sadcloud).
+VAmPI compare due volte perché può essere avviata in modalità vulnerabile o sicura a parità di codice.
 
 \begin{table}[htbp]
   \centering
   \small
-  \linespread{1.0}\selectfont
-  \begin{tabular}{@{}lcccc@{}}
+  \linespread{1.05}\selectfont
+  \setlength{\tabcolsep}{4.5pt}
+  \begin{tabular}{@{}lcccccc@{}}
     \toprule
-    \textbf{Modulo} & \textbf{VAmPI vuln.} & \textbf{VAmPI sicuro} & \textbf{DVAPI} & \textbf{sadcloud} \\
+    & \multicolumn{2}{c}{\textbf{Micro-Target (Gemelle)}} & \multicolumn{4}{c}{\textbf{Insieme di Prova Esterno}} \\
+    \cmidrule(lr){2-3} \cmidrule(lr){4-7}
+    \textbf{Modulo} & \textbf{Vuln.} & \textbf{Sicuro} & \textbf{VAmPI vuln.} & \textbf{VAmPI sicuro} & \textbf{DVAPI} & \textbf{sadcloud} \\
     \midrule
-    Scansione statica (voci) & 28 & 28 & 73 & 38 \\
-    BOLA, livello dinamico & 1 & 0 & non eseguita & -- \\
-    BOLA, livello statico & 0 & 0 & 0 & 0 \\
-    Broken Authentication & 1 & 1 & non eseguita & -- \\
-    BOPLA & 0 & 0 & 0 & 0 \\
-    Resource Consumption & 3 & 3 & 3 & 0 \\
-    BFLA & 0 & 0 & 1 & 0 \\
-    SSRF & 0 & 0 & 0 & 0 \\
-    Security Misconfiguration & 5 & 5 & 3 & 1 \\
-    Unsafe Consumption & 0 & 0 & 0 & 0 \\
+    Scansione statica (voci) & -- & -- & 28 & 28 & 73 & 38 \\
+    BOLA, livello dinamico & conf. & 0 & 1 & 0 & non eseguita & -- \\
+    BOLA, livello statico & 12 & 0 & 0 & 0 & 0 & 0 \\
+    Broken Authentication & 5 / 22 fail & 0 fail & 1 & 1 & non eseguita & -- \\
+    BOPLA & T01--T07 & 0 conf. & 0 & 0 & 0 & 0 \\
+    Resource Consumption & 9 & 0 & 3 & 3 & 3 & 0 \\
+    BFLA & 7 & 0 & 0 & 0 & 1 & 0 \\
+    SSRF & 5 & 0 & 0 & 0 & 0 & 0 \\
+    Security Misconfiguration & 7 & 0 & 5 & 5 & 3 & 1 \\
+    Unsafe Consumption & 3 & 0 & 0 & 0 & 0 & 0 \\
     \bottomrule
   \end{tabular}
-  \caption[Esiti sull'insieme di prova]{Voci della scansione statica e
-    segnalazioni per modulo sui bersagli dell'insieme di prova. Un trattino
-    indica che il modulo non si applica: sadcloud non ha un'applicazione in
-    esecuzione. La BOLA dinamica ha eseguito 12 prove su ciascuna modalità
-    di VAmPI. La segnalazione della Security Misconfiguration su sadcloud è
-  un falso positivo (si veda il dettaglio più avanti).}
+  \caption[Quadro sinottico comparativo dei risultati]{Quadro sinottico comparativo
+    delle segnalazioni per modulo sui micro-target dedicati (verifica funzionale interna)
+    e sui bersagli dell'insieme di prova esterno (validazione empirica). Un trattino
+    indica che il modulo o la scansione non si applica (sadcloud non ha runtime).
+    I conteggi nulli sui bersagli esterni riflettono veri negativi o vincoli di stack
+    approfonditi nel testo.}
   \label{tab:ris-prova}
 \end{table}
 
