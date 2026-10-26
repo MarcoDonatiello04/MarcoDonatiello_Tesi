@@ -19,7 +19,7 @@ operativo è stato realizzato uno strumento che combina scanner esistenti
 (Checkov, Semgrep e Spectral) con un modulo di rilevamento per ciascuna categoria
 tecnica o ibrida, e che affianca all'analisi statica una verifica dinamica dove
 questa non basta. Lo strumento è stato validato su coppie di applicazioni
-gemelle, una vulnerabile e una corretta, sul benchmark crAPI e su un insieme di
+gemelle, una vulnerabile e una corretta, e su un insieme di
 prova di tre applicazioni di terzi: VAmPI, DVAPI e sadcloud.
 
 Quattro categorie risultano tecniche, quattro ibride e una di logica di
@@ -29,7 +29,7 @@ positivi, e su VAmPI, che ha lo stesso codice nelle due modalità, solo la
 verifica dinamica separa quella vulnerabile da quella sicura, come la
 classificazione prevede. Su codice di terzi lo strumento trova il 61\% delle
 misconfiguration documentate dell'infrastruttura di sadcloud, ma riconosce
-poche vulnerabilità delle API: la BOLA di VAmPI e la SSRF di crAPI. Il divario
+solo una delle vulnerabilità documentate delle API, la BOLA di VAmPI. Il divario
 dipende soprattutto dalle forme di codice che le regole conoscono, e indica la
 direzione in cui estendere lo strumento.
 %

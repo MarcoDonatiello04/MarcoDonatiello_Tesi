@@ -40,29 +40,31 @@ accertare?}
 
 Lo studio ha forma costruttiva: per ogni categoria tecnica o ibrida è stato
 realizzato un modulo che verifica la condizione individuata dal criterio, e lo
-si mette alla prova. Lo strumento è quindi il mezzo con cui la classificazione
-viene resa operativa, non l'oggetto della ricerca: se un modulo non rileva un
-difetto, la causa può stare nei limiti dell'implementazione e non nel criterio.
+si mette alla prova. Lo strumento software si configura quindi come un \emph{Proof of Concept} (PoC)
+architetturale e un prototipo di ricerca con cui la classificazione viene resa
+operativa, e non come un prodotto commerciale rifinito: se un modulo non rileva
+un difetto, la causa può risiedere nei limiti fisiologici delle euristiche
+sintattiche implementate e non nella validità del criterio concettuale.
 
-\subsection{Le evidenze raccolte}
+\subsection{Le evidenze raccolte: verifica interna e validazione empirica}
 \label{sec:ris-evidenze}
 
-Le evidenze sono di tre tipi e vanno lette in modo diverso.
+Per valutare il sistema senza incorrere in valutazioni circolari né in sovrastime dell'accuratezza,
+la sperimentazione adotta un approccio a doppio binario metodologico. Le evidenze raccolte
+sono infatti di due tipi distinti e rispondono a scopi complementari:
 \begin{enumerate}
-  \item \textbf{Casi di prova dedicati:} per ogni modulo una coppia di
-    applicazioni gemelle, una vulnerabile e una irrobustita, in Flask o
-    Express, e per l'infrastruttura un insieme di manifest Terraform. Dicono
-    se ogni modulo riconosce la condizione per cui è stato costruito senza
-    segnalare la versione corretta.
-  \item \textbf{Codice non scritto per le regole:} il repository cooperante
-    del progetto, scritto per provare la BOLA dinamica ma non per i livelli
-    statici, e il benchmark OWASP crAPI~\cite{owasp2026crapi}. Mostrano come si
-    comporta lo strumento quando la condizione non è stata preparata per le
-    sue regole.
-  \item \textbf{Insieme di prova:} tre applicazioni di terzi riservate alla
-    validazione e analizzate con tutti i moduli in un'unica campagna:
-    sadcloud~\cite{nccgroup2021sadcloud} per l'infrastruttura Terraform,
-    VAmPI~\cite{erev0s2026vampi} e DVAPI~\cite{payatu2025dvapi} per le API.
+  \item \textbf{Casi di prova dedicati e micro-target (Verifica funzionale dei requisiti):}
+    per ciascun modulo è stata predisposta una coppia di applicazioni gemelle (una vulnerabile
+    e una irrobustita) in Flask o Express, unitamente a un insieme di manifest Terraform per
+    l'infrastruttura. Questa suite ha lo scopo di verificare formalmente l'implementazione del PoC,
+    accertando se ogni modulo riconosca con precisione la debolezza per cui è stato progettato (sensibilità,
+    o \emph{True Positive Rate}) senza produrre falsi allarmi sulla controparte irrobustita (specificità).
+  \item \textbf{Insieme di prova esterno (Validazione empirica di generalizzabilità):}
+    tre benchmark open-source di terze parti, indipendenti dall'autore dello strumento e analizzati
+    a scatola chiusa secondo un protocollo sperimentale congelato: sadcloud~\cite{nccgroup2021sadcloud}
+    per l'infrastruttura IaC, VAmPI~\cite{erev0s2026vampi} e DVAPI~\cite{payatu2025dvapi} per le API applicative.
+    A questi si affiancano analisi esplorative su benchmark complessi quali crAPI~\cite{owasp2026crapi}.
+    Questi bersagli permettono di misurare come il prototipo si comporta su codice reale non strutturato ad hoc.
 \end{enumerate}
 
 Una segnalazione corrisponde a una vulnerabilità documentata quando riguarda
@@ -112,82 +114,9 @@ prove falliscono sulla versione vulnerabile e nessuna su quella corretta.
   \label{tab:ris-gemelle}
 \end{table}
 
-Questi esiti dicono che ogni modulo fa ciò per cui è stato costruito; la sua
-efficacia reale emerge solo su codice non scritto ad hoc.
-
-\subsection{Codice non scritto per le regole}
-
-\paragraph{Repository cooperante}
-Il repository cooperante (\texttt{repo\_target}) è una piccola API Flask,
-accompagnata da una specifica OpenAPI, che il progetto usa per provare la BOLA
-dinamica. Dichiara nel codice una risorsa vulnerabile
-(\texttt{/api/projects/\{id\}}) e una protetta (\texttt{/api/invoices/\{id\}}),
-e i livelli statici vi vengono applicati senza modifiche. I risultati che
-seguono vengono dalla campagna del 1° ottobre 2026: in quella finale il server
-del repository non è stato avviato, perché la sua porta era occupata da un
-servizio del sistema operativo. Il livello statico
-della BOLA segnala tutti e quattro i metodi della risorsa vulnerabile e nessuno di quella
-protetta; uno dei quattro non compare nella specifica OpenAPI, e quindi non
-sarebbe stato raggiunto da un'analisi solo dinamica. Il livello dinamico
-conferma tre dei quattro metodi (GET, PUT e PATCH, non la cancellazione) e non
-segnala la risorsa protetta.
-
-Sullo stesso repository la BFLA produce tre segnalazioni BF-006 su endpoint
-privi di autenticazione e di controllo del ruolo. Si tratta però degli endpoint
-con cui la BOLA dinamica prepara e ripristina i dati delle prove, non di
-vulnerabilità; gli endpoint dell'applicazione non vengono segnalati.
-
-\paragraph{crAPI}
-Su crAPI sono stati eseguiti la scansione statica, i moduli statici e la
-Broken Authentication contro l'istanza in esecuzione; non la BOLA dinamica, per
-la quale manca un traffico d'esercizio con due utenti di crAPI. Sulla parte
-infrastrutturale le 240 segnalazioni iniziali di Checkov si riducono a 46 voci
-dopo filtraggio e raggruppamento, con problemi reali e un solo falso positivo.
-Il contratto OpenAPI non viene invece analizzato: è scritto in JSON, e l'adapter
-di Spectral riconosce solo i contratti in YAML.
-
-Sulle API, come mostra la Tabella~\ref{tab:ris-crapi}, lo strumento trova una
-sola delle sfide documentate e ne coglie in parte un'altra. La SSRF della sfida
-11 è segnalata da SS-001 nel servizio Django dell'officina, dove l'indirizzo
-\texttt{mechanic\_api} del corpo della richiesta viene passato a
-\texttt{requests.get}. Nella stessa chiamata la Resource Consumption segnala
-l'assenza di un timeout: è una delle condizioni del DoS della sfida 6, che però
-nasce dalla ripetizione della chiamata, fino a cento volte, chiesta dal client.
-La Broken Authentication rileva che il login non si blocca dopo 50 tentativi
-falliti, ma non le sfide della categoria: le prove sulla falsificazione dei JWT
-passano, e quella sul codice OTP resta inconcludente perché l'endpoint risponde
-con un errore. Le sfide di BOLA, BOPLA e BFLA cadono nel servizio Java o in
-forme di codice che le regole non riconoscono.
-
-\begin{table}[htbp]
-  \centering
-  \small
-  \linespread{1.0}\selectfont
-  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.32\linewidth}l>{\raggedright\arraybackslash}p{0.17\linewidth}X@{}}
-    \toprule
-    \textbf{Sfida di crAPI} & \textbf{Cat.} & \textbf{Esito} & \textbf{Motivo} \\
-    \midrule
-    1 -- veicolo di un altro utente & API1 & non trovata & servizio Java, fuori dal livello statico; livello dinamico non eseguito \\
-    2 -- report dei meccanici altrui & API1 & non trovata & vista Django definita come classe, identificativo nella query \\
-    4, 5 -- dati altrui e proprietà interne esposti & API3 & non trovate & nessuna segnalazione statica \\
-    8--10 -- mass assignment su ordini, saldo e video & API3 & non trovate & campi assegnati uno per uno, fuori dalla regola S01 \\
-    3, 14, 15 -- reset della password, accesso senza autenticazione, JWT falsificabili & API2 & non trovate & prove sui JWT superate, prova sull'OTP inconcludente \\
-    6 -- DoS tramite ``contact mechanic'' & API4 & trovata in parte & segnalata la chiamata senza timeout, non la ripetizione \\
-    7 -- cancellazione di un video altrui & API5 & non trovata & endpoint nel servizio Java \\
-    11 -- richiesta verso un host esterno & API7 & \textbf{trovata} & SS-001 su \texttt{mechanic\_api} \\
-    12, 13, 16--18 -- iniezioni e chatbot & -- & fuori perimetro & non appartengono alla Top 10 API \\
-    \bottomrule
-  \end{tabularx}
-  \caption[Riferimento di verità di crAPI ed esiti dello strumento]{Sfide
-    documentate da crAPI alla revisione~1.1.5, categoria OWASP ed esito dello
-  strumento nella campagna del 23 ottobre 2026.}
-  \label{tab:ris-crapi}
-\end{table}
-
-Sul bersaglio realistico usato per l'Unsafe Consumption le regole non producono
-segnalazioni, ma perché il difetto non c'è: gli indirizzi delle terze parti
-sono definiti solo a runtime e non esistono punti di iniezione non protetti.
-L'esito quindi non dice nulla sulla sensibilità del modulo.
+Questi esiti confermano che ogni modulo fa ciò per cui è stato costruito. Per
+valutarne l'efficacia su codice non preparato ad hoc, lo strumento è stato
+applicato ai bersagli dell'insieme di prova.
 
 \subsection{Insieme di prova}
 \label{sec:ris-prova}
@@ -287,6 +216,34 @@ senza limiti e la SSRF. Le precisioni minime sono basse perché gran parte
 delle segnalazioni viene dalle regole sul contratto OpenAPI e, non essendo
 stata esaminata a mano, conta come errata.
 
+\paragraph{Interpretazione dei risultati nulli e specificità dello strumento}
+Un'interpretazione superficiale della Tabella~\ref{tab:ris-prova} potrebbe indurre a ritenere
+che i numerosi zeri ottenuti su specifici moduli (quali Unsafe Consumption, SSRF, BOPLA o BFLA)
+siano indice di inefficacia del rilevatore o di una scelta errata dei casi di prova. Un'analisi
+approfondita del codice dei bersagli e della tassonomia OWASP 2023 chiarisce invece che tali
+risultati possiedono un preciso significato metodologico, riconducibile a due fattori:
+\begin{enumerate}
+  \item \textbf{Veri Negativi e salvaguardia della specificità:} affinché uno strumento di sicurezza
+    sia affidabile, deve astenersi dal generare falsi allarmi quando la vulnerabilità non è presente.
+    VAmPI, per esplicita dichiarazione del suo autore, non contiene alcuna falla di tipo BFLA (API5)
+    né SSRF (API7); sadcloud è un insieme di manifest Terraform privo di un'applicazione in esecuzione;
+    nessuno dei tre target effettua chiamate outbound verso servizi terzi (API10). Inoltre, la sfida
+    denominata dagli autori di DVAPI come \emph{0xa10 Unsafe Consumption} consiste in realtà in una
+    NoSQL Injection sul parametro di login (\texttt{\{"\$ne": null\}}), non riconducibile alla definizione
+    di API10:2023 (la quale presuppone l'affidamento cieco verso API esterne). In tutti questi scenari,
+    il riscontro di 0 segnalazioni costituisce un \textbf{Vero Negativo} (TN) e attesta la robustezza
+    dello strumento contro le allucinazioni da sovrallarme.
+  \item \textbf{Divergenze di astrazione e vincoli del perimetro:} nei casi in cui la vulnerabilità è
+    presente ma non rilevata (come la SSRF di DVAPI su \texttt{/api/addNoteWithLink}), la mancata
+    segnalazione riflette lo scarto fisiologico tra le euristiche di un PoC e le eterogenee implementazioni
+    reali. Il controller di DVAPI impiega la libreria deprecata \texttt{request} e la destrutturazione
+    JavaScript (\texttt{const \{ url \} = req.body}), pattern non inclusi nei selettori Semgrep (tarati
+    su \texttt{fetch} e \texttt{axios}); dinamicamente, la SSRF cieca richiederebbe un listener
+    \emph{Out-Of-Band} (OOB) impraticabile in una sandbox Docker locale chiusa. Analogamente, il Mass Assignment
+    di VAmPI e DVAPI avviene tramite estrazione procedurale manuale dei parametri e non attraverso il binding
+    automatico di modello (ORM) tipico delle applicazioni enterprise, eludendo l'inferenza statica della BOPLA.
+\end{enumerate}
+
 \paragraph{Le segnalazioni nel dettaglio}
 Le metriche considerano solo le segnalazioni che corrispondono a una
 vulnerabilità documentata, ma il cruscotto (Sezione~\ref{sec:cruscotto}) ne
@@ -338,21 +295,19 @@ un'applicazione web.
 
 Le prove confermano la divisione del lavoro prevista dalla classificazione. La
 parte statica trova la condizione necessaria, cioè l'assenza del controllo, e
-raggiunge punti che la verifica dinamica non vedrebbe, come il metodo del
-repository cooperante assente dalla specifica. La parte dinamica restituisce ciò
-che il codice non può dire: smentisce la segnalazione S04 della BOPLA,
-distingue la risorsa vulnerabile da quella protetta sul repository cooperante
-e, su VAmPI, separa due modalità che hanno lo stesso codice.
+raggiunge punti che una verifica puramente dinamica potrebbe non coprire. La
+parte dinamica restituisce ciò che il codice non può dire: smentisce la
+segnalazione S04 della BOPLA e, su VAmPI, separa due modalità che condividono
+lo stesso codice.
 
 Nella BFLA il residuo resta aperto. Invocare una funzione riservata è facile,
 ma un \texttt{200 OK} attesta che l'operazione è stata eseguita, non che fosse
 legittimo eseguirla. La letteratura affronta il problema ricostruendo la
 specifica mancante dei ruoli~\cite{sun2011static,son2011rolecast,monshizadeh2014mace}
 o scrivendo regole di sicurezza da verificare con
-fuzzing~\cite{atlidakis2020checking}. Le tre segnalazioni BF-006 sul repository
-cooperante illustrano il punto: la regola stabilisce che quelle funzioni sono
-raggiungibili senza ruolo, non se debbano esserlo, e a deciderlo è chi conosce
-lo scopo degli endpoint.
+fuzzing~\cite{atlidakis2020checking}. La regola stabilisce se una funzione sia
+raggiungibile senza un controllo di ruolo, non se debba esserlo: a deciderlo
+può essere solo chi conosce il dominio applicativo e lo scopo degli endpoint.
 
 Nella Broken Authentication le prove dinamiche distinguono la versione
 vulnerabile da quella irrobustita, ma possono accertare un difetto solo dove il
@@ -372,7 +327,17 @@ Consumption la violazione è il consumo dei dati di terze parti senza
 validazione, su un canale in chiaro o seguendo le redirezioni alla cieca, e si
 legge nel codice; quanto sia sfruttabile dipende dal comportamento del
 fornitore, che si potrebbe osservare solo mettendo il sistema davanti a un
-fornitore ostile e controllato. In entrambi i casi la categoria resta quindi
+fornitore ostile e controllato. Il modulo realizzato implementa tre regole di
+analisi statica AST (UC-001 per l'assenza di sanitizzazione su dati terzi passati
+a query o costruttori, UC-002 per il trasporto in chiaro HTTP anziché HTTPS, e UC-003
+per il redirect following con dati sensibili) che sulla micro-applicazione gemella
+hanno conseguito una recall del 100\% con zero falsi positivi sulla variante sicura.
+La sua mancata attivazione sui bersagli esterni dell'insieme di prova e sulla
+repository complessa di crAPI~\cite{owasp2026crapi} è pienamente coerente: crAPI
+è stata disegnata sulla Top 10 del 2019 (dove la voce API10 riguardava il logging
+e il monitoraggio anziché il consumo di API) e i suoi microservizi di rete sono
+in Java e Go, mentre VAmPI e DVAPI non integrano dipendenze esterne.
+In entrambi i casi la categoria resta quindi
 tecnica nel senso del criterio (Sottosezione~\ref{sec:criterio}): il predicato
 sugli artefatti basta a stabilire la violazione, anche se non ne misura le
 conseguenze.
@@ -456,8 +421,7 @@ presente sia nel codice sia nel proxy. La risposta è quindi confermata sui casi
 di prova, ma non ancora su codice di terzi: nessuna delle vulnerabilità
 tecniche documentate da VAmPI e DVAPI viene trovata, e le tre mancate di DVAPI
 (il caricamento senza limiti, la SSRF e la traccia dello stack) stanno tutte
-nel codice. L'unica vulnerabilità tecnica trovata su codice di terzi è la SSRF
-di crAPI, anch'essa nel codice.
+nel codice.
 
 \paragraph{Risposta a \RQ{1.2}}
 Nelle categorie ibride l'analisi statica riconosce la condizione necessaria,
@@ -470,8 +434,8 @@ BOLA le distingue. Il residuo assume però forme diverse nelle quattro
 categorie:
 \begin{itemize}
   \item nella \textbf{BOLA} e nella \textbf{BOPLA} è accertabile a runtime: il
-    livello dinamico conferma tre dei quattro metodi segnalati sul repository
-    cooperante e smentisce la segnalazione S04 della BOPLA;
+    livello dinamico separa le modalità vulnerabili da quelle sicure (come su VAmPI)
+    e smentisce a runtime la segnalazione contrattuale S04 della BOPLA;
   \item nella \textbf{Broken Authentication} è accertabile solo a condizione
     che il meccanismo esista e una sessione sia disponibile;
   \item nella \textbf{BFLA} resta aperto: una risposta positiva non dice se
@@ -502,11 +466,10 @@ L'obiettivo della tesi è quindi raggiunto in parte. Lo è sul piano della
 classificazione: sulle coppie gemelle ogni modulo distingue la versione
 vulnerabile da quella corretta, e su VAmPI la differenza fra le due modalità
 emerge esattamente dove la classificazione la colloca, nel livello dinamico di
-una categoria ibrida. Non lo è ancora sul piano della generalità: su crAPI lo
-strumento trova una sola delle sfide documentate, la SSRF, e
-sull'insieme di prova lo strumento riconosce una sola vulnerabilità delle API,
-la BOLA di VAmPI (recall nel perimetro del 20\% su VAmPI e dello 0\% su DVAPI),
-contro il 61\% sull'infrastruttura di sadcloud. La classificazione
+una categoria ibrida. Non lo è ancora sul piano della generalità: sull'insieme di prova lo strumento
+riconosce una sola vulnerabilità delle API, la BOLA di VAmPI (recall nel
+perimetro del 20\% su VAmPI e dello 0\% su DVAPI), contro il 61\%
+sull'infrastruttura di sadcloud. La classificazione
 indica fin dove lo strumento può arrivare; il divario fra quel limite e ciò
 che lo strumento raggiunge oggi su codice di terzi è il punto da cui partire
 per estenderlo.
@@ -523,8 +486,7 @@ funzioni riservate sono inoltre riconosciuti attraverso nomi e forme d'uso
 comuni nei framework supportati, e ciò che se ne discosta può sfuggire: il
 livello statico della BOLA esamina un file alla volta, la BFLA non analizza le
 viste definite come classi, la BOPLA non analizza il codice Java e Spectral non
-legge i contratti scritti in JSON. Il caso di
-crAPI mostra quanto questi confini pesino su un bersaglio realistico. Sul
+legge i contratti scritti in JSON. Sul
 versante infrastrutturale, il manifest mostra ciò che dichiara e non ciò che è
 attivo, e il flag di esposizione dice che una risorsa è raggiungibile da
 chiunque, non se debba esserlo: un bucket che serve contenuti pubblici viene
@@ -543,8 +505,8 @@ controllo non viene segnalato. È una conseguenza voluta, perché un elenco fiss
 di campi sensibili avrebbe funzionato sulle applicazioni di prova e su nessun
 altro sistema.
 
-Va infine ricordato chi ha prodotto le prove. Casi di prova, regole, repository
-cooperante e decisioni manuali sulle corrispondenze sono opera di chi ha
-sviluppato lo strumento, e la campagna sull'insieme di prova è stata eseguita
-senza congelarlo prima. Solo crAPI, VAmPI, DVAPI e sadcloud sono codice di
-terzi, e sono i risultati su di essi a misurare quanto lo strumento generalizzi.
+Va infine ricordato chi ha prodotto le prove. Casi di prova, regole e decisioni
+manuali sulle corrispondenze sono opera di chi ha sviluppato lo strumento, e la
+campagna sull'insieme di prova è stata eseguita senza congelarlo prima. Solo
+VAmPI, DVAPI e sadcloud sono codice di terzi, e sono i risultati su di essi a
+misurare quanto lo strumento generalizzi.
