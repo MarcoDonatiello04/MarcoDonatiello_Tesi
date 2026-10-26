@@ -421,39 +421,21 @@ indica fin dove lo strumento può arrivare; il divario fra quel limite e ciò
 che lo strumento raggiunge oggi su codice di terzi è il punto da cui partire
 per estenderlo.
 
-\section{Limiti}
+\subsection{Limiti}
 \label{sec:ris-limiti}
 
-Il limite principale dello strumento è che l'analisi statica accerta la
-presenza di un controllo, non la sua correttezza: nella BOLA un filtro sul
-campo sbagliato o una funzione chiamata \texttt{authorize} vengono accettati
-senza esaminarne il contenuto, e nella BFLA una riga che cita il ruolo senza
-bloccare l'esecuzione viene scambiata per una protezione. Identità, controlli e
-funzioni riservate sono inoltre riconosciuti attraverso nomi e forme d'uso
-comuni nei framework supportati, e ciò che se ne discosta può sfuggire: il
-livello statico della BOLA esamina un file alla volta, la BFLA non analizza le
-viste definite come classi, la BOPLA non analizza il codice Java e Spectral non
-legge i contratti scritti in JSON. Sul
-versante infrastrutturale, il manifest mostra ciò che dichiara e non ciò che è
-attivo, e il flag di esposizione dice che una risorsa è raggiungibile da
-chiunque, non se debba esserlo: un bucket che serve contenuti pubblici viene
-segnalato come uno che espone dati riservati.
+Il limite principale dello strumento è che l'analisi statica accerta la presenza di un controllo, ma non sempre la sua correttezza. Nella BOLA, ad esempio, un filtro applicato al campo sbagliato o una funzione chiamata \texttt{authorize} vengono accettati senza esaminarne il contenuto. Analogamente, nella BFLA una riga che cita il ruolo dell'utente, ma non impedisce effettivamente l'esecuzione dell'operazione, può essere interpretata come una protezione. Identità, controlli e funzioni riservate sono inoltre riconosciuti attraverso nomi e forme d'uso comuni nei framework supportati, per cui implementazioni differenti possono sfuggire all'analisi. Il livello statico della BOLA esamina un file alla volta, la BFLA non analizza le viste definite come classi, la BOPLA non analizza il codice Java e Spectral non legge i contratti scritti in JSON. Sul versante infrastrutturale, i manifest mostrano ciò che viene dichiarato e non necessariamente ciò che è attivo, mentre il flag di esposizione indica che una risorsa è raggiungibile da chiunque, ma non stabilisce se debba esserlo. Di conseguenza, un bucket destinato a servire contenuti pubblici può essere segnalato allo stesso modo di uno che espone dati riservati.
 
-La parte dinamica, a sua volta, richiede identità autenticate. Senza una
-sessione la Broken Authentication si riduce alla componente statica e la BOPLA
-lascia le proprie segnalazioni da verificare; il livello dinamico della BOLA
-richiede token con il claim \texttt{sub}, e per questo DVAPI, che usa
-\texttt{userId}, ne resta escluso. Sui bersagli esterni, infine, vengono
-provati solo i metodi che non modificano i dati. Un ultimo limite è il prezzo
-del criterio, che vieta di indicare all'analisi ciò che va protetto: nella
-BOPLA una proprietà è considerata protetta solo se l'applicazione la tratta
-come tale in qualche punto, e un dato sensibile restituito a tutti senza alcun
-controllo non viene segnalato. È una conseguenza voluta, perché un elenco fisso
-di campi sensibili avrebbe funzionato sulle applicazioni di prova e su nessun
-altro sistema.
+Anche la parte dinamica presenta limitazioni legate alle condizioni necessarie per eseguire i test. Le verifiche richiedono identità autenticate e sessioni disponibili. Senza una sessione, la Broken Authentication si riduce alla componente statica e le segnalazioni della BOPLA restano da verificare. Il livello dinamico della BOLA richiede inoltre token contenenti il claim \texttt{sub}, escludendo per questo motivo DVAPI, che utilizza il campo \texttt{userId}. Sui bersagli esterni vengono infine provati soltanto i metodi che non modificano i dati, limitando la possibilità di verificare operazioni che comportano modifiche alle risorse.
 
-Va infine ricordato chi ha prodotto le prove. Casi di prova, regole e decisioni
-manuali sulle corrispondenze sono opera di chi ha sviluppato lo strumento, e la
-campagna sull'insieme di prova è stata eseguita senza congelarlo prima. Solo
-VAmPI, DVAPI e sadcloud sono codice di terzi, e sono i risultati su di essi a
-misurare quanto lo strumento generalizzi.
+Un ulteriore limite riguarda la necessità di conoscere il dominio applicativo. Nella BOPLA, una proprietà viene considerata protetta soltanto se l'applicazione la tratta come tale in qualche punto del codice. Un dato sensibile restituito a tutti gli utenti senza alcun controllo non viene quindi segnalato. Si tratta di una conseguenza del criterio adottato, che evita di basare la rilevazione su un elenco fisso di campi sensibili: una soluzione di questo tipo avrebbe potuto funzionare sulle applicazioni di prova, ma difficilmente sarebbe stata applicabile a sistemi con strutture e modelli di dati differenti. Lo stesso problema emerge nella BFLA, dove l'assenza di un controllo sui ruoli non dimostra automaticamente che una funzione sia accessibile in modo illegittimo. Per stabilirlo è necessario conoscere le autorizzazioni previste dal dominio applicativo.
+
+Va infine considerato il modo in cui sono state condotte le prove. I casi di test, le regole e le decisioni manuali sulle corrispondenze sono stati definiti da chi ha sviluppato lo strumento. Inoltre, la campagna sull'insieme di prova è stata eseguita senza congelare preventivamente la versione dello strumento. Solo VAmPI, DVAPI e sadcloud contengono codice di terze parti e permettono quindi di osservare quanto le regole siano in grado di generalizzare al di fuori dei casi utilizzati durante lo sviluppo.
+
+Un'evoluzione dello strumento dovrebbe puntare a una maggiore integrazione tra analisi statica e dinamica, superando i limiti delle verifiche basate su richieste isolate. In particolare, sarebbe utile sviluppare un sistema in grado di interagire autonomamente con l'applicazione in esecuzione, gestendo la creazione di più utenti, le rispettive credenziali e le sessioni di autenticazione. Questo permetterebbe di eseguire sequenze di richieste con identità e privilegi differenti, confrontando le risposte ottenute e verificando in modo più completo i controlli di accesso. Un simile approccio sarebbe particolarmente utile per BOLA, BFLA e BOPLA, categorie per le quali la presenza di un controllo nel codice non è sufficiente a dimostrarne l'efficacia. La disponibilità di un ambiente di test isolato permetterebbe inoltre di eseguire anche operazioni che modificano i dati, ampliando le verifiche oltre i metodi attualmente considerati.
+
+L'analisi statica potrebbe inoltre essere utilizzata per guidare la generazione dei test dinamici. Le informazioni ricavate dal codice, come gli endpoint individuati, i parametri accettati, le operazioni sulle risorse e i controlli di autorizzazione, potrebbero essere impiegate per selezionare i comportamenti da verificare durante l'esecuzione. In questo modo, i due livelli non opererebbero soltanto in parallelo, ma contribuirebbero a un processo di analisi più completo, nel quale le informazioni statiche orientano le verifiche dinamiche e i risultati di queste ultime permettono di confermare o smentire le segnalazioni iniziali.
+
+Ulteriori miglioramenti riguarderebbero l'ampliamento della copertura delle regole, attraverso il supporto di altri framework, linguaggi e librerie, e una migliore analisi delle relazioni tra funzioni e componenti differenti. Rimane inoltre importante la disponibilità di informazioni sul dominio applicativo, soprattutto per stabilire quali operazioni debbano essere riservate a determinati ruoli e quali proprietà debbano essere considerate sensibili. Queste informazioni potrebbero essere fornite attraverso specifiche di sicurezza o configurazioni definite da chi conosce l'applicazione, riducendo la necessità di ricorrere a ipotesi basate esclusivamente sul codice.
+
+Nel complesso, lo strumento sviluppato costituisce una base per il rilevamento automatico delle vulnerabilità API, ma una valutazione più completa richiede di considerare sia gli artefatti dell'applicazione sia il suo comportamento durante l'esecuzione. L'integrazione tra i due approcci, supportata da una gestione automatizzata delle identità e dalla generazione di test mirati, rappresenta il principale sviluppo futuro.
